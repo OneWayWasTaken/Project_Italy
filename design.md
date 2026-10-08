@@ -279,16 +279,6 @@ Passiva **Gamba da Campione**: +1 PM se il suo dado di velocità è ≥ 6.
 
 Sangue è sotto-rappresentata (1 sola Voce): vedi domanda 2 in §12.
 
----|---|
-| Gloria (3) | Scipione, Garibaldi, Baracca |
-| Sangue (1) | Spartaco |
-| Ordine (3) | Augusto, Matilde, Anselmi |
-| Fede (4) | Perpetua, Mentil, Bartali + (Perpetua) |
-| Ingegno (2) | Federico II, Leonardo |
-| Astuzia (3) | Caterina, Cavour, Perlasca |
-> **Controllo di bilanciamento:** la tabella sopra va corretta in Fase 1 con i conteggi reali di `data.js`
-> (Fede 3, Sangue 1). **Proposta da approvare:** sostituire una Voce di Gloria o Ordine con una seconda Voce di **Sangue**
-> (es. *Anita Garibaldi* nel cap. V, al posto di Cavour→Astuzia resta invariata, oppure *Arrigo Boito*… ) — vedi domande finali.
 
 ---
 
