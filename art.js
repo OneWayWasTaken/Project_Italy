@@ -245,12 +245,12 @@
     const testa = `${hair.dietro}<rect x="56" y="44" width="9" height="12" fill="${pelle}" ${OUT}/>
       <circle cx="60" cy="36" r="12" fill="${pelle}" ${OUT}/><circle cx="60" cy="36" r="12" fill="url(#gTesta)"/><circle cx="49.5" cy="38" r="2.6" fill="${pelle}" ${OUT}/>
       <path d="M72.5 37 Q76 39 72.6 41.5" fill="${pelle}" ${OUT}/>
-      ${spec.eco ? `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="${occhio}"/>`
-        : `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="#fff"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="#fff"/><circle cx="64.7" cy="36.4" r="1.45" fill="#1b1422"/><circle cx="70.5" cy="36.4" r="1.3" fill="#1b1422"/><circle cx="65.2" cy="35.7" r=".45" fill="#fff"/><circle cx="71" cy="35.7" r=".4" fill="#fff"/>`}
+      <g class="f-occhi" style="transform-origin:67px 36px">${spec.eco ? `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="${occhio}"/>`
+        : `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="#fff"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="#fff"/><circle cx="64.7" cy="36.4" r="1.45" fill="#1b1422"/><circle cx="70.5" cy="36.4" r="1.3" fill="#1b1422"/><circle cx="65.2" cy="35.7" r=".45" fill="#fff"/><circle cx="71" cy="35.7" r=".4" fill="#fff"/>`}</g>
       <path d="M61.5 32 Q64 30.5 66.5 32 M67.5 32 Q70 30.5 72.5 32" stroke="#1b1422" stroke-width="1" fill="none" stroke-linecap="round"/>
       <path d="M65.5 43 Q68.5 45.2 71.5 43" stroke="#1b1422" stroke-width="1.1" fill="none" stroke-linecap="round"/>
       <ellipse cx="66" cy="40.5" rx="2.4" ry="1.3" fill="#e0707a" opacity=".22"/>
-      ${sulViso(spec.viso)}${barba((spec.capelli || {}).barba, bc)}${hair.davanti}${th}${spec.eco && spec.testa && spec.testa.tipo === 'cappuccio' ? `<ellipse cx="64" cy="37" rx="2.2" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="37" rx="1.9" ry="2.8" fill="${occhio}"/>` : ''}`;
+      ${sulViso(spec.viso)}${barba((spec.capelli || {}).barba, bc)}${hair.davanti}${th}${spec.eco && spec.testa && spec.testa.tipo === 'cappuccio' ? `<g class="f-occhi" style="transform-origin:67px 37px"><ellipse cx="64" cy="37" rx="2.2" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="37" rx="1.9" ry="2.8" fill="${occhio}"/></g>` : ''}`;
     const gambe = A.nascondiGambe || spec.eco ? '' : `<g class="f-gamba f-gamba-b" style="transform-origin:${xL + 6}px 104px">${gamba(xL + 6, 52)}</g><g class="f-gamba f-gamba-a" style="transform-origin:${xR - 6}px 104px">${gamba(xR - 6, 70)}</g>`;
     const coda = spec.eco ? `<g class="f-coda"><path d="M${60 - d.ww - 4} 104 Q${60 - d.ww - 8} 140 ${52} 160 Q58 172 50 186 Q66 170 64 158 Q80 150 ${60 + d.ww + 4} 104 Z" fill="${mix(ab.c1, '#000', 0.25)}" opacity=".85"/></g>` : '';
     const fx = arma && arma.lampo ? `<g class="f-lampo" transform="translate(0,${arma.lampo})"><path d="M0 -8 L3 -2 L9 0 L3 2 L0 8 L-3 2 L-9 0 L-3 -2 Z" fill="#fff3a0"/><circle r="4" fill="#ff9a2a"/></g>` : '';
@@ -262,7 +262,7 @@
       <g class="f-braccio-b" style="transform-origin:${xL}px 60px">${arto(xL, 60, xL - 2, 92, manica)}<circle cx="${xL - 2}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>${scudo}</g>
       <g class="f-testa" style="transform-origin:60px 50px">${testa}</g>
       <g class="f-braccio-a" style="transform-origin:${xR}px 60px">${arto(xR, 60, xR, 92, manica)}<circle cx="${xR}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>
-        ${arma ? `<g class="f-arma" transform="translate(${xR},93)">${arma.svg}${fx}</g>` : ''}</g>
+        ${arma ? `<g transform="translate(${xR},93)"><g class="f-arma" style="transform-origin:0 0">${arma.svg}${fx}</g></g>` : ''}</g>
     </g>`;
   }
 
@@ -331,7 +331,13 @@
     const body = spec.figura === 'elefante' ? elefante(id, spec) : umanoide(id, spec, opz);
     const d = el('div', 'fig' + (spec.eco ? ' eco' : '') + (spec.figura === 'elefante' ? ' quadrupede' : ''));
     const aA = spec.attacco === 'sparo' ? -14 : -18;
-    d.style.cssText = `--aA:${aA}deg;--aB:7deg;--dl:${(-Math.random() * 3).toFixed(2)}s;--glow:${spec.glow || '#ffd75e'}`;
+    // Ogni personaggio ha una "personalità" di riposo (spec.idle → classe idle-xxx nel CSS) più una
+    // piccola variazione dei tempi ricavata dal suo id, così nessuno si muove in sincrono con gli altri.
+    let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) % 997;
+    const jf = (0.86 + (h % 40) / 100).toFixed(2);
+    d.classList.add('idle-' + (spec.idle || (spec.eco ? 'spettro' : 'sereno')));
+    const extra = Object.keys(spec.idleVars || {}).map(k => `${k}:${spec.idleVars[k]}`).join(';');
+    d.style.cssText = `--aA:${aA}deg;--aB:7deg;--dl:${(-Math.random() * 6).toFixed(2)}s;--jf:${jf};--glow:${spec.glow || '#ffd75e'};${extra}`;
     d.dataset.vb = vb;
     d.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">${body}</svg>`;
     return d;
