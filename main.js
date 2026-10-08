@@ -59,11 +59,13 @@
       onAvvia: avviaBattaglia,
       onRiprova: () => avviaBattaglia(ultima.squadra, ultima.incontro, ultima.opz),
       avviaTutorial: () => avviaBattaglia(E.INCONTRI.tutorial.squadra, 'tutorial', { tutorial: true }),
-      onMenu: () => E.UI.mostra('menu'),
+      onMenu: () => { E.UI.mostra('menu'); if (E.UI.menuScena) E.UI.menuScena(save); },
+      onSquadra: () => { E.UI.squadra.init(ctx); E.UI.mostra('squadra'); },
       onFine(esito) { if (esito === 'vittoria') save.stats.vittorie++; else save.stats.sconfitte++; persist(); }
     };
 
     E.UI.init(ctx);
+    E.UI.menuScena(save);
     // Primo avvio: propone il tutorial (con possibilità di saltarlo del tutto)
     if (save.tutorial === undefined) {
       const d = document.createElement('div');

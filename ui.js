@@ -328,13 +328,13 @@
   /* Selezione squadra                                                     */
   /* ===================================================================== */
   UI.squadra = {
-    sel: [], ctx: null,
+    sel: [], ctx: null, filtro: null,
     init(ctx) {
-      this.ctx = ctx; const save = ctx.save;
+      this.ctx = ctx; const save = ctx.save; this.filtro = null;
       this.sel = (save.squadra || []).filter(id => E.VOCI[id]).slice(0, C.SQUADRA_MAX);
       const g = $('#sq-griglia'); g.innerHTML = '';
       Object.values(E.VOCI).sort((a, b) => a.epoca - b.epoca).forEach(v => {
-        const c = el('div', 'sq-card'); c.dataset.id = v.id;
+        const c = el('div', 'sq-card'); c.dataset.id = v.id; c.dataset.aff = v.aff;
         c.appendChild(UI.ritratto(v));
         c.appendChild(el('div', 'n', v.breve));
         c.appendChild(el('div', 'm', `<span style="color:${E.AFFINITA[v.aff].colore}">${E.AFFINITA[v.aff].simbolo} ${E.AFFINITA[v.aff].nome}</span> · Cap. ${E.CAPITOLI[v.epoca - 1].num}`));
@@ -342,24 +342,51 @@
         c.onclick = () => { Snd.sfx('ui'); this.toggle(v.id); };
         g.appendChild(c);
       });
+      // filtri per affinità
+      const f = $('#sq-filtri'); f.innerHTML = '';
+      const chip = (txt, aff, col) => { const b = el('button', 'chip-filtro' + (aff === this.filtro ? ' on' : ''), txt); if (col) b.style.setProperty('--ac', col); b.dataset.aff = aff || ''; b.onclick = () => { this.filtro = aff || null; this.applicaFiltro(); }; f.appendChild(b); };
+      chip('Tutte', null); E.AFFINITA_ORDINE.forEach(a => chip(E.AFFINITA[a].simbolo + ' ' + E.AFFINITA[a].nome, a, E.AFFINITA[a].colore));
       const s = $('#sq-incontro'); s.innerHTML = '';
       Object.values(E.INCONTRI).filter(i => !i.tutorial).forEach(i => { const o = el('option', '', i.nome); o.value = i.id; s.appendChild(o); });
       s.value = save.incontro && E.INCONTRI[save.incontro] ? save.incontro : 'pattuglia';
       $('#sq-via').onclick = () => ctx.onAvvia(this.sel.slice(), s.value);
       $('#sq-affinita').onclick = () => UI.tabellaAffinita();
+      $('#sq-consigliata').onclick = () => { this.sel = ['scipione', 'spartaco', 'perpetua', 'leonardo']; this.salva(); this.aggiorna(); this.dettaglio(this.sel[0]); };
+      $('#sq-casuale').onclick = () => {
+        const tutte = Object.keys(E.VOCI).sort(() => Math.random() - 0.5), sc = [], usate = new Set();
+        tutte.forEach(id => { if (sc.length < C.SQUADRA_MAX && !usate.has(E.VOCI[id].aff)) { sc.push(id); usate.add(E.VOCI[id].aff); } });
+        this.sel = sc; this.salva(); this.aggiorna(); this.dettaglio(sc[0]);
+      };
       this.aggiorna(); this.dettaglio(this.sel[0] || Object.keys(E.VOCI)[0]);
     },
+    applicaFiltro() {
+      $$('.chip-filtro').forEach(b => b.classList.toggle('on', (b.dataset.aff || null) === this.filtro));
+      $$('.sq-card').forEach(c => c.classList.toggle('nascosta', !!this.filtro && c.dataset.aff !== this.filtro));
+    },
+    salva() { this.ctx.save.squadra = this.sel.slice(); this.ctx.persist(); },
     toggle(id) {
       const i = this.sel.indexOf(id);
       if (i >= 0) this.sel.splice(i, 1);
       else if (this.sel.length < C.SQUADRA_MAX) this.sel.push(id);
-      this.dettaglio(id); this.aggiorna();
-      this.ctx.save.squadra = this.sel.slice(); this.ctx.persist();
+      this.dettaglio(id); this.aggiorna(); this.salva();
     },
     aggiorna() {
       $$('.sq-card').forEach(c => c.classList.toggle('sel', this.sel.includes(c.dataset.id)));
       $('#sq-conta').textContent = this.sel.length + '/' + C.SQUADRA_MAX;
       $('#sq-via').disabled = this.sel.length !== C.SQUADRA_MAX;
+      // anteprima della squadra con Concordie e copertura delle affinità
+      const t = $('#sq-team'); t.innerHTML = '';
+      for (let i = 0; i < C.SQUADRA_MAX; i++) {
+        const id = this.sel[i], slot = el('div', 'slot' + (id ? ' pieno' : ''));
+        if (id) { slot.appendChild(UI.ritratto(E.VOCI[id])); slot.appendChild(el('span', 'nm', E.VOCI[id].breve)); slot.title = 'Rimuovi'; slot.onclick = () => this.toggle(id); }
+        else slot.appendChild(el('span', 'vuoto-slot', '+'));
+        t.appendChild(slot);
+      }
+      const affs = this.sel.map(id => E.VOCI[id].aff), info = el('div', 'team-info');
+      const conc = E.CONCORDIE.filter(([a, b]) => affs.includes(a) && affs.includes(b));
+      info.innerHTML = (conc.length ? conc.map(c => `<span class="badge-conc">Concordia ${E.AFFINITA[c[0]].simbolo}${E.AFFINITA[c[1]].simbolo}</span>`).join('') : '<span class="badge-no">Nessuna Concordia</span>') +
+        `<span class="badge-aff">${new Set(affs).size} affinità</span>`;
+      t.appendChild(info);
     },
     dettaglio(id) {
       const v = E.VOCI[id], d = $('#sq-dettaglio'); d.innerHTML = '';
@@ -367,16 +394,35 @@
       const fw = el('div', 'det-fig'); if (E.Arte) fw.appendChild(E.Arte.figura(id)); d.appendChild(fw);
       d.appendChild(el('h3', '', v.nome));
       d.appendChild(el('small', '', `${E.CAPITOLI[v.epoca - 1].epoca} · ${v.ruolo} · <span style="color:${a.colore}">${a.simbolo} ${a.nome}</span> · ${'★'.repeat(v.rarita)}`));
-      d.appendChild(el('p', '', `PV <b>${v.pv}</b> · Velocità <b>${v.vel[0]}–${v.vel[1]}</b>`));
+      d.appendChild(el('p', '', `PV <b>${v.pv}</b> · Velocità <b>${v.vel[0]}–${v.vel[1]}</b> · Forte contro <b style="color:${E.AFFINITA[E.AFFINITA_ORDINE[(E.AFFINITA_ORDINE.indexOf(v.aff) + 1) % 6]].colore}">${E.AFFINITA[E.AFFINITA_ORDINE[(E.AFFINITA_ORDINE.indexOf(v.aff) + 1) % 6]].nome}</b>`));
       d.appendChild(el('div', 'skill-box', `<b>Passiva — ${v.passiva.nome}</b><small>${v.passiva.desc}</small>`));
       v.skills.forEach(sid => {
         const s = E.SKILL[sid];
         d.appendChild(el('div', 'skill-box', `<b>${s.nome}</b> <span style="color:var(--oro)">◆${s.costo}</span>
-          <small>${s.monete} monete · PB ${s.pb} · PM +${s.pm} · ${E.AFFINITA[s.aff].nome}</small>
+          <small>${s.monete} monete · PB ${s.pb} · PM +${s.pm} · ${E.AFFINITA[s.aff].nome} · attacco «${(E.ANIM_SKILL && E.ANIM_SKILL[sid]) || 'base'}»</small>
           <small>${E.descrizioneSkill(s).join('<br>') || '—'}</small>`));
       });
       d.appendChild(el('small', 'vuoto', 'Voce romanzata: carattere e abilità sono inventati; nomi e fatti storici no.'));
     }
+  };
+
+  /** Scena animata dietro il menu principale: la squadra salvata contro un Eco, tutti con la loro idle. */
+  UI.menuScena = function (save) {
+    const c = $('#menu-scena'); if (!c || !E.Arte) return;
+    const p = E.Arte.applicaPalette(c, 0);
+    c.innerHTML = '<div class="ms-bg"></div><div class="ms-floor"><div class="arena-disco"></div></div>';
+    $('.ms-bg', c).innerHTML = E.Arte.sfondo(0);
+    const alleati = (save.squadra && save.squadra.length ? save.squadra : ['scipione', 'spartaco', 'perpetua', 'leonardo']).slice(0, 4);
+    const pos = [[12, 70], [24, 86], [8, 92], [30, 72]];
+    const nem = [['annibale', 82, 86], ['eco_cartaginese', 70, 72], ['legionario', 92, 72]];
+    const add = (id, x, y, enemy) => {
+      const d = document.createElement('div'); d.className = 'ms-pg' + (enemy ? ' nem' : ''); d.style.left = x + '%'; d.style.top = y + '%'; d.style.zIndex = Math.round(y);
+      if (E.ARTE[id] && E.ARTE[id].scala) d.style.setProperty('--sc', E.ARTE[id].scala);
+      d.appendChild(E.Arte.figura(id)); c.appendChild(d);
+    };
+    alleati.forEach((id, i) => add(id, pos[i][0], pos[i][1], false));
+    nem.forEach(n => add(n[0], n[1], n[2], true));
+    if (UI.Fx) UI.Fx.ambiente = p.polvere;
   };
 
   /* ===================================================================== */
@@ -397,6 +443,8 @@
     avvia(B, ctx) {
       this.B = B; this.ctx = ctx; this.fase = 'riproduzione'; this.skip = false;
       this.V = {}; this.els = {}; this.dadi = {}; this.sel = null; this.cl = null; this.skillDi = {}; this.spostati = new Set();
+      this.sessione = (this.sessione || 0) + 1; this.stat = {}; this.skip = false;
+      B.unita.forEach(x => { this.stat[x.id] = { danno: 0, colpi: 0, max: 0, subito: 0 }; });
       this.velBase = ctx.save.opzioni.vel || 1;
       Snd.on = ctx.save.opzioni.audio !== false;
       $('#col-alleati').innerHTML = ''; $('#col-nemici').innerHTML = ''; $('#log').innerHTML = ''; $('#risultato').classList.remove('on');
@@ -510,17 +558,19 @@
 
     /* ----- ciclo di turno ----- */
     async cicloTurno(evIniziali) {
-      const B = this.B;
+      const B = this.B, S = this.sessione, viva = () => S === this.sessione;      // la sessione cambia se si abbandona o si ricomincia
       try {
         if (evIniziali && evIniziali.length) await this.riproduci(evIniziali);
-        while (!B.esito) {
+        while (!B.esito && viva()) {
           Combat().iniziaTurno(B);
           await this.riproduci(B.eventi);
-          if (B.esito) break;
+          if (B.esito || !viva()) break;
           await this.pianifica();
+          if (!viva()) return;
           const evs = Combat().esegui(B);
           await this.riproduci(evs);
         }
+        if (!viva()) return;
         await this.finale();
       } catch (err) { console.error('Errore nel ciclo di battaglia', err); this.log('Errore interno: ' + err.message, 'imp'); }
     },
@@ -545,6 +595,27 @@
       Object.keys(this.els).forEach(id => { this.els[id].intent.innerHTML = ''; });
       this.disegnaSkills();
       const r = this._pronto; this._pronto = null; r && r();
+    },
+    /** Abbandona la battaglia in corso e torna al menu. */
+    abbandona() {
+      this.sessione++; this.skip = true; this.fase = 'fine';
+      const r = this._pronto; this._pronto = null; r && r();
+      if (E.Tutorial && E.Tutorial.attivo) E.Tutorial.ferma(null);
+      Fx.pulisciLinee(); this.zoom(0, 0, 1); this.messaAFuoco(null); $('#clash').className = ''; $('#risultato').classList.remove('on');
+      $$('.num-fly,.banner,.cutin').forEach(n => n.remove());
+      this.ctx.onMenu();
+    },
+    menuPausa() {
+      if (this.fase === 'fine') return;
+      const d = el('div', 'menu-pausa'); d.innerHTML = '<h3>Pausa</h3>';
+      const mk = (txt, fn, cls) => { const b = el('button', 'btn ' + (cls || ''), txt); b.onclick = fn; d.appendChild(b); return b; };
+      mk('Riprendi', () => $('#modale').classList.remove('on'), 'grande');
+      mk('Come si gioca', () => UI.manuale(0));
+      mk('Tabella affinità', () => UI.tabellaAffinita());
+      mk('Registro dei combattimenti', () => { const w = el('div', 'log-modale'); w.innerHTML = '<h3>Registro</h3>' + $('#log').innerHTML; UI.modale(w); });
+      mk('Opzioni', () => UI.opzioni(this.ctx.save, this.ctx.persist, v => { this.velBase = v; this.aggiornaVel(); }));
+      mk('Abbandona battaglia', () => { if (confirm('Abbandonare la battaglia? I progressi di questo scontro andranno persi.')) { $('#modale').classList.remove('on'); this.abbandona(); } }, 'pericolo');
+      UI.modale(d); const cb = $('#modale .pannello-modale > .btn:last-child'); if (cb) cb.style.display = 'none';
     },
     bloccato() { return !!(E.Tutorial && E.Tutorial.bloccaInput()); },
     clickCarta(id) {
@@ -634,10 +705,15 @@
       await this.sleep(900);
       const r = $('#risultato'); r.className = 'overlay on ' + B.esito;
       Snd.sfx(B.esito);
-      r.innerHTML = `<h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p>${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} Turni: ${B.turno}</p>`;
-      const b1 = el('button', 'btn grande', 'Riprova'), b2 = el('button', 'btn', 'Menu');
-      b1.onclick = () => this.ctx.onRiprova(); b2.onclick = () => this.ctx.onMenu();
-      r.append(b1, b2);
+      const alleati = B.unita.filter(x => x.lato === 'a'), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
+      let righe = '';
+      alleati.forEach(x => { const st = this.stat[x.id], v = this.V[x.id]; righe += `<tr class="${v.vivo ? '' : 'caduto'}"><td>${x === mvp && st.danno ? '★ ' : ''}${x.breve}${v.vivo ? '' : ' ✝'}</td><td>${st.danno}</td><td>${st.colpi}</td><td>${st.max}</td><td>${st.subito}</td></tr>`; });
+      r.innerHTML = `<h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p class="sub">${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} · ${B.turno} turni</p>
+        <table class="tab-risultato"><tr><th>Voce</th><th>Danni</th><th>Colpi</th><th>Max</th><th>Subiti</th></tr>${righe}</table><div class="risultato-extra"></div>`;
+      const bx = el('div', 'risultato-btn');
+      const b1 = el('button', 'btn grande', 'Riprova'), b2 = el('button', 'btn', 'Cambia squadra'), b3 = el('button', 'btn', 'Menu');
+      b1.onclick = () => this.ctx.onRiprova(); b2.onclick = () => this.ctx.onSquadra(); b3.onclick = () => this.ctx.onMenu();
+      bx.append(b1, b2, b3); r.appendChild(bx);
       this.ctx.onFine(B.esito, B);
     },
 
@@ -662,10 +738,13 @@
       return { x: r.left + r.width / 2, y: r.top + r.height * 0.45, w: r.width, h: r.height };
     },
     async riproduci(evs) {
+      const S = this.sessione;
       if (this.fase !== 'pianifica') this.fase = 'riproduzione';
       for (const e of evs) {
-        try { await this.gestisci(e); } catch (err) { console.error('Errore evento', e, err); }
+        if (S !== this.sessione) return;
+        try { await this.gestisci(e); } catch (err) { if (S === this.sessione) console.error('Errore evento', e, err); }
       }
+      if (S !== this.sessione) return;
       await this.rientraTutti();
       this.skip = false;
     },
@@ -960,6 +1039,7 @@
       // ---- impatto ----
       const forte = e.danno >= 22 || e.rel === 1;
       bers.pv = e.pvDopo; this.render(e.bers);
+      { const st = this.stat[e.att], sb = this.stat[e.bers]; if (st) { st.danno += e.danno; st.colpi++; st.max = Math.max(st.max, e.danno); } if (sb) sb.subito += e.danno; }
       const p = this.pos(e.bers), pa = this.pos(e.att), ang = Math.atan2(p.y - pa.y, p.x - pa.x);
       Fx.sparks(p.x, p.y, clamp(10 + Math.round(e.danno * 0.8), 10, 50), colore, 0.7 + Math.min(1, e.danno / 40));
       Fx.ring(p.x, p.y, colore, 60 + e.danno);
@@ -1019,6 +1099,7 @@
   UI.init = function (ctx) {
     Fx.init(); UI.iniziaTip();
     $('#btn-esegui').onclick = () => Bat.conferma();
+    $('#btn-menu').onclick = () => Bat.menuPausa();
     $('#btn-affondo').onclick = () => Bat.toggleAffondo();
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
     $('#btn-audio').onclick = () => {
@@ -1027,6 +1108,7 @@
     };
     root.addEventListener('resize', () => { if (Bat.B) Bat.layout(); });
     document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && $('#scr-battaglia').classList.contains('active') && !$('#modale').classList.contains('on')) { Bat.menuPausa(); return; }
       if (!$('#scr-battaglia').classList.contains('active') || Bat.fase !== 'pianifica' || Bat.bloccato()) return;
       if (e.key >= '1' && e.key <= '3') Bat.scegliSkill(+e.key - 1);
       else if (e.key === 'Enter') Bat.conferma();

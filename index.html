@@ -26,6 +26,7 @@
 
   <!-- MENU -->
   <section id="scr-menu" class="screen active">
+    <div id="menu-scena"></div>
     <div class="titolo">
       <h1>ECHI D'ITALIA</h1>
       <p class="sub">Il Custode ascolta ciò che la storia ha taciuto</p>
@@ -39,17 +40,20 @@
       <button class="btn" disabled title="Fase 4">Evocazioni (presto)</button>
       <button class="btn" disabled title="Fase 5">Dungeon (presto)</button>
     </div>
-    <p class="nota-fase">Fase 1 · sistema di scontri a monete</p>
+    <p class="nota-fase" id="nota-versione">Echi d'Italia · versione di sviluppo</p>
   </section>
 
   <!-- SELEZIONE SQUADRA -->
   <section id="scr-squadra" class="screen">
     <header class="barra"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Scegli 4 Voci</h2><span id="sq-conta">0/4</span></header>
+    <div class="sq-filtri" id="sq-filtri"></div>
     <div class="squadra-layout">
       <div id="sq-griglia" class="sq-griglia"></div>
       <aside id="sq-dettaglio" class="sq-dettaglio"></aside>
     </div>
+    <div class="sq-team" id="sq-team"></div>
     <footer class="barra">
+      <button id="sq-consigliata" class="btn piccolo">Consigliata</button><button id="sq-casuale" class="btn piccolo">Casuale</button>
       <label>Incontro <select id="sq-incontro"></select></label>
       <button id="sq-affinita" class="btn piccolo">Tabella affinità</button>
       <button id="sq-via" class="btn grande" disabled>Combatti</button>
@@ -66,6 +70,7 @@
           <div id="stage-floor"><div class="arena-disco"></div></div>
         </div>
         <div id="luce"></div><div id="vignetta"></div>
+        <button id="btn-menu" class="btn piccolo" title="Pausa (Esc)">☰</button>
         <div id="turno-info"><span id="turno-n">Turno 1</span> <span id="ardore">Ardore 3</span></div>
         <div id="clash"></div>
       </div>
