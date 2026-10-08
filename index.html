@@ -8,6 +8,11 @@
 </head>
 <body>
 <div id="app">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="gOmbra" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></linearGradient>
+    <linearGradient id="gVert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></linearGradient>
+    <radialGradient id="gTesta" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".36"/></radialGradient>
+  </defs></svg>
   <canvas id="fx"></canvas>
 
   <!-- MENU -->
@@ -45,7 +50,11 @@
     <div id="campo">
       <div id="col-alleati" class="colonna"></div>
       <div id="stage">
-        <div id="stage-bg"></div>
+        <div id="cam">
+          <div id="stage-bg"></div>
+          <div id="stage-floor"><div class="arena-disco"></div></div>
+        </div>
+        <div id="luce"></div><div id="vignetta"></div>
         <div id="turno-info"><span id="turno-n">Turno 1</span> <span id="ardore">Ardore 3</span></div>
         <div id="clash"></div>
       </div>

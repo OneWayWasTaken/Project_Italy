@@ -70,7 +70,7 @@
   /* Motore effetti su canvas                                              */
   /* ===================================================================== */
   const Fx = UI.Fx = {
-    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], proiettili: [], frozen: 0, last: 0,
+    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], proiettili: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
     init() {
       this.cv = $('#fx'); this.ctx = this.cv.getContext('2d');
       const res = () => {
@@ -89,6 +89,39 @@
         this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, life: 0, max: rnd(0.3, 0.8), w: rnd(1.2, 3.2), c: Math.random() < 0.35 ? '#fff' : colore });
       }
     },
+    /** Nuvole di polvere ai piedi (x,y = punto di contatto con il terreno). */
+    polvere(x, y, n, forza, rgb) {
+      for (let i = 0; i < n; i++) this.puffs.push({ x: x + rnd(-14, 14), y: y + rnd(-4, 3), vx: rnd(-70, 70) * (forza || 1), vy: rnd(-34, -8), r: rnd(5, 11), life: 0, max: rnd(0.45, 0.8), c: rgb || '210,190,160' });
+    },
+    /** Onda d'urto schiacciata sul pavimento (prospettiva). */
+    urto(x, y, r, colore) { this.urti.push({ x, y, r: r || 80, c: colore || '#fff', t: 0, max: 0.5 }); },
+    /** Fendente: mezzaluna luminosa che spazza l'impatto (ang in radianti, direzione del colpo). */
+    taglio(x, y, ang, len, colore) { this.tagli.push({ x, y, ang, len: len || 60, c: colore, t: 0, max: 0.26 }); },
+    /** Stoccata: raggi che convergono sul punto d'impatto. */
+    raggi(x, y, ang, colore) { for (let i = 0; i < 9; i++) { const a = ang + rnd(-0.5, 0.5), v = rnd(260, 620); this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, g: 0, life: 0, max: rnd(0.15, 0.32), w: rnd(1.5, 3.2), c: i % 3 ? colore : '#fff' }); } },
+    /** Registra/aggiorna gli stati di un'unità: emettono particelle continue (fiamme, sangue, scintille…). */
+    setStati(id, fn, stati) { if (!stati) { delete this.emettitori[id]; return; } const em = this.emettitori[id] || { acc: {} }; em.fn = fn; em.stati = stati; this.emettitori[id] = em; },
+    emetti(dt) {
+      Object.keys(this.emettitori).forEach(id => {
+        const em = this.emettitori[id], p = em.fn(); if (!p) return;
+        const R = { bruciatura: 34, sanguinamento: 9, splendore: 16, voto: 8, marchio: 7 };
+        Object.keys(em.stati).forEach(st => {
+          if (!R[st]) return;
+          em.acc[st] = (em.acc[st] || 0) + R[st] * Math.min(1, 0.4 + em.stati[st] * 0.15) * dt;
+          while (em.acc[st] >= 1) {
+            em.acc[st]--;
+            const x = p.x + rnd(-p.w * 0.28, p.w * 0.28);
+            switch (st) {
+              case 'bruciatura': this.parts.push({ x, y: p.y + rnd(-p.h * 0.1, p.h * 0.3), vx: rnd(-14, 14), vy: rnd(-110, -50), g: -30, life: 0, max: rnd(0.4, 0.85), w: rnd(2, 4), c: Math.random() < 0.5 ? '#ff8a3d' : '#ffd75e' }); break;
+              case 'sanguinamento': this.parts.push({ x, y: p.y + rnd(-p.h * 0.1, p.h * 0.2), vx: rnd(-8, 8), vy: rnd(0, 30), g: 700, life: 0, max: rnd(0.35, 0.6), w: 2.2, c: '#c0303f' }); break;
+              case 'splendore': this.parts.push({ x, y: p.y + rnd(-p.h * 0.3, p.h * 0.4), vx: rnd(-10, 10), vy: rnd(-50, -20), g: 0, life: 0, max: rnd(0.6, 1.1), w: rnd(1.5, 2.8), c: '#ffe27a' }); break;
+              case 'voto': this.parts.push({ x, y: p.y - p.h * 0.45 + rnd(-6, 6), vx: rnd(-12, 12), vy: rnd(-26, -8), g: 0, life: 0, max: rnd(0.6, 1), w: 2, c: '#cfe6ff' }); break;
+              case 'marchio': this.parts.push({ x, y: p.y - p.h * 0.1 + rnd(-8, 8), vx: rnd(-20, 20), vy: rnd(-34, -12), g: 0, life: 0, max: rnd(0.5, 0.9), w: 2, c: '#b58cf0' }); break;
+            }
+          }
+        });
+      });
+    },
     ring(x, y, colore, r) { this.rings.push({ x, y, c: colore, t: 0, max: 0.45, r: r || 90 }); },
     flash(colore, alpha) { this.flashes.push({ c: colore, a: alpha || 0.35, t: 0, max: 0.35 }); },
     /** Proiettile luminoso da a verso b in `dur` secondi (colpi a distanza). */
@@ -102,7 +135,37 @@
       if (t < this.frozen) dt = 0;
       const g = this.ctx; g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       g.clearRect(0, 0, this.W, this.H);
+      if (dt) this.emetti(dt);
+      // polvere d'ambiente (granelli che galleggiano)
+      if (this.ambiente) {
+        while (this.motes.length < 34) this.motes.push({ x: rnd(0, this.W), y: rnd(0, this.H), r: rnd(0.8, 2.4), vx: rnd(-8, 12), vy: rnd(-14, -2), ph: rnd(0, 7), a: rnd(0.15, 0.45) });
+        this.motes.forEach(m => { m.x += m.vx * dt; m.y += m.vy * dt; m.ph += dt; if (m.y < -4 || m.x > this.W + 4 || m.x < -4) { m.y = this.H + 4; m.x = rnd(0, this.W); } });
+        this.motes.forEach(m => { g.globalAlpha = m.a * (0.6 + 0.4 * Math.sin(m.ph * 2)); g.fillStyle = 'rgb(' + this.ambiente + ')'; g.beginPath(); g.arc(m.x, m.y, m.r, 0, 7); g.fill(); });
+      }
+      // nuvole di polvere (compositing normale)
+      this.puffs = this.puffs.filter(p => (p.life += dt) < p.max);
+      this.puffs.forEach(p => {
+        p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; const k = p.life / p.max, r = p.r * (1 + 1.9 * k);
+        const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r); gr.addColorStop(0, 'rgba(' + p.c + ',' + 0.5 * (1 - k) + ')'); gr.addColorStop(1, 'rgba(' + p.c + ',0)');
+        g.globalAlpha = 1; g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, r, 0, 7); g.fill();
+      });
       g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+      // onde d'urto sul pavimento
+      this.urti = this.urti.filter(r => (r.t += dt) < r.max);
+      this.urti.forEach(r => { const k = r.t / r.max; g.globalAlpha = (1 - k) * 0.9; g.strokeStyle = r.c; g.lineWidth = 5 * (1 - k) + 1; g.beginPath(); g.ellipse(r.x, r.y, 10 + r.r * k, (10 + r.r * k) * 0.32, 0, 0, 7); g.stroke(); });
+      // fendenti
+      this.tagli = this.tagli.filter(s => (s.t += dt) < s.max);
+      this.tagli.forEach(s => {
+        const k = s.t / s.max, e = 1 - Math.pow(1 - Math.min(1, k * 1.6), 3), a0 = s.ang - 1.05, a1 = s.ang + 1.05, head = a0 + (a1 - a0) * e, tail = Math.max(a0, head - 1.3);
+        const N = 18; g.globalAlpha = Math.max(0, 1 - Math.max(0, k - 0.45) / 0.55);
+        for (let i = 0; i < N; i++) {
+          const t0 = tail + (head - tail) * i / N, t1 = tail + (head - tail) * (i + 1) / N, w = (i + 1) / N;
+          [[s.c, 14, 0.4], ['#fff', 5, 1]].forEach(([c, lw, al]) => {
+            g.strokeStyle = c; g.globalAlpha = al * w * Math.max(0, 1 - Math.max(0, k - 0.45) / 0.55); g.lineWidth = lw * w;
+            g.beginPath(); g.arc(s.x - Math.cos(s.ang) * s.len * 0.5, s.y - Math.sin(s.ang) * s.len * 0.5, s.len, t0, t1); g.stroke();
+          });
+        }
+      });
       this.flashes = this.flashes.filter(f => { f.t += dt; return f.t < f.max; });
       this.flashes.forEach(f => { g.globalAlpha = f.a * (1 - f.t / f.max); g.fillStyle = f.c; g.fillRect(0, 0, this.W, this.H); });
       this.rings = this.rings.filter(r => { r.t += dt; return r.t < r.max; });
@@ -116,7 +179,7 @@
       });
       this.parts = this.parts.filter(p => (p.life += dt) < p.max);
       this.parts.forEach(p => {
-        p.vy += 900 * dt; p.vx *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy += (p.g == null ? 900 : p.g) * dt; p.vx *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt;
         g.globalAlpha = 1 - p.life / p.max; g.strokeStyle = p.c; g.lineWidth = p.w;
         g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); g.stroke();
       });
@@ -268,9 +331,11 @@
   /* ===================================================================== */
   /** Formazioni sul palcoscenico: posizione dei PIEDI (x%, y%) per numero di unità. */
   const FORM = {
-    a: { 1: [[26, 86]], 2: [[24, 68], [38, 94]], 3: [[18, 52], [36, 74], [18, 96]], 4: [[16, 44], [34, 62], [16, 80], [34, 98]] },
-    n: { 1: [[76, 88]], 2: [[78, 68], [62, 94]], 3: [[84, 52], [66, 74], [84, 96]], 4: [[84, 44], [66, 62], [84, 80], [66, 98]] }
+    a: { 1: [[28, 80]], 2: [[22, 66], [38, 88]], 3: [[15, 62], [33, 74], [15, 91]], 4: [[12, 62], [30, 68], [14, 85], [33, 94]] },
+    n: { 1: [[76, 82]], 2: [[78, 66], [62, 88]], 3: [[85, 62], [67, 74], [85, 91]], 4: [[88, 62], [70, 68], [86, 85], [67, 94]] }
   };
+  /** Scala di prospettiva: chi sta più indietro (y minore) è più piccolo. */
+  const profondita = y => clamp(0.8 + (y - 56) / 40 * 0.3, 0.78, 1.12);
 
   const Bat = UI.battaglia = {
     B: null, V: {}, els: {}, dadi: {}, sel: null, fase: 'idle', velBase: 1, skip: false, ctx: null, cl: null, linea: null, ardoreV: 0,
@@ -285,6 +350,9 @@
       $$('#stage .pg').forEach(p => p.remove());
       $('#clash').className = ''; $('#clash').innerHTML = '';
       $('#stage-bg').innerHTML = E.Arte ? E.Arte.sfondo(ctx.capitolo || 0) : '';
+      const pal = E.Arte ? E.Arte.applicaPalette($('#stage'), ctx.capitolo || 0) : null;
+      Fx.ambiente = pal ? pal.polvere : null; Fx.motes = []; Fx.emettitori = {};
+      $('#cam').style.transform = ''; $('#stage').classList.remove('clashing');
       UI.mostra('battaglia');
       Combat().snapshot(B).forEach(u => this.aggiungiCarta(u));
       this.layout();
@@ -300,6 +368,7 @@
       const def = u.lato === 'a' ? E.VOCI[u.def] : E.NEMICI[u.def];
       const spec = E.ARTE && E.ARTE[u.def] || {};
       const c = el('div', 'unit ' + (u.lato === 'a' ? 'alleato' : 'nemico')); c.dataset.id = u.id;
+      c.style.setProperty('--ac', E.AFFINITA[u.aff].colore);
       const rit = UI.ritratto(def);
       const a = E.AFFINITA[u.aff];
       const info = el('div', 'info');
@@ -315,17 +384,19 @@
       const pg = el('div', 'pg ' + (u.lato === 'a' ? 'alleato' : 'nemico') + (spec.figura === 'elefante' ? ' quadrupede' : '')); pg.dataset.id = u.id;
       pg.style.setProperty('--sc', spec.scala || 1);
       const mov = el('div', 'pg-mov'), fig = E.Arte ? E.Arte.figura(u.def) : el('div', 'fig');
-      mov.appendChild(fig); pg.append(el('div', 'pg-ombra'), mov);
+      const aure = el('div', 'pg-aure'), hp = el('div', 'pg-hp', '<i></i>');
+      mov.append(el('div', 'pg-ombra'), aure, fig, hp);      // ombra, aure e barra PV seguono la figura quando scatta
+      pg.append(mov);
       pg.onclick = () => this.clickCarta(u.id);
-      $('#stage').appendChild(pg);
+      $('#cam').appendChild(pg);
       this.els[u.id] = { card: c, rit, ritardo: $('.ritardo', c), pieno: $('.pieno', c), num: $('.barra-pv .num', c), san: $('.barra-sanita .riempi', c),
-        sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.intenzioni', c), dadi, tag: null, pg, mov, fig, pgTag: null };
+        sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.intenzioni', c), dadi, tag: null, pg, mov, fig, pgTag: null, aure, hpBar: $('i', hp), hpWrap: hp };
       this.render(u.id);
     },
     /** Posiziona le figure secondo le formazioni e ridimensiona in base al palcoscenico. */
     layout() {
       const st = $('#stage'); if (!st) return;
-      st.style.setProperty('--fh', clamp(st.clientHeight * 0.36, 56, 210) + 'px');
+      st.style.setProperty('--fh', clamp(st.clientHeight * 0.37, 54, 220) + 'px');
       ['a', 'n'].forEach(l => {
         const lista = Object.values(this.V).filter(u => u.lato === l);
         const slots = FORM[l][clamp(lista.length, 1, 4)];
@@ -333,6 +404,8 @@
           const p = this.els[u.id].pg, s = slots[i] || slots[slots.length - 1];
           p.style.left = s[0] + '%'; p.style.top = s[1] + '%'; p.style.zIndex = Math.round(s[1] * 10);
           p.dataset.z = p.style.zIndex;
+          const spec = (E.ARTE && E.ARTE[u.def]) || {};
+          p.style.setProperty('--sc', ((spec.scala || 1) * profondita(s[1])).toFixed(3));
         });
       });
     },
@@ -346,6 +419,15 @@
       e.san.style.background = u.sanita >= 0 ? 'linear-gradient(90deg,#6aa8ff,#9fd0ff)' : 'linear-gradient(270deg,#a97be0,#d1a3ff)';
       e.sanNum.textContent = u.sanita;
       e.chips.innerHTML = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" title="${d.nome}: ${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
+      e.hpBar.style.width = pct + '%'; e.hpBar.style.background = u.lato === 'a' ? 'linear-gradient(#7be0a4,#2f9a62)' : 'linear-gradient(#f0707a,#b02a3a)';
+      e.hpWrap.style.opacity = u.vivo ? 1 : 0;
+      // aure degli stati (CSS) + particelle continue (Fx)
+      Object.keys(E.STATI).forEach(st => {
+        const k = 'aura-' + st, ex = e.aure.querySelector('.' + k);
+        if (u.stati[st] && u.vivo) { if (!ex) e.aure.appendChild(el('div', 'aura ' + k, st === 'marchio' ? '<b>◎</b>' : '')); }
+        else if (ex) ex.remove();
+      });
+      Fx.setStati(id, () => (this.els[id] && this.V[id].vivo ? this.pos(id) : null), u.vivo && Object.keys(u.stati).length ? Object.assign({}, u.stati) : null);
       e.card.classList.toggle('morto', !u.vivo);
       e.pg.classList.toggle('morto', !u.vivo);
       const ced = u.ced > 0 && u.vivo;
@@ -361,9 +443,10 @@
       (this.dadi[id] || []).forEach(d => { const x = el('div', 'dado' + (anima ? ' rolla' : ''), d); e.dadi.appendChild(x); });
     },
     mostraArdore() {
-      const B = this.B; let t = 'Ardore ' + this.ardoreV + '/' + C.ARDORE_MAX;
-      if (this.fase === 'pianifica') { const c = Combat().costoPiano(B); if (c) t += ' (−' + c + ')'; }
-      $('#ardore').textContent = t;
+      const B = this.B, costo = this.fase === 'pianifica' ? Combat().costoPiano(B) : 0, tot = this.ardoreV;
+      let h = '<span class="lab">Ardore</span>';
+      for (let i = 0; i < C.ARDORE_MAX; i++) h += '<span class="gem ' + (i < tot - costo ? 'on' : i < tot ? 'pend' : '') + '"></span>';
+      $('#ardore').innerHTML = h + '<span class="n">' + tot + (costo ? ' (−' + costo + ')' : '') + '</span>';
     },
     log(msg, cls) {
       const l = $('#log'); const d = el('div', cls || '', msg); l.appendChild(d);
@@ -472,10 +555,11 @@
       u.skills.forEach((sid, idx) => {
         const s = E.SKILL[sid], rel = bers ? E.rel(s.aff, bers.aff) : 0;
         const b = el('button', 'skill-btn' + (a.skill === sid ? ' sel' : ''));
+        b.style.setProperty('--ac', E.AFFINITA[s.aff].colore);
         b.disabled = u.panico || s.costo > this.disponibile(a) && a.skill !== sid;
         const af = E.AFFINITA[s.aff];
         b.innerHTML = `<div class="t"><span>${idx + 1}. ${s.nome}</span><span class="costo">◆${s.costo}</span></div>
-          <div class="num"><span style="color:${af.colore}">${af.simbolo}</span> ${s.monete}● · PB ${s.pb} · PM +${s.pm}
+          <div class="num"><span style="color:${af.colore}">${af.simbolo}</span> <span class="pips">${'●'.repeat(s.monete)}</span> PB ${s.pb} · PM +${s.pm}
           ${rel > 0 ? '<span class="rel vant">▲ vantaggio</span>' : rel < 0 ? '<span class="rel svant">▼ svantaggio</span>' : ''}</div>
           <div class="d">${E.descrizioneSkill(s).join(' · ')}</div>`;
         b.onclick = () => this.scegliSkill(idx);
@@ -529,12 +613,12 @@
     numero(id, testo, cls, dy) {
       if (!this.els[id]) return;
       const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), testo);
-      n.style.left = (p.x + rnd(-22, 22)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px';
+      n.style.left = (p.x + rnd(-18, 18)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px'; n.style.setProperty('--dx', rnd(-46, 46) + 'px');
       $('#app').appendChild(n); setTimeout(() => n.remove(), 1200);
     },
     shake(elem, amp, dur) {
       const k = []; for (let i = 0; i < 8; i++) k.push({ transform: `translate(${rnd(-amp, amp)}px,${rnd(-amp, amp)}px)` }); k.push({ transform: 'translate(0,0)' });
-      elem.animate(k, { duration: (dur || 300) / this.vel });
+      elem.animate(k, { duration: (dur || 300) / this.vel, composite: 'add' });
     },
     /** Hit-stop: congela animazioni DOM e canvas per pochi millisecondi. */
     async hitStop(ms) {
@@ -556,37 +640,87 @@
     anima(id, nome) { return E.Arte ? E.Arte.anima(this.els[id].fig, nome, this.vel) : Promise.resolve(); },
 
     /* ----- spostamenti delle figure ----- */
-    muovi(id, dx, dy) {
-      const e = this.els[id]; e.mov.style.transitionDuration = (0.18 / this.vel) + 's';
+    /** Punto di contatto con il terreno (centro dei piedi) in coordinate schermo. */
+    piedi(id) { const r = this.els[id].fig.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.bottom - 2 }; },
+    /** Sposta la figura con una corsa (gambe animate, polvere, schiacciamento in partenza). */
+    muovi(id, dx, dy, dur) {
+      const e = this.els[id], d = (dur || 0.28) / this.vel;
+      const corre = Math.hypot(dx, dy) > 14 && !this.skip;
+      e.mov.style.transitionDuration = d + 's'; e.mov.style.transitionTimingFunction = 'cubic-bezier(.35,.0,.25,1)';
       e.mov.style.transform = `translate(${dx}px,${dy}px)`;
-      e.pg.style.zIndex = 5000 + (+e.pg.dataset.z || 0); this.spostati.add(id);
+      this.spostati.add(id);
+      { // ordinamento in profondità: chi sta più in basso sullo schermo (più vicino) sta davanti
+        const st = $('#stage').getBoundingClientRect(), fr = e.fig.getBoundingClientRect();
+        e.pg.style.zIndex = 2000 + Math.round((fr.bottom + dy - st.top) / st.height * 1000) + 5; }
+      if (corre) {
+        e.fig.classList.add('corre');
+        const f0 = this.piedi(id); Fx.polvere(f0.x, f0.y, 5, 0.9);
+        e.fig.style.transformOrigin = '50% 100%';
+        e.fig.animate([{ transform: 'scale(1,1)' }, { transform: 'scale(.9,1.1)', offset: .25 }, { transform: 'scale(1.1,.94)', offset: .8 }, { transform: 'scale(1,1)' }], { duration: d * 1000 });
+        const t0 = performance.now();
+        const passo = () => { if (!e.fig.classList.contains('corre')) return; const f = this.piedi(id); Fx.polvere(f.x, f.y, 1, 0.5); setTimeout(passo, 70); };
+        setTimeout(passo, 70);
+        setTimeout(() => { e.fig.classList.remove('corre'); const f = this.piedi(id); Fx.polvere(f.x, f.y, 6, 1.1); }, d * 1000 + 20);
+      }
     },
-    /** L'attaccante scatta verso il bersaglio fermandosi a distanza di tiro (ravvicinata o no). */
+    /** L'attaccante scatta verso il bersaglio lungo il terreno e si ferma a distanza di tiro (ravvicinata o no). */
     async avanza(att, bers) {
-      const a = this.pos(att), b = this.pos(bers), dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const fa = this.piedi(att), fb = this.piedi(bers), pa = this.pos(att);
       const stile = this.stile(att, this.skillDi[att]);
-      const stop = (stile === 'sparo' || stile === 'lancio') ? Math.max(a.w * 2.6, 90) : Math.max(a.w * 0.85, 34);
-      const k = Math.max(0, (dist - stop) / dist);
-      this.muovi(att, (b.x - a.x) * k, (b.y - a.y) * k * 0.7);
-      await this.sleep(190);
+      const stop = (stile === 'sparo' || stile === 'lancio') ? Math.max(pa.w * 2.8, 100) : Math.max(pa.w * 0.9, 38);
+      const lato = Math.sign(fa.x - fb.x) || 1;                       // da che parte del bersaglio si trova
+      const tx = fb.x + lato * stop, dx = Math.abs(fa.x - fb.x) < stop ? 0 : tx - fa.x;
+      this.muovi(att, dx, fb.y - fa.y + 2);
+      await this.sleep(300);
     },
-    /** Due combattenti si incontrano a metà strada. */
+    /** Due combattenti si incontrano a metà strada, sulla stessa linea di terreno. */
     async incontra(ida, idb) {
-      const a = this.pos(ida), b = this.pos(idb), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / dist, uy = (b.y - a.y) / dist, gap = Math.max(a.w * 0.9, 40);
-      this.muovi(ida, mx - ux * gap / 2 - a.x, (my - uy * gap / 2 - a.y) * 0.8);
-      this.muovi(idb, mx + ux * gap / 2 - b.x, (my + uy * gap / 2 - b.y) * 0.8);
-      await this.sleep(220);
+      const fa = this.piedi(ida), fb = this.piedi(idb), pa = this.pos(ida);
+      const mx = (fa.x + fb.x) / 2, my = (fa.y + fb.y) / 2, gap = Math.max(pa.w * 0.95, 46), la = Math.sign(fb.x - fa.x) || 1;
+      this.muovi(ida, mx - la * gap / 2 - fa.x, my - fa.y);
+      this.muovi(idb, mx + la * gap / 2 - fb.x, my - fb.y + 1);
+      await this.sleep(320);
     },
     async rientraTutti() {
       if (!this.spostati.size) return;
       this.spostati.forEach(id => {
         const e = this.els[id]; if (!e) return;
-        e.mov.style.transitionDuration = (0.25 / this.vel) + 's'; e.mov.style.transform = '';
+        e.mov.style.transitionDuration = (0.3 / this.vel) + 's'; e.mov.style.transform = '';
         e.pg.style.zIndex = e.pg.dataset.z || '';
+        if (!this.skip) { e.fig.classList.add('corre'); setTimeout(() => e.fig.classList.remove('corre'), 300 / this.vel); }
       });
       this.spostati.clear();
-      await this.sleep(260);
+      await this.sleep(300);
+    },
+    /** Zoom della camera verso un punto dello schermo (con sfondo che si scurisce attorno). */
+    zoom(x, y, s) {
+      const st = $('#stage'), r = st.getBoundingClientRect(), cam = $('#cam');
+      cam.style.transitionDuration = (0.38 / this.vel) + 's';
+      cam.style.transformOrigin = '0 0';
+      if (!(s > 1)) { cam.style.transform = 'translate(0px,0px) scale(1)'; return; }
+      // La camera non scopre mai i bordi: la traslazione è limitata allo spazio extra generato dallo zoom.
+      const W = r.width, H = r.height, ox = x - r.left, oy = y - r.top;
+      const tx = clamp(ox - ox * s, W - W * s, 0), ty = clamp(oy - oy * s, H - H * s, 0);
+      cam.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+    },
+    /** Illumina solo i combattenti coinvolti. */
+    messaAFuoco(ids) {
+      $('#stage').classList.toggle('clashing', !!ids);
+      Object.keys(this.els).forEach(id => this.els[id].pg.classList.toggle('in-clash', !!ids && ids.includes(id)));
+    },
+    /** Sequenza "cut-in" per le skill culmine: banda diagonale con il volto del personaggio. */
+    async cutin(attId, skillId) {
+      const u = this.V[attId], s = E.SKILL[skillId], def = u.lato === 'a' ? E.VOCI[u.def] : E.NEMICI[u.def], ac = E.AFFINITA[s.aff].colore;
+      const d = 1.15 / this.vel, w = el('div', 'cutin');
+      w.style.setProperty('--ac', ac); w.style.setProperty('--d', d + 's');
+      w.innerHTML = '<div class="banda"><div class="strisce"></div></div>';
+      const r = UI.ritratto(def, 'cut'); w.appendChild(r);
+      w.appendChild(el('div', 'cut-aff', E.AFFINITA[s.aff].simbolo));
+      w.appendChild(el('div', 'cut-nome', s.nome));
+      w.appendChild(el('div', 'cut-chi', u.breve));
+      $('#app').appendChild(w); setTimeout(() => w.remove(), d * 1000 + 100);
+      Fx.flash(ac, 0.3); Snd.sfx('forte');
+      await this.sleep(1000);
     },
 
     async gestisci(e) {
@@ -603,9 +737,8 @@
         case 'azione': {
           this.log(e.msg); this.skillDi[e.att] = e.skill;
           const s = E.SKILL[e.skill];
-          if (s.costo >= 5 || s.ultima) {            // skill culmine: banner a tutto schermo
-            this.banner(s.nome.toUpperCase()); Fx.flash(E.AFFINITA[s.aff].colore, 0.25); Snd.sfx('forte'); await this.sleep(750);
-          } else { this.numero(e.att, s.nome, 'testo', -34); await this.sleep(240); }
+          if (s.costo >= 5 || s.ultima) await this.cutin(e.att, e.skill);     // skill culmine: cut-in a tutto schermo
+          else { this.numero(e.att, s.nome, 'testo', -34); await this.sleep(240); }
           break;
         }
         case 'affondo': {
@@ -651,7 +784,7 @@
           const u = this.V[e.id]; u.ced = 2; this.render(e.id);
           this.log(e.msg, 'imp'); this.numero(e.id, 'CEDIMENTO!', 'testo', -30);
           const p = this.pos(e.id); Fx.ring(p.x, p.y, '#fff', 150); Fx.flash('#fff', 0.3); Fx.sparks(p.x, p.y, 40, '#fff', 1);
-          this.shake($('#stage'), 8, 400); Snd.sfx('ced'); await this.hitStop(160); await this.sleep(500); break;
+          this.shake($('#cam'), 8, 400); Snd.sfx('ced'); await this.hitStop(160); await this.sleep(500); break;
         }
         case 'ced_agg': { const u = this.V[e.id]; u.ced = e.ced; this.render(e.id); break; }
         case 'panico_fine': { this.V[e.id].panico = false; this.render(e.id); break; }
@@ -664,7 +797,7 @@
         case 'panico': {
           this.V[e.id].panico = true; this.render(e.id); this.log(e.msg, 'imp'); this.numero(e.id, 'PANICO!', 'testo', -30); await this.sleep(300); break;
         }
-        case 'fase': this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#stage'), 10, 500); await this.sleep(1000); break;
+        case 'fase': this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#cam'), 10, 500); await this.sleep(1000); break;
         case 'evoca': this.aggiungiCarta(e.unit); this.layout(); this.log(e.msg, 'imp'); Snd.sfx('forte'); await this.sleep(700); break;
         case 'fine': break;
       }
@@ -687,7 +820,10 @@
       box.appendChild(cl.a.lato); box.appendChild(el('div', 'clash-vs', 'VS')); box.appendChild(cl.b.lato);
       box.className = 'on';
       this.log(e.msg, 'imp'); Snd.sfx('clash');
+      this.messaAFuoco([e.a.id, e.b.id]);
       await this.incontra(e.a.id, e.b.id);
+      { const a0 = this.pos(e.a.id), b0 = this.pos(e.b.id); this.zoom((a0.x + b0.x) / 2, (a0.y + b0.y) / 2 + 10, 1.22); }
+      await this.sleep(380);
       const a = this.pos(e.a.id), b = this.pos(e.b.id);
       this.linea = Fx.linea(a, b, E.AFFINITA[this.V[e.a.id].aff].colore, E.AFFINITA[this.V[e.b.id].aff].colore);
       Fx.flash('#fff', 0.18); Fx.ring((a.x + b.x) / 2, (a.y + b.y) / 2, '#fff', 120);
@@ -710,7 +846,7 @@
       const pa = this.anima(cl.a.id, cl.sa), pb = this.anima(cl.b.id, cl.sb);
       const imp = Math.min(E.Arte.IMPATTO[cl.sa] * E.Arte.DURATA[cl.sa], E.Arte.IMPATTO[cl.sb] * E.Arte.DURATA[cl.sb]);
       await this.sleep(imp * 1000);
-      Fx.sparks(mx, my, 28, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); this.shake($('#stage'), 3, 200); Snd.sfx('clash');
+      Fx.sparks(mx, my, 30, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); Fx.urto(mx, Math.max(this.piedi(cl.a.id).y, this.piedi(cl.b.id).y), 110, '#ffd75e'); this.shake($('#cam'), 3, 200); Snd.sfx('clash');
       await this.hitStop(60);
       await Promise.all([pa, pb]);
       if (e.v) {
@@ -733,6 +869,8 @@
       this.anima(e.perdente, 'hit');
       await this.sleep(500);
       $('#clash').className = ''; Fx.pulisciLinee(); this.linea = null; this.cl = null;
+      this.zoom(0, 0, 1); this.messaAFuoco(null);
+      await this.sleep(300);
     },
 
     /* ----- Colpo singolo ----- */
@@ -755,14 +893,23 @@
       // ---- impatto ----
       const forte = e.danno >= 22 || e.rel === 1;
       bers.pv = e.pvDopo; this.render(e.bers);
-      const p = this.pos(e.bers);
+      const p = this.pos(e.bers), pa = this.pos(e.att), ang = Math.atan2(p.y - pa.y, p.x - pa.x);
       Fx.sparks(p.x, p.y, clamp(10 + Math.round(e.danno * 0.8), 10, 50), colore, 0.7 + Math.min(1, e.danno / 40));
       Fx.ring(p.x, p.y, colore, 60 + e.danno);
-      if (forte) Fx.flash(colore, 0.2);
+      if (stile === 'fendente') Fx.taglio(p.x, p.y, ang + (Math.random() < 0.5 ? 0.5 : -0.5), clamp(40 + e.danno * 1.6, 50, 110), colore);
+      else if (stile === 'affondo') Fx.raggi(p.x, p.y, ang + Math.PI, colore);
+      else if (stile === 'sparo') { Fx.sparks(p.x, p.y, 10, '#ffb04a', 0.9); Fx.raggi(p.x, p.y, ang + Math.PI, '#fff3a0'); }
+      else if (stile === 'lancio') { Fx.ring(p.x, p.y, '#fff', 40 + e.danno); Fx.sparks(p.x, p.y, 8, '#fff', 0.8); }
+      else Fx.ring(p.x, p.y, colore, 80);
+      const fp = this.piedi(e.bers);
+      if (forte) { Fx.flash(colore, 0.2); Fx.urto(fp.x, fp.y, 70 + e.danno, colore); Fx.polvere(fp.x, fp.y, 4, 0.9); }
+      // contraccolpo: il bersaglio viene spinto indietro e ritorna con un rimbalzo
+      { const kb = clamp(6 + e.danno * 0.6, 8, 30) * (Math.cos(ang) >= 0 ? 1 : -1);
+        this.els[e.bers].fig.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${kb}px)`, offset: 0.25 }, { transform: `translateX(${-kb * 0.2}px)`, offset: 0.6 }, { transform: 'translateX(0)' }], { duration: 420 / this.vel, easing: 'ease-out' }); }
       this.numero(e.bers, e.danno, e.rel === 1 ? 'vant' : e.rel === -1 ? 'svant' : '');
       if (e.assorbito) this.numero(e.bers, 'assorbe ' + e.assorbito, 'assorbi', 24);
       this.anima(e.bers, 'hit');
-      if (forte) this.shake($('#stage'), 3 + Math.min(8, e.danno / 6), 320);
+      if (forte) this.shake($('#cam'), 3 + Math.min(8, e.danno / 6), 320);
       Snd.sfx(forte ? 'forte' : 'colpo', e.danno);
       this.log(`${att.breve} → ${bers.breve}: ${e.danno} danni${e.rel === 1 ? ' (vantaggio)' : e.rel === -1 ? ' (svantaggio)' : ''}${e.testa ? '' : ' [croce]'}.`);
       await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150));

@@ -150,11 +150,11 @@
 
   /* ---------- Copricapi (colori c1 = principale, c2 = accento) ---------- */
   const TESTE = {
-    elmo_romano: (c1, c2) => `<path d="M46 38 Q45 18 60 18 Q75 18 74 38 L46 38 Z" fill="${c1}" ${OUT}/><rect x="44" y="36" width="32" height="4" rx="1.5" fill="${scuro(c1, 0.2)}" ${OUT}/>
-      <path d="M47 40 L51 52 L56 41 Z M73 40 L69 52 L64 41 Z" fill="${c1}" ${OUT}/><path d="M48 22 Q60 2 72 22 L67 22 Q60 11 53 22 Z" fill="${c2}" ${OUT}/>`,
-    elmo_cartaginese: (c1, c2) => `<path d="M46 38 Q45 17 60 17 Q75 17 74 38 L46 38 Z" fill="${c1}" ${OUT}/><rect x="44" y="36" width="32" height="4" rx="1.5" fill="${scuro(c1, 0.2)}" ${OUT}/>
-      <path d="M52 20 Q54 -2 62 2 Q58 8 64 20 Z" fill="${c2}" ${OUT}/><path d="M47 40 L52 54 L57 41 Z" fill="${c1}" ${OUT}/>`,
-    elmo_medievale: (c1) => `<path d="M46 38 Q45 17 60 17 Q75 17 74 38 L46 38 Z" fill="${c1}" ${OUT}/><rect x="58" y="37" width="4" height="12" fill="${c1}" ${OUT}/><rect x="44" y="36" width="32" height="3.5" fill="${scuro(c1, 0.25)}" ${OUT}/>`,
+    elmo_romano: (c1, c2) => `<path d="M46 33 Q45 15 60 15 Q75 15 74 33 L46 33 Z" fill="${c1}" ${OUT}/><rect x="44" y="30.5" width="32" height="3.6" rx="1.5" fill="${scuro(c1, 0.2)}" ${OUT}/>
+      <path d="M46 34 L50 50 L54 36 Z M74 34 L70 50 L66 36 Z" fill="${c1}" ${OUT}/><path d="M48 20 Q60 -1 72 20 L67 20 Q60 8 53 20 Z" fill="${c2}" ${OUT}/>`,
+    elmo_cartaginese: (c1, c2) => `<path d="M46 33 Q45 14 60 14 Q75 14 74 33 L46 33 Z" fill="${c1}" ${OUT}/><rect x="44" y="30.5" width="32" height="3.6" rx="1.5" fill="${scuro(c1, 0.2)}" ${OUT}/>
+      <path d="M52 18 Q54 -4 62 0 Q58 6 64 18 Z" fill="${c2}" ${OUT}/><path d="M46 34 L50 52 L54 36 Z" fill="${c1}" ${OUT}/>`,
+    elmo_medievale: (c1) => `<path d="M46 33 Q45 15 60 15 Q75 15 74 33 L46 33 Z" fill="${c1}" ${OUT}/><rect x="58" y="33" width="3.6" height="12" fill="${c1}" ${OUT}/><rect x="44" y="30.5" width="32" height="3.2" fill="${scuro(c1, 0.25)}" ${OUT}/>`,
     alloro: (c1) => `<g fill="${c1}" ${OUT}>${[0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = Math.PI * (1.08 + i * 0.12); return `<ellipse cx="${60 + 13 * Math.cos(a)}" cy="${37 + 13 * Math.sin(a)}" rx="3.6" ry="1.9" transform="rotate(${(a * 180 / Math.PI) + 90} ${60 + 13 * Math.cos(a)} ${37 + 13 * Math.sin(a)})"/>`; }).join('')}</g>`,
     corona: (c1) => `<path d="M48 28 L50 18 L55 25 L60 15 L65 25 L70 18 L72 28 Z" fill="${c1}" ${OUT}/><circle cx="60" cy="22" r="1.6" fill="#c0303f"/>`,
     velo_corona: (c1) => `<path d="M46 38 Q46 17 60 17 Q74 17 74 38 L78 70 L62 52 L46 62 Z" fill="#e9e1cf" ${OUT}/><path d="M49 26 L51 18 L56 24 L60 15 L64 24 L69 18 L71 26 Z" fill="${c1}" ${OUT}/>`,
@@ -233,7 +233,9 @@
     const manica = A.manica === 'nuda' ? pelle : (A.manica || ab.c1);
     const pant = A.pant === 'nuda' ? pelle : (A.pant || ab.c2);
     const xR = 60 + d.sw - 2, xL = 60 - d.sw + 2;
-    const arto = (x1, y1, x2, y2, col) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#1b1422" stroke-width="${d.gw + 2.6}" stroke-linecap="round" fill="none"/><path d="M${x1} ${y1} L${x2} ${y2}" stroke="${col}" stroke-width="${d.gw}" stroke-linecap="round" fill="none"/>`;
+    const arto = (x1, y1, x2, y2, col) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="#1b1422" stroke-width="${d.gw + 2.6}" stroke-linecap="round" fill="none"/><path d="M${x1} ${y1} L${x2} ${y2}" stroke="${col}" stroke-width="${d.gw}" stroke-linecap="round" fill="none"/>
+      <path d="M${x1 - d.gw * 0.22} ${y1 + 1} L${x2 - d.gw * 0.22} ${y2 - 1}" stroke="#fff" stroke-opacity=".2" stroke-width="${d.gw * 0.28}" stroke-linecap="round" fill="none"/>
+      <path d="M${x1 + d.gw * 0.26} ${y1 + 1} L${x2 + d.gw * 0.26} ${y2 - 1}" stroke="#000" stroke-opacity=".22" stroke-width="${d.gw * 0.3}" stroke-linecap="round" fill="none"/>`;
     const gamba = (x0, x1) => `${arto(x0, 104, x1, 178, pant)}${A.fasce ? `<path d="M${x1 - 4} 160 L${x1 + 4} 164 M${x1 - 4} 168 L${x1 + 4} 172" stroke="${scuro(pant)}" stroke-width="1.4"/>` : ''}<path d="M${x1 - 5} 184 Q${x1 - 6} 177 ${x1 + 1} 177 Q${x1 + 6} 177 ${x1 + 10} 182 L${x1 + 10} 187 L${x1 - 5} 187 Z" fill="${A.stivale || '#222'}" ${OUT}/>`;
     const arma = spec.arma && ARMI[spec.arma] ? ARMI[spec.arma](spec.armaC1, spec.armaC2) : null;
     const hair = capelli((spec.capelli || {}).stile, (spec.capelli || {}).colore || '#3a2a1c');
@@ -241,18 +243,22 @@
     const th = spec.testa && TESTE[spec.testa.tipo || spec.testa] ? TESTE[spec.testa.tipo || spec.testa](spec.testa.c1 || '#888', spec.testa.c2 || '#c33') : '';
     const occhio = spec.eco ? (spec.glow || '#ffd75e') : '#1b1422';
     const testa = `${hair.dietro}<rect x="56" y="44" width="9" height="12" fill="${pelle}" ${OUT}/>
-      <circle cx="60" cy="36" r="12" fill="${pelle}" ${OUT}/><circle cx="49.5" cy="38" r="2.6" fill="${pelle}" ${OUT}/>
+      <circle cx="60" cy="36" r="12" fill="${pelle}" ${OUT}/><circle cx="60" cy="36" r="12" fill="url(#gTesta)"/><circle cx="49.5" cy="38" r="2.6" fill="${pelle}" ${OUT}/>
       <path d="M72.5 37 Q76 39 72.6 41.5" fill="${pelle}" ${OUT}/>
-      <circle cx="64" cy="36" r="1.5" fill="${occhio}"/><circle cx="70" cy="36" r="1.5" fill="${occhio}"/><path d="M65 43 Q68 45 71 43" stroke="#1b1422" stroke-width="1" fill="none"/>
-      ${sulViso(spec.viso)}${barba((spec.capelli || {}).barba, bc)}${hair.davanti}${th}`;
-    const gambe = A.nascondiGambe || spec.eco ? '' : `<g class="f-gamba f-gamba-b">${gamba(xL + 6, 52)}</g><g class="f-gamba f-gamba-a">${gamba(xR - 6, 70)}</g>`;
+      ${spec.eco ? `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="${occhio}"/>`
+        : `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="#fff"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="#fff"/><circle cx="64.7" cy="36.4" r="1.45" fill="#1b1422"/><circle cx="70.5" cy="36.4" r="1.3" fill="#1b1422"/><circle cx="65.2" cy="35.7" r=".45" fill="#fff"/><circle cx="71" cy="35.7" r=".4" fill="#fff"/>`}
+      <path d="M61.5 32 Q64 30.5 66.5 32 M67.5 32 Q70 30.5 72.5 32" stroke="#1b1422" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M65.5 43 Q68.5 45.2 71.5 43" stroke="#1b1422" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <ellipse cx="66" cy="40.5" rx="2.4" ry="1.3" fill="#e0707a" opacity=".22"/>
+      ${sulViso(spec.viso)}${barba((spec.capelli || {}).barba, bc)}${hair.davanti}${th}${spec.eco && spec.testa && spec.testa.tipo === 'cappuccio' ? `<ellipse cx="64" cy="37" rx="2.2" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="37" rx="1.9" ry="2.8" fill="${occhio}"/>` : ''}`;
+    const gambe = A.nascondiGambe || spec.eco ? '' : `<g class="f-gamba f-gamba-b" style="transform-origin:${xL + 6}px 104px">${gamba(xL + 6, 52)}</g><g class="f-gamba f-gamba-a" style="transform-origin:${xR - 6}px 104px">${gamba(xR - 6, 70)}</g>`;
     const coda = spec.eco ? `<g class="f-coda"><path d="M${60 - d.ww - 4} 104 Q${60 - d.ww - 8} 140 ${52} 160 Q58 172 50 186 Q66 170 64 158 Q80 150 ${60 + d.ww + 4} 104 Z" fill="${mix(ab.c1, '#000', 0.25)}" opacity=".85"/></g>` : '';
     const fx = arma && arma.lampo ? `<g class="f-lampo" transform="translate(0,${arma.lampo})"><path d="M0 -8 L3 -2 L9 0 L3 2 L0 8 L-3 2 L-9 0 L-3 -2 Z" fill="#fff3a0"/><circle r="4" fill="#ff9a2a"/></g>` : '';
     const scudo = spec.scudo ? SCUDI[spec.scudo.tipo](spec.scudo.c1, spec.scudo.c2) : '';
     return `<g class="f-tutto" style="transform-origin:60px 188px">
       <g class="f-aura"><circle cx="60" cy="100" r="46" fill="none" stroke="${spec.glow || '#ffd75e'}" stroke-width="3" opacity="0"/></g>
       ${dietro(spec, d)}${gambe}${coda}
-      <g class="f-torso" style="transform-origin:60px 106px">${A.svg}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}</g>
+      <g class="f-torso" style="transform-origin:60px 106px">${A.svg}<path d="${T(d)}" fill="url(#gVert)"/><path d="${T(d)}" fill="url(#gOmbra)"/>${A.nascondiGambe ? `<path d="M${60 - d.ww} 100 L${60 + d.ww} 100 L${60 + d.ww + 16} 178 L${60 - d.ww - 16} 178 Z" fill="url(#gOmbra)"/>` : ''}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}</g>
       <g class="f-braccio-b" style="transform-origin:${xL}px 60px">${arto(xL, 60, xL - 2, 92, manica)}<circle cx="${xL - 2}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>${scudo}</g>
       <g class="f-testa" style="transform-origin:60px 50px">${testa}</g>
       <g class="f-braccio-a" style="transform-origin:${xR}px 60px">${arto(xR, 60, xR, 92, manica)}<circle cx="${xR}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>
@@ -262,19 +268,23 @@
 
   /* ---------- Elefante (nemico quadrupede) ---------- */
   function elefante(id, spec) {
-    const c = spec.pelle || '#8a8090', cs = scuro(c, 0.3);
-    const zampa = (x, cls) => `<g class="f-gamba ${cls}"><rect x="${x}" y="130" width="15" height="54" rx="6" fill="${cs}" ${OUT}/><ellipse cx="${x + 7.5}" cy="184" rx="9" ry="4" fill="#4a4250" ${OUT}/></g>`;
+    const c = spec.pelle || '#8a8090', cs = scuro(c, 0.28), cc = chiaro(c, 0.12);
+    const zampa = (x, cls) => `<g class="f-gamba ${cls}" style="transform-origin:${x + 8}px 128px"><path d="M${x} 126 L${x + 16} 126 L${x + 17} 180 Q${x + 8} 190 ${x - 1} 180 Z" fill="${cs}" ${OUT}/><path d="M${x + 1} 178 h4 M${x + 7} 180 h4 M${x + 13} 178 h3" stroke="#e9e1cf" stroke-width="2.4" stroke-linecap="round"/></g>`;
     return `<g class="f-tutto" style="transform-origin:60px 188px">
       <g class="f-aura"><circle cx="60" cy="110" r="70" fill="none" stroke="${spec.glow || '#c0303f'}" stroke-width="3" opacity="0"/></g>
-      ${zampa(14, 'f-gamba-b')}${zampa(70, 'f-gamba-b')}
-      <g class="f-torso" style="transform-origin:60px 150px"><path d="M6 110 Q8 78 50 76 Q92 76 98 108 Q100 138 84 144 L22 144 Q4 138 6 110 Z" fill="${c}" ${OUT}/>
-        <path d="M96 106 Q102 106 104 114" stroke="${cs}" stroke-width="3" fill="none"/></g>
-      ${zampa(30, 'f-gamba-a')}${zampa(86, 'f-gamba-a')}
-      <g class="f-testa" style="transform-origin:96px 100px">
-        <path d="M82 84 Q96 66 112 82 Q122 98 118 126 Q116 160 122 172 Q110 176 108 164 Q104 138 98 118 Z" fill="${c}" ${OUT}/>
-        <ellipse cx="94" cy="96" rx="14" ry="22" fill="${cs}" ${OUT}/><path d="M112 96 Q132 100 128 118 Q122 106 112 106 Z" fill="#e9e1cf" ${OUT}/>
-        <circle cx="108" cy="90" r="2.4" fill="${spec.glow || '#ffd75e'}"/></g>
-      <g class="f-braccio-a f-braccio-b"></g>
+      ${zampa(14, 'f-gamba-b')}${zampa(72, 'f-gamba-b')}
+      <g class="f-mantello" style="transform-origin:8px 96px"><path d="M10 96 Q-4 106 2 130" stroke="${cs}" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="2" cy="132" r="3" fill="${cs}"/></g>
+      <g class="f-torso" style="transform-origin:60px 150px"><path d="M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z" fill="${c}" ${OUT}/>
+        <path d="M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z" fill="url(#gVert)"/><path d="M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z" fill="url(#gOmbra)"/>
+        <path d="M30 90 Q44 84 56 90 M40 110 Q56 104 70 112" stroke="${cs}" stroke-width="1.2" fill="none" opacity=".6"/></g>
+      ${zampa(32, 'f-gamba-a')}${zampa(90, 'f-gamba-a')}
+      <g class="f-testa" style="transform-origin:100px 96px">
+        <path d="M96 78 Q122 66 128 96 Q132 112 124 124 Q118 156 128 176 Q116 182 112 168 Q106 140 104 124 L92 118 Z" fill="${c}" ${OUT}/>
+        <path d="M112 98 Q122 100 126 112" stroke="${cs}" stroke-width="1.1" fill="none"/><path d="M110 112 Q124 114 128 126" stroke="${cs}" stroke-width="1.1" fill="none"/>
+        <ellipse cx="94" cy="96" rx="15" ry="24" fill="${cs}" ${OUT}/><ellipse cx="96" cy="96" rx="9" ry="17" fill="${scuro(c, 0.1)}" opacity=".7"/>
+        <path d="M114 118 Q132 124 134 106 Q124 114 112 108 Z" fill="#efe6cf" ${OUT}/>
+        <circle cx="116" cy="94" r="2.6" fill="${spec.glow || '#ffd75e'}"/><circle cx="116" cy="94" r="1" fill="#1b1422"/>
+      </g>
     </g>`;
   }
 
@@ -317,7 +327,7 @@
     const spec = E.ARTE[id]; opz = opz || {};
     if (!spec) { const d = el('div', 'fig'); d.textContent = '?'; return d; }
     if (spec.sprite) return sprite(spec, opz);
-    const vb = spec.figura === 'elefante' ? '-6 0 140 200' : '0 0 120 200';
+    const vb = spec.figura === 'elefante' ? '-6 0 140 190' : '0 0 120 190';
     const body = spec.figura === 'elefante' ? elefante(id, spec) : umanoide(id, spec, opz);
     const d = el('div', 'fig' + (spec.eco ? ' eco' : '') + (spec.figura === 'elefante' ? ' quadrupede' : ''));
     const aA = spec.attacco === 'sparo' ? -14 : -18;
@@ -342,7 +352,7 @@
       }
       d.appendChild(i); return d;
     }
-    const vb = spec.figura === 'elefante' ? '60 56 78 78' : '28 6 64 64';
+    const vb = spec.figura === 'elefante' ? '70 62 72 72' : '28 6 64 64';
     const body = spec.figura === 'elefante' ? elefante(id, spec) : umanoide(id, spec);
     d.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" class="busto-svg">${body}</svg>`;
     return d;
@@ -366,15 +376,34 @@
   };
   Arte.reset = function (fig) { [...fig.classList].filter(c => c.startsWith('a-')).forEach(c => fig.classList.remove(c)); };
 
-  /* ---------- Sfondo del palcoscenico per capitolo ---------- */
+  /* ---------- Sfondo e arena per capitolo ---------- */
+  /** Palette per capitolo: cielo, luna, sagome, sabbia/pietra dell'arena, bordo, colore delle particelle d'ambiente. */
+  Arte.PALETTE = [
+    { cielo: ['#2b1c3a', '#7a3a4a'], sagome: '#1a1220', sabbia: ['#b89a6a', '#7a5f3e', '#3a2c20'], bordo: '#d9b44a', polvere: '255,215,150' },   // Roma repubblicana
+    { cielo: ['#2a1a1a', '#a0401a'], sagome: '#1e1210', sabbia: ['#b0825a', '#74503a', '#34231a'], bordo: '#e0722e', polvere: '255,160,90' },
+    { cielo: ['#1e2a3a', '#5a6a8a'], sagome: '#141a24', sabbia: ['#8a8f96', '#5c6068', '#2a2c32'], bordo: '#9fb3c8', polvere: '200,215,240' },
+    { cielo: ['#2a2230', '#9a7a4a'], sagome: '#1a141c', sabbia: ['#a8906a', '#6e5a3c', '#30261c'], bordo: '#d9b44a', polvere: '255,220,160' },
+    { cielo: ['#1c2a2a', '#4a8a7a'], sagome: '#121a1a', sabbia: ['#8aa07a', '#566a4e', '#243026'], bordo: '#7fc4a0', polvere: '190,255,210' },
+    { cielo: ['#26262c', '#7a7a82'], sagome: '#16161a', sabbia: ['#8a8478', '#575248', '#26231e'], bordo: '#b0b0b8', polvere: '210,210,220' },
+    { cielo: ['#161618', '#3a3a44'], sagome: '#0c0c0e', sabbia: ['#6a6a70', '#44444a', '#1c1c20'], bordo: '#8a8a94', polvere: '180,180,190' }];
+  Arte.palette = cap => Arte.PALETTE[cap % Arte.PALETTE.length];
+  /** Applica i colori dell'arena alle variabili CSS dello stage. */
+  Arte.applicaPalette = function (stageEl, cap) {
+    const p = Arte.palette(cap);
+    stageEl.style.setProperty('--sabbia1', p.sabbia[0]); stageEl.style.setProperty('--sabbia2', p.sabbia[1]); stageEl.style.setProperty('--sabbia3', p.sabbia[2]);
+    stageEl.style.setProperty('--bordo-arena', p.bordo); stageEl.style.setProperty('--orizzonte', p.cielo[1]);
+    return p;
+  };
+  /** Sfondo lontano (cielo, luna, colline, colonne): l'orizzonte sta al 42% dell'altezza, il pavimento è in CSS. */
   Arte.sfondo = function (cap) {
-    const pal = [
-      ['#2b1c3a', '#6a3a4a', '#1a1220'], ['#2a1a1a', '#8a3a1a', '#1e1210'], ['#1e2a3a', '#4a5a7a', '#141a24'], ['#2a2230', '#8a6a4a', '#1a141c'],
-      ['#1c2a2a', '#4a7a6a', '#121a1a'], ['#26262c', '#6a6a72', '#16161a'], ['#161618', '#3a3a42', '#0c0c0e']][cap % 7];
-    const colonne = [0, 1, 2, 3, 4].map(i => `<g fill="${pal[2]}" opacity=".85"><rect x="${70 + i * 90}" y="${50 + (i % 2) * 14}" width="20" height="130"/><rect x="${64 + i * 90}" y="${44 + (i % 2) * 14}" width="32" height="8"/></g>`).join('');
-    return `<svg viewBox="0 0 520 300" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" class="sfondo-svg">
-      <rect width="520" height="300" fill="${pal[0]}"/><circle cx="410" cy="70" r="34" fill="${pal[1]}" opacity=".55"/><circle cx="410" cy="70" r="52" fill="${pal[1]}" opacity=".15"/>
-      <path d="M0 190 Q90 140 190 180 T380 170 T520 185 L520 300 L0 300 Z" fill="${pal[2]}" opacity=".8"/>${colonne}
-      <rect y="196" width="520" height="104" fill="${pal[2]}"/><ellipse cx="260" cy="250" rx="300" ry="54" fill="${pal[1]}" opacity=".16"/></svg>`;
+    const p = Arte.palette(cap);
+    const colonne = [0, 1, 2, 3, 4, 5].map(i => `<g fill="${p.sagome}" opacity="${0.55 + (i % 2) * 0.25}"><rect x="${40 + i * 88}" y="${62 + (i % 2) * 12}" width="${18 - (i % 2) * 4}" height="${86 - (i % 2) * 12}"/><rect x="${35 + i * 88}" y="${57 + (i % 2) * 12}" width="${28 - (i % 2) * 4}" height="7"/><rect x="${36 + i * 88}" y="${146}" width="${26}" height="4"/></g>`).join('');
+    const stelle = Array.from({ length: 26 }, (_, i) => `<circle cx="${(i * 97) % 520}" cy="${(i * 53) % 90}" r="${0.6 + (i % 3) * 0.4}" fill="#fff" opacity="${0.25 + (i % 4) * 0.12}"/>`).join('');
+    return `<svg viewBox="0 0 520 150" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" class="sfondo-svg">
+      <defs><linearGradient id="gCielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.cielo[0]}"/><stop offset="1" stop-color="${p.cielo[1]}"/></linearGradient></defs>
+      <rect width="520" height="150" fill="url(#gCielo)"/>${stelle}
+      <circle cx="400" cy="52" r="46" fill="${p.cielo[1]}" opacity=".18"/><circle cx="400" cy="52" r="26" fill="#fff" opacity=".22"/>
+      <path d="M0 118 Q90 78 190 108 T380 100 T520 112 L520 150 L0 150 Z" fill="${p.sagome}" opacity=".7"/>
+      <path d="M0 132 Q120 104 240 128 T520 124 L520 150 L0 150 Z" fill="${p.sagome}" opacity=".95"/>${colonne}</svg>`;
   };
 })(typeof window !== 'undefined' ? window : globalThis);
