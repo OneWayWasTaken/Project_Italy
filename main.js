@@ -45,9 +45,11 @@
     let ultima = null;                                  // ultima battaglia (per "Riprova")
     const persist = () => E.Save.save();
 
-    function avviaBattaglia(squadra, incontro) {
-      ultima = { squadra, incontro };
-      save.squadra = squadra.slice(); save.incontro = incontro; persist();
+    function avviaBattaglia(squadra, incontro, opz) {
+      opz = opz || {};
+      ultima = { squadra, incontro, opz };
+      ctx.tutorial = !!opz.tutorial;
+      if (!opz.tutorial) { save.squadra = squadra.slice(); save.incontro = incontro; persist(); }
       const B = E.Combat.creaBattaglia({ alleati: squadra, nemici: E.INCONTRI[incontro].nemici });
       root.__battaglia = B;                              // utile per debug da console
       E.UI.battaglia.avvia(B, ctx);
@@ -55,12 +57,25 @@
     const ctx = {
       save, persist,
       onAvvia: avviaBattaglia,
-      onRiprova: () => avviaBattaglia(ultima.squadra, ultima.incontro),
+      onRiprova: () => avviaBattaglia(ultima.squadra, ultima.incontro, ultima.opz),
+      avviaTutorial: () => avviaBattaglia(E.INCONTRI.tutorial.squadra, 'tutorial', { tutorial: true }),
       onMenu: () => E.UI.mostra('menu'),
       onFine(esito) { if (esito === 'vittoria') save.stats.vittorie++; else save.stats.sconfitte++; persist(); }
     };
 
     E.UI.init(ctx);
+    // Primo avvio: propone il tutorial (con possibilità di saltarlo del tutto)
+    if (save.tutorial === undefined) {
+      const d = document.createElement('div');
+      d.innerHTML = '<h3>Benvenuto in Echi d\'Italia</h3><p>Vuoi una breve <b>guida interattiva</b> che spiega come funziona il gioco? Dura un paio di minuti e puoi interromperla quando vuoi.</p><div class="primo-btn"></div>';
+      const b1 = document.createElement('button'); b1.className = 'btn grande'; b1.textContent = 'Inizia il tutorial';
+      const b2 = document.createElement('button'); b2.className = 'btn'; b2.textContent = 'Salta (non chiedermelo più)';
+      b1.onclick = () => { document.getElementById('modale').classList.remove('on'); ctx.avviaTutorial(); };
+      b2.onclick = () => { save.tutorial = 'saltato'; persist(); document.getElementById('modale').classList.remove('on'); };
+      d.querySelector('.primo-btn').append(b1, b2);
+      E.UI.modale(d);
+      document.querySelector('#modale .pannello-modale > .btn:last-child').style.display = 'none';   // niente "Chiudi": si sceglie uno dei due
+    }
     document.querySelectorAll('[data-azione]').forEach(b => {
       b.addEventListener('click', () => {
         E.UI.Snd.init();
@@ -68,6 +83,8 @@
           case 'nuova-prova': E.UI.squadra.init(ctx); E.UI.mostra('squadra'); break;
           case 'menu': E.UI.mostra('menu'); break;
           case 'opzioni': E.UI.opzioni(save, persist, () => {}); break;
+          case 'tutorial': ctx.avviaTutorial(); break;
+          case 'manuale': E.UI.manuale(0); break;
         }
       });
     });

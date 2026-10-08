@@ -392,3 +392,30 @@ html, body, #app { height: 100%; }
   #stage { border-radius: 10px; } #vignetta { border-radius: 10px; }
 }
 
+
+/* ============================================================================
+ * TUTORIAL, MANUALE, SUGGERIMENTI
+ * ========================================================================== */
+.tut { position: fixed; inset: 0; z-index: 150; pointer-events: none; display: none; }
+.tut.on { display: block; }
+.tut-blocco { position: absolute; inset: 0; pointer-events: none; }
+.tut.info .tut-blocco { pointer-events: auto; }
+.tut-spot { position: fixed; border-radius: 12px; border: 2px solid var(--oro); box-shadow: 0 0 0 100vmax #000000b8, 0 0 24px #e0b43a99; pointer-events: none; transition: left .25s, top .25s, width .25s, height .25s; animation: spot 1.6s ease-in-out infinite; }
+@keyframes spot { 50% { border-color: #fff3c4; } }
+.tut:not(.con-spot) .tut-blocco { background: #000000a8; }
+.tut-card { position: fixed; pointer-events: auto; background: linear-gradient(#2c2340, #1c1628); border: 1px solid var(--oro2); border-radius: 12px; padding: 12px 16px; box-shadow: 0 10px 40px #000c, 0 0 0 1px #000; font-size: 14px; line-height: 1.45; }
+.tut-titolo { color: var(--oro); font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+.tut-testo b { color: #ffe9a8; }
+.tut-azioni { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.tut-salta { margin-right: auto; opacity: .75; }
+.tip { position: fixed; z-index: 300; background: #0c0912f2; border: 1px solid var(--oro2); border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 1.4; max-width: 260px; pointer-events: none; opacity: 0; transition: opacity .12s; box-shadow: 0 6px 20px #000b; }
+.tip.on { opacity: 1; }
+#modale { z-index: 200; }
+.manuale .man-corpo { font-size: 14px; line-height: 1.5; min-height: 190px; }
+.manuale .man-corpo b { color: #ffe9a8; }
+.manuale ul { padding-left: 18px; } .manuale li { margin: 4px 0; }
+.man-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.man-pag { color: var(--testo2); font-size: 12px; }
+.diag-svg { width: 230px; max-width: 100%; display: block; margin: 4px auto; }
+.primo-btn { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+@media (max-height: 520px) { .tut-card { font-size: 12px; padding: 8px 12px; } .tut-titolo { font-size: 14px; } .manuale .man-corpo { font-size: 12px; min-height: 120px; } .diag-svg { width: 170px; } }

@@ -261,6 +261,49 @@
     d.appendChild(el('p', '', '<b>Concordie</b> (coppie opposte): ' + E.CONCORDIE.map(c => E.AFFINITA[c[0]].nome + ' + ' + E.AFFINITA[c[1]].nome).join(' · ') + '.<br>Con una Concordia in squadra: +4 Sanità ai due membri e +1 Ardore iniziale.'));
     UI.modale(d);
   };
+  /** Diagramma del ciclo delle affinità (SVG). */
+  UI.diagrammaAffinita = function () {
+    const o = E.AFFINITA_ORDINE, cx = 100, cy = 96, R = 70, pos = i => { const a = -Math.PI / 2 + i * Math.PI / 3; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; };
+    let s = '<svg viewBox="0 0 200 192" class="diag-svg"><defs><marker id="frecciaA" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#e8d8a8"/></marker></defs>';
+    o.forEach((a, i) => {
+      const p = pos(i), q = pos((i + 1) % 6), dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy), k = 17 / L;
+      s += `<line x1="${p[0] + dx * k}" y1="${p[1] + dy * k}" x2="${q[0] - dx * k}" y2="${q[1] - dy * k}" stroke="#e8d8a8" stroke-width="2" marker-end="url(#frecciaA)"/>`;
+    });
+    o.forEach((a, i) => { const p = pos(i), A = E.AFFINITA[a]; s += `<circle cx="${p[0]}" cy="${p[1]}" r="15" fill="${A.colore}" stroke="#000" stroke-opacity=".5" stroke-width="1.5"/><text x="${p[0]}" y="${p[1] + 5}" text-anchor="middle" font-size="15" fill="#1b1422" font-weight="bold">${A.simbolo}</text><text x="${p[0]}" y="${p[1] + (p[1] < cy ? -20 : 29)}" text-anchor="middle" font-size="10" fill="#efe6d2">${A.nome}</text>`; });
+    return s + '<text x="100" y="94" text-anchor="middle" font-size="9" fill="#a99fb4">forte contro →</text></svg>';
+  };
+  /** Manuale "Come si gioca" a pagine. */
+  UI.manuale = function (pag) {
+    const P = E.TUTORIAL.manuale; pag = pag || 0;
+    const d = el('div', 'manuale');
+    d.appendChild(el('h3', '', 'Come si gioca — ' + P[pag].titolo));
+    const corpo = el('div', 'man-corpo', P[pag].html); d.appendChild(corpo);
+    const dg = corpo.querySelector('.diag-aff'); if (dg) dg.innerHTML = UI.diagrammaAffinita();
+    const ls = corpo.querySelector('.lista-stati');
+    if (ls) Object.keys(E.STATI).forEach(k => { const s = E.STATI[k]; ls.appendChild(el('li', '', `<b style="color:${s.colore}">${s.icona} ${s.nome}</b> — ${s.desc}`)); });
+    const nav = el('div', 'man-nav');
+    const prec = el('button', 'btn piccolo', '← Indietro'), succ = el('button', 'btn piccolo', 'Avanti →');
+    prec.disabled = pag === 0; succ.disabled = pag === P.length - 1;
+    prec.onclick = () => UI.manuale(pag - 1); succ.onclick = () => UI.manuale(pag + 1);
+    nav.appendChild(prec); nav.appendChild(el('span', 'man-pag', (pag + 1) + ' / ' + P.length)); nav.appendChild(succ); d.appendChild(nav);
+    UI.modale(d);
+  };
+  /** Suggerimenti al passaggio del mouse / tocco su elementi con data-tip. */
+  UI.iniziaTip = function () {
+    const tip = el('div', 'tip'); tip.id = 'tip'; $('#app').appendChild(tip); let to = null;
+    const mostra = t => {
+      tip.innerHTML = t.dataset.tip; tip.classList.add('on');
+      const r = t.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+      tip.style.left = clamp(r.left + r.width / 2 - tw / 2, 6, root.innerWidth - tw - 6) + 'px';
+      tip.style.top = (r.top - th - 8 < 6 ? r.bottom + 8 : r.top - th - 8) + 'px';
+    };
+    const nascondi = () => { tip.classList.remove('on'); clearTimeout(to); };
+    document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const t = e.target.closest && e.target.closest('[data-tip]'); if (t) mostra(t); else nascondi(); });
+    document.addEventListener('pointerdown', e => {
+      const t = e.target.closest && e.target.closest('[data-tip]');
+      if (t && e.pointerType !== 'mouse') { mostra(t); clearTimeout(to); to = setTimeout(nascondi, 2800); } else if (e.pointerType !== 'mouse') nascondi();
+    });
+  };
   UI.opzioni = function (save, persist, onVel) {
     const d = el('div'); d.innerHTML = '<h3>Opzioni</h3>';
     const r1 = el('div', 'opz-riga', '<span>Velocità animazioni</span>'); const g = el('span');
@@ -272,6 +315,8 @@
     const rf = el('div', 'opz-riga', '<span>Schermo intero</span>'); const bf = el('button', 'btn piccolo', 'Attiva');
     bf.onclick = () => { const de = document.documentElement; try { if (document.fullscreenElement) document.exitFullscreen(); else if (de.requestFullscreen) de.requestFullscreen(); } catch (e) { /* non supportato */ } };
     rf.appendChild(bf); d.appendChild(rf);
+    const rt = el('div', 'opz-riga', '<span>Tutorial: ' + (save.tutorial === 'completato' ? 'completato' : save.tutorial === 'saltato' ? 'saltato' : 'da fare') + '</span>');
+    const bt = el('button', 'btn piccolo', 'Riattiva suggerimenti'); bt.onclick = () => { delete save.tutorial; persist(); bt.textContent = 'Fatto'; bt.disabled = true; }; rt.appendChild(bt); d.appendChild(rt);
     const r3 = el('div', 'opz-riga', '<span>Cancella salvataggio</span>'); const b3 = el('button', 'btn piccolo', 'Cancella');
     b3.onclick = () => { if (confirm('Cancellare tutti i progressi?')) { E.Save.reset(); location.reload(); } };
     r3.appendChild(b3); d.appendChild(r3);
@@ -298,7 +343,7 @@
         g.appendChild(c);
       });
       const s = $('#sq-incontro'); s.innerHTML = '';
-      Object.values(E.INCONTRI).forEach(i => { const o = el('option', '', i.nome); o.value = i.id; s.appendChild(o); });
+      Object.values(E.INCONTRI).filter(i => !i.tutorial).forEach(i => { const o = el('option', '', i.nome); o.value = i.id; s.appendChild(o); });
       s.value = save.incontro && E.INCONTRI[save.incontro] ? save.incontro : 'pattuglia';
       $('#sq-via').onclick = () => ctx.onAvvia(this.sel.slice(), s.value);
       $('#sq-affinita').onclick = () => UI.tabellaAffinita();
@@ -367,6 +412,7 @@
       this.ardoreV = B.ardore; this.mostraArdore();
       this.aggiornaVel(); $('#btn-audio').textContent = 'Suono: ' + (Snd.on ? 'sì' : 'no');
       this.log('Il Custode entra nell\'Eco…', 'imp');
+      if (E.Tutorial) { if (ctx.tutorial) E.Tutorial.inizia(ctx); else E.Tutorial.attivo = false; }
       this.cicloTurno(B.eventiIniziali);
     },
 
@@ -426,7 +472,7 @@
       e.san.style.width = w + '%'; e.san.style.left = (u.sanita >= 0 ? 50 : 50 - w) + '%';
       e.san.style.background = u.sanita >= 0 ? 'linear-gradient(90deg,#6aa8ff,#9fd0ff)' : 'linear-gradient(270deg,#a97be0,#d1a3ff)';
       e.sanNum.textContent = u.sanita;
-      e.chips.innerHTML = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" title="${d.nome}: ${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
+      e.chips.innerHTML = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" data-tip="<b>${d.nome} ${u.stati[s]}</b><br>${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
       e.hpBar.style.width = pct + '%'; e.hpBar.style.background = u.lato === 'a' ? 'linear-gradient(#7be0a4,#2f9a62)' : 'linear-gradient(#f0707a,#b02a3a)';
       e.hpWrap.style.opacity = u.vivo ? 1 : 0;
       // aure degli stati (CSS) + particelle continue (Fx)
@@ -448,7 +494,7 @@
     },
     renderDadi(id, anima) {
       const e = this.els[id]; if (!e) return; e.dadi.innerHTML = '';
-      (this.dadi[id] || []).forEach(d => { const x = el('div', 'dado' + (anima ? ' rolla' : ''), d); e.dadi.appendChild(x); });
+      (this.dadi[id] || []).forEach(d => { const x = el('div', 'dado' + (anima ? ' rolla' : ''), d); x.dataset.tip = '<b>Dado di velocità: ' + d + '</b><br>Chi ha il numero più alto agisce per primo e sceglie chi affrontare.'; e.dadi.appendChild(x); });
     },
     mostraArdore() {
       const B = this.B, costo = this.fase === 'pianifica' ? Combat().costoPiano(B) : 0, tot = this.ardoreV;
@@ -486,20 +532,23 @@
       this.sel = this.sel && B.azioni.some(a => a.u === this.sel) && this.V[this.sel].vivo ? this.sel : prima;
       this.aggiornaPiano();
       this.log('— Pianifica: scegli skill e bersagli, poi Esegui turno —');
+      if (E.Tutorial && E.Tutorial.attivo) E.Tutorial.pianifica(B.turno, this);
       return new Promise(res => { this._pronto = res; });
     },
     conferma() {
-      if (this.fase !== 'pianifica') return;
+      if (this.fase !== 'pianifica' || this.bloccato()) return;
       if (!Combat().pianoValido(this.B)) { this.log('Ardore insufficiente per il piano scelto.', 'imp'); return; }
       Snd.init(); Snd.sfx('ui');
+      if (E.Tutorial) E.Tutorial.notifica('esegui');
       this.fase = 'riproduzione'; $('#btn-esegui').disabled = true; $('#btn-affondo').style.display = 'none';
       $$('.unit, .pg').forEach(c => c.classList.remove('sel', 'bersaglio-di-sel', 'bersagliabile'));
       Object.keys(this.els).forEach(id => { this.els[id].intent.innerHTML = ''; });
       this.disegnaSkills();
       const r = this._pronto; this._pronto = null; r && r();
     },
+    bloccato() { return !!(E.Tutorial && E.Tutorial.bloccaInput()); },
     clickCarta(id) {
-      if (this.fase !== 'pianifica') return;
+      if (this.fase !== 'pianifica' || this.bloccato()) return;
       Snd.init();
       const u = this.V[id];
       if (u.lato === 'a') { if (u.vivo) { this.sel = id; Snd.sfx('ui'); this.aggiornaPiano(); } return; }
@@ -509,9 +558,10 @@
       const idx = this.B.byId[this.sel].skills.indexOf(a.skill);
       Combat().pianifica(this.B, this.sel, idx, id); Snd.sfx('ui');
       this.aggiornaPiano();
+      if (E.Tutorial) E.Tutorial.notifica('bersaglio');
     },
     scegliSkill(idx) {
-      if (this.fase !== 'pianifica' || !this.sel) return;
+      if (this.fase !== 'pianifica' || !this.sel || this.bloccato()) return;
       const a = this.B.azioni.find(x => x.u === this.sel); if (!a) return;
       const dis = this.disponibile(a);
       if (E.SKILL[this.B.byId[this.sel].skills[idx]].costo > dis) return;
@@ -520,7 +570,7 @@
     },
     /** Attiva/disattiva l'Affondo: la Voce selezionata colpisce gratis un nemico in Cedimento. */
     toggleAffondo() {
-      if (this.fase !== 'pianifica') return;
+      if (this.fase !== 'pianifica' || this.bloccato()) return;
       const B = this.B;
       if (B.affondo) { Combat().pianificaAffondo(B, null); this.log('Affondo annullato.'); }
       else {
@@ -578,6 +628,7 @@
     async finale() {
       const B = this.B; this.fase = 'fine';
       await this.rientraTutti();
+      if (E.Tutorial && E.Tutorial.attivo && B.esito === 'vittoria') await E.Tutorial.fine(); else if (E.Tutorial && E.Tutorial.attivo) E.Tutorial.ferma(null);
       // Posa di vittoria dei sopravvissuti
       if (B.esito === 'vittoria') Object.keys(this.els).forEach(id => { if (this.V[id].lato === 'a' && this.V[id].vivo) this.els[id].fig.classList.add('a-vittoria'); });
       await this.sleep(900);
@@ -733,6 +784,7 @@
     },
 
     async gestisci(e) {
+      if (E.Tutorial && E.Tutorial.attivo) await E.Tutorial.evento(e);
       if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) await this.rientraTutti();
       switch (e.t) {
         case 'turno':
@@ -965,7 +1017,7 @@
 
   /* ----- Collegamento controlli (una sola volta) ----- */
   UI.init = function (ctx) {
-    Fx.init();
+    Fx.init(); UI.iniziaTip();
     $('#btn-esegui').onclick = () => Bat.conferma();
     $('#btn-affondo').onclick = () => Bat.toggleAffondo();
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
@@ -975,7 +1027,7 @@
     };
     root.addEventListener('resize', () => { if (Bat.B) Bat.layout(); });
     document.addEventListener('keydown', e => {
-      if (!$('#scr-battaglia').classList.contains('active') || Bat.fase !== 'pianifica') return;
+      if (!$('#scr-battaglia').classList.contains('active') || Bat.fase !== 'pianifica' || Bat.bloccato()) return;
       if (e.key >= '1' && e.key <= '3') Bat.scegliSkill(+e.key - 1);
       else if (e.key === 'Enter') Bat.conferma();
       else if (e.key === 'a' || e.key === 'A') Bat.toggleAffondo();

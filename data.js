@@ -222,8 +222,44 @@
 
   /* ---------- Incontri di prova (Fase 1) ---------- */
   E.INCONTRI = {
+    tutorial:  { id: 'tutorial', nome: 'Tutorial', desc: 'Incontro guidato.', nemici: ['eco_cartaginese', 'legionario'], tutorial: true, squadra: ['scipione', 'spartaco', 'perpetua', 'leonardo'] },
     pattuglia: { id: 'pattuglia', nome: "Pattuglia dell'Eco", desc: 'Tre echi di Canne. Ideale per imparare gli scontri.', nemici: ['eco_cartaginese', 'elefante', 'legionario'] },
     annibale:  { idle: 'regale', idleVars: { '--cape': '10deg' }, id: 'annibale', nome: 'Annibale, Eco di Canne', desc: 'Il Nodo del primo capitolo: 2-3 azioni per turno e due fasi.', nemici: ['annibale'] }
+  };
+
+  /* ---------- Tutorial e manuale (testi) ----------
+   * passi: coach-mark durante la pianificazione del 1° turno (sel = selettore CSS evidenziato,
+   * azione = attende che il giocatore faccia qualcosa: 'bersaglio' | 'esegui').
+   * reattivi: spiegazioni che compaiono la prima volta che succede qualcosa (chiave = tipo di evento di combattimento). */
+  E.TUTORIAL = {
+    passi: [
+      { id: 'benvenuto', titolo: 'Benvenuto, Custode', testo: 'Sei dentro un <b>Eco</b>: un ricordo deformato del passato. Guidi una squadra di 4 <b>Voci</b> contro gli Echi nemici. Ogni turno scegli cosa farà ciascuna Voce, poi gli scontri si risolvono animati. Questa guida dura un paio di minuti e puoi <b>saltarla in qualsiasi momento</b>.' },
+      { id: 'voci', sel: '#col-alleati', pos: 'destra', titolo: 'Le tue Voci', testo: 'Ogni Voce ha <b>PV</b> (barra verde), <b>Sanità</b> (barra azzurra/viola sotto) e <b>stati</b> (le piccole icone). Clicca una Voce, o la sua figura sul campo, per selezionarla: compare un anello dorato.' },
+      { id: 'nemici', sel: '#col-nemici', pos: 'sinistra', titolo: 'I nemici', testo: 'I nemici <b>dichiarano in anticipo</b> cosa faranno: nella loro targhetta vedi la skill e chi attaccheranno. I numeri gialli in alto sono i loro <b>dadi di velocità</b>.' },
+      { id: 'dadi', sel: '#col-alleati .dado', pos: 'destra', titolo: 'Dado di velocità', testo: 'A inizio turno ogni Voce tira un dado. Chi ha il numero più alto agisce per primo e <b>sceglie chi affrontare</b>: se il bersaglio non ha ancora agito, il suo attacco viene trascinato in uno <b>scontro</b> con il tuo.' },
+      { id: 'skill', sel: '#skills', pos: 'sopra', titolo: 'Le skill', testo: 'Ogni Voce ha 3 skill. I pallini ● sono le <b>monete</b>, <b>PB</b> la potenza base, <b>PM</b> il bonus di ogni moneta Testa. Il numero nel cerchio dorato è il <b>costo in Ardore</b>. Puoi scegliere anche con i tasti 1-2-3.' },
+      { id: 'ardore', sel: '#ardore', pos: 'sotto', titolo: 'Ardore', testo: "L'<b>Ardore</b> è la risorsa di squadra: parti con 3 gemme e ne guadagni 2 a ogni turno (massimo 10). Le skill più forti costano di più: scegli come spenderlo." },
+      { id: 'bersaglio', sel: '#col-nemici', pos: 'sinistra', azione: 'bersaglio', titolo: 'Scegli il bersaglio', testo: 'Con una Voce selezionata, <b>clicca un nemico</b> (targhetta o figura) per scegliere chi attaccare. Sulle skill vedi ▲ <b>vantaggio</b> o ▼ <b>svantaggio</b> contro quel nemico (le affinità!). Prova adesso.' },
+      { id: 'esegui', sel: '#btn-esegui', pos: 'sopra', azione: 'esegui', titolo: 'Esegui il turno', testo: 'Quando sei pronto premi <b>Esegui turno</b> (o Invio). Guarda cosa succede: ti spiegherò le cose man mano che compaiono.' }
+    ],
+    reattivi: {
+      clash: { sel: '#clash', pos: 'sotto', titolo: 'Scontro (clash)', testo: 'Due azioni che si affrontano lanciano le loro monete: <b>Testa</b> (oro) o <b>Croce</b> (argento). Potenza = PB + (Teste × PM). Chi ha la potenza maggiore vince il round e <b>l\'avversario perde una moneta</b>. Si ripete finché uno resta senza monete: il vincitore colpisce con quelle che gli restano.' },
+      clash_fine: { sel: '#col-alleati', pos: 'destra', titolo: 'Sanità e fortuna', testo: 'La <b>Sanità</b> cambia la probabilità di Testa: 50% a Sanità 0, fino al 95% a +45 e al 5% a −45. Vincere scontri la alza; perdere o vedere un alleato cadere la abbassa. A −45 si va nel <b>Panico</b>.' },
+      colpo: { titolo: 'Il colpo', testo: 'Ogni moneta rimasta colpisce in sequenza e la potenza cresce con le Teste. Il danno cambia con le <b>affinità</b>: ▲ +25% e +1 PM, ▼ −20% e −1 PM. Ogni affinità batte la successiva: Ordine → Sangue → Astuzia → Ingegno → Fede → Gloria → Ordine.', bottone: 'affinita' },
+      stato: { titolo: 'Stati', testo: 'Le icone sotto le barre sono <b>stati</b>: Sanguinamento, Bruciatura, Marchio (negativi) e Formazione, Voto, Splendore (positivi). Passa il mouse o <b>tocca</b> un\'icona per leggerne l\'effetto.' },
+      cedimento: { titolo: 'Cedimento!', testo: 'Quando un personaggio scende sotto il 50% e il 25% dei PV <b>barcolla</b>: salta il turno, subisce +30% danni e non può difendersi. Nel turno dopo compare <b>Affondo</b> (tasto A): una Voce a tua scelta lo colpisce gratis con danni ×1,5.' },
+      fine: { titolo: 'Ben fatto!', testo: 'Conosci l\'essenziale. Nel menu trovi <b>Come si gioca</b> con tutte le regole in dettaglio. Buona fortuna, Custode.' }
+    },
+    turno2: { titolo: 'Affinità e Concordie', testo: 'Ogni affinità è forte contro la successiva del ciclo. Due Voci con affinità <b>opposte</b> nel ciclo (Ordine+Ingegno, Sangue+Fede, Astuzia+Gloria) formano una <b>Concordia</b>: +Sanità iniziale e +1 Ardore.', bottone: 'affinita' },
+    manuale: [
+      { titolo: 'Obiettivo e turno', html: '<p>Sei il <b>Custode</b>: entri negli <b>Echi</b> del passato italiano per restituire loro una forma onesta. Guidi 4 <b>Voci</b> (personaggi storici romanzati) contro gli Echi nemici.</p><p>Ogni <b>turno</b>: (1) tutti tirano il <b>dado di velocità</b>; (2) tu scegli <b>skill</b> e <b>bersaglio</b> di ogni Voce; (3) premi <b>Esegui</b> e gli scontri si risolvono. Vinci se tutti i nemici cadono, perdi se cadono tutte le tue Voci.</p>' },
+      { titolo: 'Skill, monete e Ardore', html: '<p>Una skill ha <b>N monete</b>, una <b>potenza base (PB)</b>, un bonus per moneta <b>(PM)</b> e un <b>costo in Ardore</b>. Potenza = PB + (Teste × PM).</p><p>L\'<b>Ardore</b> è condiviso: 3 all\'inizio, +2 a turno, massimo 10. Le skill da costo 5 sono le <b>skill culmine</b> (con cut-in a schermo).</p>' },
+      { titolo: 'Scontri e Sanità', html: '<p>Chi ha il dado più alto sceglie il bersaglio. Se il bersaglio non ha ancora agito, il suo attacco si <b>scontra</b> con il tuo: si lanciano le monete, vince il round chi ha più potenza e il perdente <b>perde una moneta</b>. Il vincitore finale colpisce con le monete rimaste.</p><p>La <b>Sanità</b> (−45…+45) decide la probabilità di Testa: <b>50% + Sanità%</b> (da 5% a 95%). Vincere la alza, perdere la abbassa. A −45: <b>Panico</b>; a +45: <b>Esaltazione</b> (+1 PM).</p>' },
+      { titolo: 'Affinità', html: '<p>Le sei affinità formano un ciclo: ognuna batte la successiva.</p><div class="diag-aff"></div><p>Vantaggio: <b>+1 PM e +25% danno</b>. Svantaggio: <b>−1 PM e −20% danno</b>. Le coppie opposte (Ordine+Ingegno, Sangue+Fede, Astuzia+Gloria) formano una <b>Concordia</b>: +4 Sanità e +1 Ardore a inizio battaglia.</p>' },
+      { titolo: 'Stati', html: '<ul class="lista-stati"></ul>' },
+      { titolo: 'Cedimento e Affondo', html: '<p>Scendere sotto il <b>50%</b> e il <b>25%</b> dei PV provoca il <b>Cedimento</b>: salti il turno, subisci +30% danni e non puoi difenderti. Un nemico in Cedimento può essere colpito con l\'<b>Affondo</b> (tasto A): azione di squadra gratuita, danni ×1,5.</p>' },
+      { titolo: 'Consigli', html: '<ul><li>Guarda sempre le <b>intenzioni</b> dei nemici prima di scegliere.</li><li>Usa l\'affinità giusta: ▲ vantaggio sulle skill.</li><li>Tieni alta la <b>Sanità</b>: più Teste, più danni.</li><li>Non sprecare l\'Ardore: le skill culmine decidono i combattimenti.</li><li>Una Concordia in squadra è un vantaggio gratuito.</li></ul>' }
+    ]
   };
 
   /* ---------- Capitoli (struttura; riempiti nelle fasi 3 e 5) ---------- */
