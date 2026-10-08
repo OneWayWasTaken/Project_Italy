@@ -44,7 +44,8 @@
   <section id="scr-battaglia" class="screen">
     <div id="campo">
       <div id="col-alleati" class="colonna"></div>
-      <div id="centro">
+      <div id="stage">
+        <div id="stage-bg"></div>
         <div id="turno-info"><span id="turno-n">Turno 1</span> <span id="ardore">Ardore 3</span></div>
         <div id="clash"></div>
       </div>
@@ -56,6 +57,7 @@
         <div class="vel">
           <button class="btn piccolo" data-vel="1">×1</button><button class="btn piccolo" data-vel="2">×2</button><button class="btn piccolo" data-vel="4">×4</button><button class="btn piccolo" data-vel="0" title="Salta animazioni">Salta</button>
         </div>
+        <button id="btn-affondo" class="btn" style="display:none" title="Azione di squadra gratuita su un nemico in Cedimento (tasto A)">Affondo</button>
         <button id="btn-esegui" class="btn grande" disabled>Esegui turno</button>
         <button id="btn-audio" class="btn piccolo">Suono: sì</button>
       </div>
@@ -65,10 +67,12 @@
   </section>
 
   <div id="modale" class="overlay"></div>
+  <div id="ruota"><div class="tel">📱</div><p>Ruota il telefono in orizzontale per giocare</p></div>
 </div>
 
 <script src="data.js"></script>
 <script src="combat.js"></script>
+<script src="art.js"></script>
 <script src="story.js"></script>
 <script src="gacha.js"></script>
 <script src="ui.js"></script>

@@ -30,6 +30,7 @@
     MOLT_CEDIMENTO: 1.3,
     STATO_MAX: 20,
     SQUADRA_MAX: 4,
+    AFFONDO_MOLT: 1.5,               // bonus di danno dell'Affondo (azione di squadra su nemico in Cedimento)
     SAVE_KEY: 'echi_save_v1'
   };
 
@@ -81,28 +82,28 @@
   sk('manovra_avvolgente', 'Manovra Avvolgente', 'gloria', 3, 4, 3, 2, { fx: [S('win', 'marchio', 2, 'target')] });
   sk('giornata_zama', 'Giornata di Zama', 'gloria', 4, 6, 4, 5, { pbPer: { s: 'splendore', k: 1 } });
   sk('colpo_gladio', 'Colpo di Gladio', 'sangue', 2, 4, 3, 0, { fx: [S('hit', 'sanguinamento', 1, 'target')] });
-  sk('rete_tridente', 'Rete e Tridente', 'sangue', 3, 3, 3, 2, { fx: [S('win', 'sanguinamento', 2, 'target')] });
+  sk('rete_tridente', 'Rete e Tridente', 'sangue', 3, 3, 3, 2, { fx: [S('win', 'sanguinamento', 2, 'target'), { on: 'win', velProx: -1, to: 'target' }] });
   sk('rivolta_schiavi', 'Rivolta degli Schiavi', 'sangue', 4, 5, 4, 5, { fx: [{ on: 'use', perdiPv: 0.10, to: 'self' }, { on: 'hit', perTesta: true, stato: 'sanguinamento', n: 1, to: 'target' }] });
   // --- Capitolo II
   sk('ordine_marcia', 'Ordine di Marcia', 'ordine', 2, 4, 2, 0, { fx: [S('hit', 'formazione', 1, 'self')] });
   sk('editto', 'Editto', 'ordine', 2, 3, 3, 2, { fx: [S('win', 'formazione', 2, 'ally')] });
-  sk('pax_romana', 'Pax Romana', 'ordine', 3, 6, 3, 5, { fx: [S('use', 'formazione', 6, 'team')] });
+  sk('pax_romana', 'Pax Romana', 'ordine', 3, 6, 3, 5, { fx: [S('use', 'formazione', 6, 'team'), S('hit', 'splendore', -3, 'target')] });
   sk('preghiera_arena', "Preghiera nell'Arena", 'fede', 2, 3, 3, 0, { fx: [S('hit', 'voto', 2, 'self')] });
   sk('fermezza', 'Fermezza', 'fede', 2, 4, 3, 2, { fx: [S('use', 'voto', 2, 'ally'), SAN('use', 5, 'ally')] });
   sk('il_rifiuto', 'Il Rifiuto', 'fede', 3, 5, 4, 5, { pbPer: { s: 'voto', k: 1, consuma: 0.5 } });
   // --- Capitolo III
   sk('falcone_addestrato', 'Falcone Addestrato', 'ingegno', 2, 4, 3, 0, { fx: [S('hit', 'bruciatura', 1, 'target')] });
-  sk('macchina_assedio', "Macchina d'Assedio", 'ingegno', 3, 4, 3, 2, { fx: [S('hit', 'bruciatura', 2, 'target')] });
+  sk('macchina_assedio', "Macchina d'Assedio", 'ingegno', 3, 4, 3, 2, { monetePiuSeCed: 1, fx: [S('hit', 'bruciatura', 2, 'target')] });
   sk('stupor_mundi', 'Stupor Mundi', 'ingegno', 4, 5, 4, 5, { fx: [{ on: 'hit', raddoppia: 'bruciatura', to: 'target' }] });
   sk('lancia_canossiana', 'Lancia Canossiana', 'ordine', 2, 4, 3, 0, { fx: [S('hit', 'formazione', 1, 'self')] });
   sk('mediazione', 'Mediazione', 'ordine', 2, 3, 3, 2, { fx: [{ on: 'win', rimuoviPositivi: 3, to: 'target' }] });
-  sk('castello_tiene', 'Il Castello Tiene', 'ordine', 3, 5, 3, 5, { fx: [S('use', 'formazione', 5, 'self')] });
+  sk('castello_tiene', 'Il Castello Tiene', 'ordine', 3, 5, 3, 5, { fx: [S('use', 'formazione', 5, 'self'), { on: 'use', noCed: true, to: 'self' }] });
   // --- Capitolo IV
   sk('balestra_girevole', 'Balestra Girevole', 'ingegno', 2, 3, 4, 0, { fx: [S('hit', 'bruciatura', 1, 'target')] });
-  sk('ornitottero', 'Ornitottero', 'ingegno', 3, 3, 3, 2, { fx: [{ on: 'use', velProx: 2, to: 'self' }] });
-  sk('grande_carro', 'Il Grande Carro', 'ingegno', 4, 5, 3, 5, { fx: [S('hit', 'bruciatura', 3, 'target')] });
+  sk('ornitottero', 'Ornitottero', 'ingegno', 3, 3, 3, 2, { fx: [{ on: 'use', velProx: 2, to: 'self' }, { on: 'use', evade: true, to: 'self' }] });
+  sk('grande_carro', 'Il Grande Carro', 'ingegno', 4, 5, 3, 5, { ignoraDifesa: 0.3, fx: [S('hit', 'bruciatura', 3, 'target')] });
   sk('colpo_archibugio', 'Colpo di Archibugio', 'sangue', 2, 4, 3, 0, { fx: [S('hit', 'sanguinamento', 1, 'target')] });
-  sk('stratagemma_ravaldino', 'Stratagemma di Ravaldino', 'sangue', 3, 4, 3, 2, { fx: [S('win', 'sanguinamento', 2, 'target')] });
+  sk('stratagemma_ravaldino', 'Stratagemma di Ravaldino', 'sangue', 3, 4, 3, 2, { fx: [S('win', 'sanguinamento', 2, 'target'), { on: 'win', pmProx: -1, to: 'target' }] });
   sk('rappresaglia', 'Rappresaglia', 'sangue', 3, 6, 3, 5, { moltSeStato: { s: 'sanguinamento', min: 3, molt: 1.5, consuma: true } });
   // --- Capitolo V
   sk('sciabola', 'Sciabola', 'gloria', 2, 4, 3, 0, { fx: [S('hit', 'splendore', 1, 'self')] });
@@ -120,10 +121,10 @@
   sk('il_carico', 'Il Carico', 'fede', 3, 4, 3, 5, { fx: [{ on: 'use', cura: 0.15, to: 'team' }, S('use', 'voto', 2, 'team')] });
   // --- Capitolo VII
   sk('lettera_protetta', 'Lettera Protetta', 'astuzia', 2, 3, 3, 0, { fx: [S('hit', 'marchio', 1, 'target'), S('use', 'formazione', 1, 'ally')] });
-  sk('documenti_perfetti', 'Documenti Perfetti', 'astuzia', 2, 3, 3, 2, { fx: [S('use', 'voto', 2, 'ally')] });
+  sk('documenti_perfetti', 'Documenti Perfetti', 'astuzia', 2, 3, 3, 2, { fx: [S('use', 'voto', 2, 'ally'), S('use', 'marchio', -2, 'ally')] });
   sk('casa_protetta', 'Casa Protetta', 'astuzia', 3, 5, 3, 5, { fx: [S('use', 'formazione', 3, 'team'), SAN('use', 10, 'team'), { on: 'use', rimuoviNegativi: true, to: 'team' }] });
   sk('messaggio_cifrato', 'Messaggio Cifrato', 'ordine', 2, 3, 3, 0, { fx: [S('hit', 'formazione', 1, 'ally')] });
-  sk('rete_memoria', 'Rete della Memoria', 'ordine', 3, 4, 3, 2, { fx: [S('win', 'marchio', 2, 'target')] });
+  sk('rete_memoria', 'Rete della Memoria', 'ordine', 3, 4, 3, 2, { fx: [{ on: 'win', trasferisci: { stato: 'marchio', n: 2 }, to: 'target' }] });
   sk('giustizia_paziente', 'Giustizia Paziente', 'ordine', 3, 5, 3, 5, { moltSeStato: { s: 'marchio', min: 1, molt: 1.3 }, fx: [S('use', 'formazione', 5, 'self'), S('use', 'formazione', 5, 'ally')] });
   sk('salita_dolomitica', 'Salita Dolomitica', 'fede', 2, 3, 3, 0, { fx: [S('hit', 'voto', 1, 'self'), SAN('hit', 2, 'self')] });
   sk('telaio_segreto', 'Telaio Segreto', 'fede', 2, 3, 3, 2, { fx: [S('use', 'voto', 2, 'ally'), { on: 'use', velProx: 1, to: 'ally' }] });
@@ -138,7 +139,7 @@
   sk('n_testuggine', 'Testuggine', 'ordine', 2, 3, 2, 0, { fx: [S('use', 'formazione', 3, 'self')] });
   sk('a_stratagemma', 'Stratagemma', 'astuzia', 3, 4, 3, 0, { fx: [S('hit', 'marchio', 2, 'target')] });
   sk('a_accerchiamento', 'Accerchiamento', 'astuzia', 3, 3, 3, 0, { fx: [S('win', 'sanguinamento', 2, 'target')] });
-  sk('a_canne', 'La Battaglia di Canne', 'astuzia', 4, 5, 3, 0, { moltPerStato: { s: 'marchio', per: 0.1, consuma: false } });
+  sk('a_canne', 'La Battaglia di Canne', 'astuzia', 4, 5, 3, 0, { ultima: true, moltPerStato: { s: 'marchio', per: 0.1, consuma: false } });
 
   /* ---------- Passive ----------
    * `tipo` seleziona il gestore in combat.js (PASSIVE_HANDLERS); gli altri campi sono parametri. */
@@ -236,6 +237,35 @@
     { id: 'cap7', num: 'VII', epoca: 'Seconda guerra mondiale', eco: "L'Eco del Silenzio",      boss: 'silenzio' }
   ];
 
+  /* ---------- Arte (Fase 2) ----------
+   * Descrizione visiva di ogni Voce/nemico: la legge art.js per disegnare la figura SVG.
+   * Campi: corpo (m|f|g), pelle, capelli{stile,colore,barba}, abito{tipo,c1,c2}, mantello, dorso,
+   *        testa{tipo,c1,c2}, viso, accessorio, arma, scudo{tipo,c1,c2}, attacco (stile d'attacco),
+   *        scala (dimensione), eco (aspetto spettrale) + glow.
+   * Per usare uno sprite tuo aggiungi: sprite:{src,w,h[,anim]}  (vedi ARTE.md). */
+  E.ARTE = {
+    scipione:  { corpo: 'm', pelle: '#e0b090', capelli: { stile: 'corto', colore: '#3a2a1c' }, abito: { tipo: 'corazza', c1: '#b3302a', c2: '#d9b44a' }, mantello: '#8e1f24', testa: { tipo: 'elmo_romano', c1: '#c9a24a', c2: '#b3302a' }, arma: 'gladio', scudo: { tipo: 'scutum', c1: '#b3302a', c2: '#d9b44a' }, attacco: 'fendente' },
+    spartaco:  { corpo: 'g', pelle: '#c9976f', capelli: { stile: 'riccio', colore: '#2a1a10', barba: 'barba' }, abito: { tipo: 'tunica', c1: '#7a5a3a', c2: '#4a3523' }, accessorio: 'catene', testa: { tipo: 'fascia', c1: '#8a2a2a' }, arma: 'sciabola', attacco: 'fendente' },
+    augusto:   { corpo: 'm', pelle: '#e6bf9e', capelli: { stile: 'corto', colore: '#4b3622' }, abito: { tipo: 'toga', c1: '#efe8d6', c2: '#7a2a66' }, testa: { tipo: 'alloro', c1: '#7fa84a' }, arma: 'rotolo', attacco: 'preghiera' },
+    perpetua:  { corpo: 'f', pelle: '#e8c4a4', capelli: { stile: 'lungo', colore: '#4a2e1e' }, abito: { tipo: 'veste_lunga', c1: '#e8e2d0', c2: '#6a8cc4' }, testa: { tipo: 'fazzoletto', c1: '#cfd8ea' }, arma: 'palma', attacco: 'preghiera' },
+    federico:  { corpo: 'm', pelle: '#e3b895', capelli: { stile: 'corto', colore: '#7a4a22', barba: 'pizzo' }, abito: { tipo: 'veste_lunga', c1: '#1f3b7a', c2: '#d9b44a' }, mantello: '#6a1f4a', testa: { tipo: 'corona', c1: '#d9b44a' }, arma: 'falco', attacco: 'lancio' },
+    matilde:   { corpo: 'f', pelle: '#ecc8a8', capelli: { stile: 'lungo', colore: '#7a4a20' }, abito: { tipo: 'veste_lunga', c1: '#3a5a9a', c2: '#d9b44a' }, mantello: '#2a3a6a', testa: { tipo: 'velo_corona', c1: '#d9b44a' }, arma: 'lancia', scudo: { tipo: 'clipeo', c1: '#3a5a9a', c2: '#d9b44a' }, attacco: 'affondo' },
+    leonardo:  { corpo: 'm', pelle: '#e0b896', capelli: { stile: 'lungo', colore: '#b8b0a0', barba: 'barba' }, abito: { tipo: 'veste_lunga', c1: '#7a3030', c2: '#d9b44a' }, testa: { tipo: 'berretto', c1: '#7a3030' }, arma: 'compasso', attacco: 'lancio' },
+    caterina:  { corpo: 'f', pelle: '#efcdb0', capelli: { stile: 'lungo', colore: '#c98a3a' }, abito: { tipo: 'veste_lunga', c1: '#a0243a', c2: '#d9b44a' }, testa: { tipo: 'cappello_piuma', c1: '#2a2a3a', c2: '#d9b44a' }, arma: 'archibugio', attacco: 'sparo' },
+    garibaldi: { corpo: 'm', pelle: '#e0b088', capelli: { stile: 'lungo', colore: '#c9a55a', barba: 'barba' }, abito: { tipo: 'giubba', c1: '#c0272d', c2: '#6a6a72' }, mantello: '#d8d0bc', testa: { tipo: 'berretto', c1: '#1f1f2a' }, arma: 'sciabola', attacco: 'fendente' },
+    cavour:    { corpo: 'm', pelle: '#e8c4a0', capelli: { stile: 'corto', colore: '#6a5a4a' }, viso: 'occhiali', abito: { tipo: 'abito_nero', c1: '#efe8d6', c2: '#23232e' }, arma: 'lettera', attacco: 'lancio' },
+    baracca:   { corpo: 'm', pelle: '#e3b995', capelli: { stile: 'corto', colore: '#3a2a1a', barba: 'baffi' }, abito: { tipo: 'uniforme', c1: '#6b4a2b', c2: '#3a2a1a' }, accessorio: 'sciarpa', accessorioC: '#f0ece0', testa: { tipo: 'aviatore', c1: '#5a3b20', c2: '#cfe0ea' }, arma: 'pistola', attacco: 'sparo' },
+    mentil:    { corpo: 'f', pelle: '#e6bf9f', capelli: { stile: 'trecce', colore: '#5a3a22' }, abito: { tipo: 'gonna', c1: '#bfae90', c2: '#4a3a32' }, dorso: 'gerla', testa: { tipo: 'fazzoletto', c1: '#7a3a3a' }, arma: 'bastone', attacco: 'affondo' },
+    perlasca:  { corpo: 'm', pelle: '#e0b794', capelli: { stile: 'corto', colore: '#2a2a2e' }, abito: { tipo: 'civile', c1: '#3a3d4a', c2: '#2c2e38' }, testa: { tipo: 'fedora', c1: '#4a4a52', c2: '#222222' }, arma: 'cartella', attacco: 'lancio' },
+    anselmi:   { corpo: 'f', pelle: '#efc8aa', capelli: { stile: 'trecce', colore: '#6a4a2c' }, abito: { tipo: 'gonna', c1: '#e8e2d0', c2: '#3a4a6a' }, arma: 'lettera', attacco: 'lancio' },
+    bartali:   { corpo: 'm', pelle: '#d9a67f', capelli: { stile: 'corto', colore: '#2a1a10' }, abito: { tipo: 'tuta', c1: '#3a6aa0', c2: '#e0c040' }, testa: { tipo: 'cappellino_ciclista', c1: '#e8e2d0' }, arma: 'ruota', attacco: 'lancio' },
+    // --- Nemici (Echi: aspetto spettrale)
+    eco_cartaginese: { eco: true, glow: '#8c5cc4', corpo: 'm', pelle: '#7a6a8a', abito: { tipo: 'tunica', c1: '#4a2f68', c2: '#8c5cc4' }, testa: { tipo: 'cappuccio', c1: '#3a2455' }, arma: 'lancia', attacco: 'affondo' },
+    elefante:        { eco: true, glow: '#c0303f', figura: 'elefante', pelle: '#8a8090', scala: 1.25, attacco: 'affondo' },
+    legionario:      { eco: true, glow: '#7d93ab', corpo: 'm', pelle: '#8a98a8', abito: { tipo: 'corazza', c1: '#4a5a6e', c2: '#8da0b8' }, testa: { tipo: 'elmo_romano', c1: '#8da0b8', c2: '#4a5a6e' }, arma: 'gladio', scudo: { tipo: 'scutum', c1: '#4a5a6e', c2: '#8da0b8' }, attacco: 'fendente' },
+    annibale:        { eco: true, glow: '#8c5cc4', corpo: 'g', scala: 1.3, pelle: '#8a6a5a', capelli: { stile: 'corto', colore: '#15101c', barba: 'barba' }, viso: 'benda', abito: { tipo: 'armatura', c1: '#5a3a7a', c2: '#d9b44a' }, mantello: '#3a1f55', testa: { tipo: 'elmo_cartaginese', c1: '#b8923a', c2: '#2a1a3a' }, arma: 'sciabola', attacco: 'fendente' }
+  };
+
   /* ---------- Helper: descrizione testuale di una skill (per la UI) ---------- */
   const TO = { self: 'sé', target: 'bersaglio', ally: 'alleato', team: 'squadra', nemici: 'nemici' };
   const ON = { use: 'Uso', hit: 'Al colpo', win: 'Se vince lo scontro' };
@@ -250,7 +280,11 @@
       else if (f.rimuoviNegativi) t = 'rimuove stati negativi';
       else if (f.rimuoviPositivi) t = 'rimuove ' + f.rimuoviPositivi + ' stack positivi';
       else if (f.raddoppia) t = 'raddoppia ' + E.STATI[f.raddoppia].nome;
-      else if (f.velProx) t = '+' + f.velProx + ' al dado del prossimo turno';
+      else if (f.velProx) t = (f.velProx > 0 ? '+' : '') + f.velProx + ' al dado del prossimo turno';
+      else if (f.pmProx) t = f.pmProx + ' PM al prossimo turno';
+      else if (f.evade) t = 'schiva il primo colpo libero';
+      else if (f.noCed) t = 'non va in Cedimento questo turno';
+      else if (f.trasferisci) t = 'trasferisce ' + f.trasferisci.n + ' ' + E.STATI[f.trasferisci.stato].nome + ' da un alleato';
       else if (f.perdiPv) t = 'costa ' + Math.round(f.perdiPv * 100) + '% PV';
       out.push((ON[f.on] || f.on) + (f.perTesta ? ' (per Testa)' : '') + ': ' + t + (f.to ? ' → ' + TO[f.to] : ''));
     });
@@ -258,6 +292,8 @@
     if (s.pmPerStato) out.push('+' + s.pmPerStato.k + ' PM per ' + E.STATI[s.pmPerStato.s].nome + ' (max +' + s.pmPerStato.max + ')');
     if (s.moltSeStato) out.push('×' + s.moltSeStato.molt + ' danno se bersaglio ha ' + s.moltSeStato.min + '+ ' + E.STATI[s.moltSeStato.s].nome);
     if (s.moltPerStato) out.push('+' + Math.round(s.moltPerStato.per * 100) + '% danno per ' + E.STATI[s.moltPerStato.s].nome + ' sul bersaglio');
+    if (s.monetePiuSeCed) out.push('+' + s.monetePiuSeCed + ' moneta se il bersaglio è in Cedimento');
+    if (s.ignoraDifesa) out.push('ignora ' + Math.round(s.ignoraDifesa * 100) + '% di Formazione/Voto');
     if (s.pbPerVel) out.push('+' + s.pbPerVel + ' PB per punto di velocità sul bersaglio');
     if (s.pmSePiuVeloce) out.push('+' + s.pmSePiuVeloce + ' PM se più veloce del bersaglio');
     return out;

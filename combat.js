@@ -13,7 +13,7 @@
  *
  * Eventi (campo `t`): turno, dadi, regola, azione, clash, round, clash_fine,
  *   colpo, stato, sanita, ardore, cura, cedimento, morte, dot, panico, fase,
- *   evoca, msg, fine
+ *   evoca, schiva, affondo, ced_agg, panico_fine, msg, fine
  * ========================================================================== */
 (function (root) {
   'use strict';
@@ -51,7 +51,7 @@
       skills: def.skills.slice(), passiva: def.passiva || null, ia: def.ia ? def.ia.slice() : null,
       fasi: (def.fasi || []).map(f => Object.assign({ fatta: false }, f)), regole: def.regole || [],
       soglie: def.soglie || C.SOGLIE_CEDIMENTO,
-      stati: {}, ced: 0, sogliaIdx: 0, panico: false, vivo: true, dadi: [], bonusDado: 0,
+      stati: {}, bonusPM: 0, bonusPMProx: 0, evade: false, noCed: false, ced: 0, sogliaIdx: 0, panico: false, vivo: true, dadi: [], bonusDado: 0,
       ultimaSkill: null, appunti: 0, usate: [], passivaUsata: false, bleedTurno: false, splTurno: 0,
       boss: !!def.boss, colore: def.colore, sigla: def.sigla || def.breve.slice(0, 1)
     };
@@ -149,6 +149,7 @@
     // Cedimento (stagger)
     let trig = false;
     while (T.sogliaIdx < T.soglie.length && fr <= T.soglie[T.sogliaIdx]) { T.sogliaIdx++; trig = true; }
+    if (trig && T.noCed) trig = false;     // Castello Tiene: nessun Cedimento questo turno
     if (trig) {
       T.ced = 2; annullaAzioni(B, T);
       ev(B, { t: 'cedimento', id: T.id, msg: T.breve + ' va in Cedimento!' });
@@ -206,6 +207,16 @@
         }
         if (f.raddoppia && t.stati[f.raddoppia]) addStato(B, t, f.raddoppia, t.stati[f.raddoppia]);
         if (f.velProx) t.bonusDado += f.velProx;
+        if (f.pmProx) t.bonusPMProx += f.pmProx;
+        if (f.evade) t.evade = true;
+        if (f.noCed) t.noCed = true;
+        if (f.trasferisci) {
+          // Sposta stack di uno stato da un alleato (quello che ne ha di più) al bersaglio
+          const st = f.trasferisci.stato;
+          const don = vivi(B, u.lato).sort((x, y) => (y.stati[st] || 0) - (x.stati[st] || 0))[0];
+          const n = Math.min(f.trasferisci.n, don ? (don.stati[st] || 0) : 0);
+          if (n > 0) { addStato(B, don, st, -n); addStato(B, t, st, n, u); } else addStato(B, t, st, 1, u);
+        }
         if (f.perdiPv) {
           const d = Math.min(t.pv - 1, Math.ceil(t.pvMax * f.perdiPv));
           if (d > 0) { t.pv -= d; ev(B, { t: 'dot', id: t.id, tipo: 'costo', danno: d, pvDopo: t.pv }); }
@@ -224,7 +235,8 @@
   }
   function prepara(B, u, s, az, rival) {
     const rel = E.rel(s.aff, rival.aff);
-    let pb = s.pb, pm = s.pm + rel, molt = 1, monete = s.monete;
+    let pb = s.pb, pm = s.pm + rel + u.bonusPM, molt = 1, monete = s.monete;
+    if (s.monetePiuSeCed && rival.ced > 0) monete += s.monetePiuSeCed;
     pb += Math.min(6, (u.stati.splendore || 0) * 0.5);
     pm += Math.min(3, Math.floor((u.stati.formazione || 0) / 3));
     if (u.sanita >= C.SANITA_MAX) pm += 1;                       // Esaltazione
@@ -258,7 +270,7 @@
         if (!u.usate.includes(s.id)) { u.usate.push(s.id); u.appunti++; }
         break;
     }
-    return { u, s, az, rival, rel, pb, pm, molt, monete };
+    return { u, s, az, rival, rel, pb, pm, molt, monete, ignora: s.ignoraDifesa || 0 };
   }
 
   const lancia = (B, u, n) => Array.from({ length: n }, () => B.rng() < Combat.chanceTesta(u));
@@ -274,15 +286,16 @@
       if (p.rel === 1) d *= C.BONUS_VANTAGGIO; else if (p.rel === -1) d *= C.MALUS_SVANTAGGIO;
       const mk = T.stati.marchio || 0;
       if (mk) d *= 1 + 0.05 * mk;
-      d *= 1 - Math.min(0.5, 0.05 * (T.stati.formazione || 0));
+      d *= 1 - Math.min(0.5, 0.05 * (T.stati.formazione || 0)) * (1 - p.ignora);
       if (T.ced > 0) d *= C.MOLT_CEDIMENTO;
       d = Math.max(1, Math.round(d));
       // Voto: assorbe 3 danni per stack
       let assorbito = 0;
       const voto = T.stati.voto || 0;
       if (voto) {
-        const usa = Math.min(voto, Math.ceil(d / 3));
-        assorbito = Math.min(d, usa * 3); d -= assorbito;
+        const dAss = Math.round(d * (1 - p.ignora));
+        const usa = Math.min(voto, Math.ceil(dAss / 3));
+        assorbito = Math.min(dAss, usa * 3); d -= assorbito;
         addStato(B, T, 'voto', -usa); addSanita(B, T, usa);
       }
       const pvDopo = sottraiPv(B, T, d);
@@ -336,6 +349,11 @@
     const u = get(B, a.u), s = E.SKILL[a.skill];
     a.usata = true;
     applicaFx(B, s, 'use', u, T);
+    if (T.evade) {
+      T.evade = false;
+      ev(B, { t: 'schiva', id: T.id, msg: T.breve + ' schiva il colpo!' });
+      u.ultimaSkill = s.id; return;
+    }
     const p = prepara(B, u, s, a, T);
     ev(B, { t: 'msg', msg: u.breve + ' colpisce ' + T.breve + ' senza opposizione.' });
     colpi(B, p, T, p.monete);
@@ -351,7 +369,8 @@
 
   /* ---------- Turno ---------- */
   Combat.iniziaTurno = function (B) {
-    B.turno++; B.eventi = []; B.azioni = [];
+    B.turno++; B.eventi = []; B.azioni = []; B.affondo = null;
+    B.unita.forEach(u => { u.bonusPM = u.bonusPMProx; u.bonusPMProx = 0; });
     if (B.turno > 1) B.ardore = clamp(B.ardore + C.ARDORE_TURNO, 0, C.ARDORE_MAX);
     ev(B, { t: 'turno', n: B.turno, ardore: B.ardore });
     B.unita.forEach(u => {
@@ -431,6 +450,7 @@
     const costo = Combat.costoPiano(B);
     B.ardore -= costo;
     if (costo) ev(B, { t: 'ardore', valore: B.ardore });
+    eseguiAffondo(B);
     const ordine = B.azioni.slice().sort((x, y) => (y.dado - x.dado) || (B.rng() - 0.5));
     for (const a of ordine) {
       if (B.esito) break;
@@ -459,6 +479,30 @@
     return B.eventi;
   };
 
+  /* ---------- Affondo (azione di squadra su nemico in Cedimento, costo 0) ---------- */
+  /** Nemici attualmente in Cedimento (bersagli possibili dell'Affondo). */
+  Combat.bersagliAffondo = B => vivi(B, 'n').filter(u => u.ced > 0);
+  /** Imposta (o annulla con unitId=null) l'Affondo del turno. */
+  Combat.pianificaAffondo = function (B, unitId, bersId) {
+    if (!unitId) { B.affondo = null; return true; }
+    const u = get(B, unitId), T = get(B, bersId);
+    if (!u || !u.vivo || u.lato !== 'a' || u.ced > 0 || !T || !T.vivo || T.ced <= 0) return false;
+    B.affondo = { u: unitId, bers: bersId }; return true;
+  };
+  function eseguiAffondo(B) {
+    const af = B.affondo; B.affondo = null;
+    if (!af) return;
+    const u = get(B, af.u), T = get(B, af.bers);
+    if (!u.vivo || u.ced > 0 || !T.vivo || T.ced <= 0) return;
+    const s = E.SKILL[u.skills[0]];
+    ev(B, { t: 'affondo', att: u.id, bers: T.id, skill: s.id, msg: 'AFFONDO! ' + u.breve + ' approfitta del Cedimento di ' + T.breve + '.' });
+    const az = { u: u.id, skill: s.id, dado: Math.max(1, ...u.dadi), bers: T.id };
+    applicaFx(B, s, 'use', u, T);
+    const p = prepara(B, u, s, az, T);
+    p.molt *= C.AFFONDO_MOLT;
+    colpi(B, p, T, p.monete);
+  }
+
   function fineTurno(B) {
     B.unita.forEach(u => {
       if (!u.vivo) return;
@@ -475,9 +519,9 @@
       if (!u.vivo) return;
       const sp = u.stati.splendore || 0;
       if (sp) addStato(B, u, 'splendore', -Math.ceil(sp / 2));
-      if (u.ced > 0) u.ced--;
-      if (u.panico) { u.panico = false; addSanita(B, u, -15 - u.sanita); }
-      u.bleedTurno = false; u.splTurno = 0;
+      if (u.ced > 0) { u.ced--; ev(B, { t: 'ced_agg', id: u.id, ced: u.ced }); }
+      if (u.panico) { u.panico = false; addSanita(B, u, -15 - u.sanita); ev(B, { t: 'panico_fine', id: u.id }); }
+      u.bleedTurno = false; u.splTurno = 0; u.evade = false; u.noCed = false;
     });
     controllaEsito(B);
     if (B.esito) ev(B, { t: 'fine', esito: B.esito });

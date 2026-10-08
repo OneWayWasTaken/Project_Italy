@@ -1,14 +1,15 @@
 /* ============================================================================
- * ui.js — rendering e animazioni (DOM + canvas).
+ * ui.js — rendering e animazioni (DOM + canvas + figure SVG).
  *
  * Moduli:
  *   Snd    effetti sonori sintetizzati (WebAudio, nessun file)
- *   Fx     motore particellare su canvas: scintille, linee di clash, anelli, flash, hit-stop
- *   UI.ritratto()          ritratto segnaposto → in Fase 2 verrà sostituito dagli SVG
+ *   Fx     motore particellare su canvas: scintille, linee di clash, anelli, flash, proiettili
+ *   UI.ritratto()          busto circolare (HUD): usa Arte.busto() → SVG o sprite
  *   UI.squadra             schermata di scelta squadra
- *   UI.battaglia           schermata di combattimento: pianificazione + riproduzione eventi
+ *   UI.battaglia           schermata di combattimento: palcoscenico + pianificazione + riproduzione eventi
  *
  * La UI non decide MAI nulla di logico: legge gli eventi prodotti da Combat e li anima.
+ * Le figure (art.js) sono sul palcoscenico (#stage); le "targhette" con barre PV/Sanità stanno nelle colonne.
  * ========================================================================== */
 (function (root) {
   'use strict';
@@ -19,6 +20,7 @@
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const Combat = () => E.Combat;
 
   /* ===================================================================== */
   /* Suoni sintetizzati                                                    */
@@ -51,6 +53,7 @@
         case 'clash': this.rumore(0.18, 0.25, 2500); this.tono(220, 0.2, 'sawtooth', 0.1, -120); break;
         case 'colpo': this.rumore(0.14, 0.3, 700 + (x || 0) * 8); this.tono(140, 0.14, 'square', 0.12, -90); break;
         case 'forte': this.rumore(0.3, 0.45, 400); this.tono(90, 0.3, 'sawtooth', 0.2, -50); break;
+        case 'sparo': this.rumore(0.12, 0.35, 2000); this.tono(300, 0.1, 'square', 0.1, -200); break;
         case 'cura': this.tono(520, 0.25, 'sine', 0.12, 400); break;
         case 'stato': this.tono(400, 0.1, 'triangle', 0.06, 100); break;
         case 'rompi': this.tono(500, 0.25, 'sawtooth', 0.12, -420); this.rumore(0.2, 0.2, 3000); break;
@@ -67,7 +70,7 @@
   /* Motore effetti su canvas                                              */
   /* ===================================================================== */
   const Fx = UI.Fx = {
-    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], frozen: 0, last: 0,
+    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], proiettili: [], frozen: 0, last: 0,
     init() {
       this.cv = $('#fx'); this.ctx = this.cv.getContext('2d');
       const res = () => {
@@ -88,10 +91,10 @@
     },
     ring(x, y, colore, r) { this.rings.push({ x, y, c: colore, t: 0, max: 0.45, r: r || 90 }); },
     flash(colore, alpha) { this.flashes.push({ c: colore, a: alpha || 0.35, t: 0, max: 0.35 }); },
+    /** Proiettile luminoso da a verso b in `dur` secondi (colpi a distanza). */
+    proiettile(a, b, colore, dur) { this.proiettili.push({ a, b, c: colore, t: 0, max: dur || 0.2 }); },
     /** Linea "elettrica" persistente tra due punti: restituisce l'oggetto (poi .fine = true per toglierla). */
-    linea(a, b, c1, c2) {
-      const l = { a, b, c1, c2, pts: [], t: 0, ag: 0 }; this.lines.push(l); return l;
-    },
+    linea(a, b, c1, c2) { const l = { a, b, c1, c2, pts: [], t: 0, ag: 0 }; this.lines.push(l); return l; },
     pulisciLinee() { this.lines.forEach(l => { l.fine = true; }); },
     congela(ms) { this.frozen = performance.now() + ms; },
     loop(t) {
@@ -100,20 +103,23 @@
       const g = this.ctx; g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       g.clearRect(0, 0, this.W, this.H);
       g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
-      // flash
       this.flashes = this.flashes.filter(f => { f.t += dt; return f.t < f.max; });
       this.flashes.forEach(f => { g.globalAlpha = f.a * (1 - f.t / f.max); g.fillStyle = f.c; g.fillRect(0, 0, this.W, this.H); });
-      // anelli
       this.rings = this.rings.filter(r => { r.t += dt; return r.t < r.max; });
       this.rings.forEach(r => { const k = r.t / r.max; g.globalAlpha = 1 - k; g.strokeStyle = r.c; g.lineWidth = 6 * (1 - k) + 1; g.beginPath(); g.arc(r.x, r.y, 8 + r.r * k, 0, 7); g.stroke(); });
-      // particelle
+      this.proiettili = this.proiettili.filter(p => (p.t += dt) < p.max);
+      this.proiettili.forEach(p => {
+        const k = p.t / p.max, k0 = Math.max(0, k - 0.22);
+        const x1 = p.a.x + (p.b.x - p.a.x) * k, y1 = p.a.y + (p.b.y - p.a.y) * k, x0 = p.a.x + (p.b.x - p.a.x) * k0, y0 = p.a.y + (p.b.y - p.a.y) * k0;
+        g.globalAlpha = 0.5; g.strokeStyle = p.c; g.lineWidth = 8; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      });
       this.parts = this.parts.filter(p => (p.life += dt) < p.max);
       this.parts.forEach(p => {
         p.vy += 900 * dt; p.vx *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt;
         g.globalAlpha = 1 - p.life / p.max; g.strokeStyle = p.c; g.lineWidth = p.w;
         g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); g.stroke();
       });
-      // linee di clash
       this.lines = this.lines.filter(l => !l.fine || (l.fade = (l.fade || 0) + dt) < 0.25);
       this.lines.forEach(l => {
         l.t += dt; l.ag -= dt;
@@ -121,7 +127,7 @@
           l.ag = 0.05; l.pts = [];
           const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, N = 12;
           for (let i = 0; i <= N; i++) {
-            const k = i / N, j = (i === 0 || i === N) ? 0 : rnd(-1, 1) * 22 * Math.sin(k * Math.PI);
+            const k = i / N, j = (i === 0 || i === N) ? 0 : rnd(-1, 1) * 18 * Math.sin(k * Math.PI);
             l.pts.push({ x: l.a.x + dx * k + nx * j, y: l.a.y + dy * k + ny * j });
           }
         }
@@ -140,8 +146,9 @@
   /* ===================================================================== */
   /* Elementi riutilizzabili                                               */
   /* ===================================================================== */
-  /** Ritratto segnaposto. FASE 2: sostituire il corpo con il rendering SVG/sprite di `def.svg`. */
+  /** Busto circolare per HUD e liste. Usa l'arte SVG (o lo sprite) se disponibile, altrimenti l'iniziale. */
   UI.ritratto = function (def, cls) {
+    if (E.Arte) return E.Arte.busto(def, cls);
     const d = el('div', 'ritratto ' + (cls || ''), def.sigla || def.breve.slice(0, 1));
     d.style.setProperty('--c', def.colore || E.AFFINITA[def.aff].colore);
     return d;
@@ -191,6 +198,9 @@
     const r2 = el('div', 'opz-riga', '<span>Suono</span>'); const b2 = el('button', 'btn piccolo', save.opzioni.audio ? 'Sì' : 'No');
     b2.onclick = () => { save.opzioni.audio = !save.opzioni.audio; Snd.on = save.opzioni.audio; b2.textContent = save.opzioni.audio ? 'Sì' : 'No'; persist(); };
     r2.appendChild(b2); d.appendChild(r2);
+    const rf = el('div', 'opz-riga', '<span>Schermo intero</span>'); const bf = el('button', 'btn piccolo', 'Attiva');
+    bf.onclick = () => { const de = document.documentElement; try { if (document.fullscreenElement) document.exitFullscreen(); else if (de.requestFullscreen) de.requestFullscreen(); } catch (e) { /* non supportato */ } };
+    rf.appendChild(bf); d.appendChild(rf);
     const r3 = el('div', 'opz-riga', '<span>Cancella salvataggio</span>'); const b3 = el('button', 'btn piccolo', 'Cancella');
     b3.onclick = () => { if (confirm('Cancellare tutti i progressi?')) { E.Save.reset(); location.reload(); } };
     r3.appendChild(b3); d.appendChild(r3);
@@ -238,6 +248,7 @@
     dettaglio(id) {
       const v = E.VOCI[id], d = $('#sq-dettaglio'); d.innerHTML = '';
       const a = E.AFFINITA[v.aff];
+      const fw = el('div', 'det-fig'); if (E.Arte) fw.appendChild(E.Arte.figura(id)); d.appendChild(fw);
       d.appendChild(el('h3', '', v.nome));
       d.appendChild(el('small', '', `${E.CAPITOLI[v.epoca - 1].epoca} · ${v.ruolo} · <span style="color:${a.colore}">${a.simbolo} ${a.nome}</span> · ${'★'.repeat(v.rarita)}`));
       d.appendChild(el('p', '', `PV <b>${v.pv}</b> · Velocità <b>${v.vel[0]}–${v.vel[1]}</b>`));
@@ -255,28 +266,39 @@
   /* ===================================================================== */
   /* Battaglia                                                             */
   /* ===================================================================== */
+  /** Formazioni sul palcoscenico: posizione dei PIEDI (x%, y%) per numero di unità. */
+  const FORM = {
+    a: { 1: [[26, 86]], 2: [[24, 68], [38, 94]], 3: [[18, 52], [36, 74], [18, 96]], 4: [[16, 44], [34, 62], [16, 80], [34, 98]] },
+    n: { 1: [[76, 88]], 2: [[78, 68], [62, 94]], 3: [[84, 52], [66, 74], [84, 96]], 4: [[84, 44], [66, 62], [84, 80], [66, 98]] }
+  };
+
   const Bat = UI.battaglia = {
     B: null, V: {}, els: {}, dadi: {}, sel: null, fase: 'idle', velBase: 1, skip: false, ctx: null, cl: null, linea: null, ardoreV: 0,
+    skillDi: {}, spostati: new Set(), affondoOn: false,
 
     avvia(B, ctx) {
       this.B = B; this.ctx = ctx; this.fase = 'riproduzione'; this.skip = false;
-      this.V = {}; this.els = {}; this.dadi = {}; this.sel = null; this.cl = null;
+      this.V = {}; this.els = {}; this.dadi = {}; this.sel = null; this.cl = null; this.skillDi = {}; this.spostati = new Set();
       this.velBase = ctx.save.opzioni.vel || 1;
       Snd.on = ctx.save.opzioni.audio !== false;
       $('#col-alleati').innerHTML = ''; $('#col-nemici').innerHTML = ''; $('#log').innerHTML = ''; $('#risultato').classList.remove('on');
+      $$('#stage .pg').forEach(p => p.remove());
       $('#clash').className = ''; $('#clash').innerHTML = '';
+      $('#stage-bg').innerHTML = E.Arte ? E.Arte.sfondo(ctx.capitolo || 0) : '';
+      UI.mostra('battaglia');
       Combat().snapshot(B).forEach(u => this.aggiungiCarta(u));
+      this.layout();
       this.ardoreV = B.ardore; this.mostraArdore();
       this.aggiornaVel(); $('#btn-audio').textContent = 'Suono: ' + (Snd.on ? 'sì' : 'no');
-      UI.mostra('battaglia');
       this.log('Il Custode entra nell\'Eco…', 'imp');
       this.cicloTurno(B.eventiIniziali);
     },
 
-    /* ----- costruzione carte ----- */
+    /* ----- costruzione: targhetta (HUD) + figura (palcoscenico) ----- */
     aggiungiCarta(u) {
       this.V[u.id] = u;
       const def = u.lato === 'a' ? E.VOCI[u.def] : E.NEMICI[u.def];
+      const spec = E.ARTE && E.ARTE[u.def] || {};
       const c = el('div', 'unit ' + (u.lato === 'a' ? 'alleato' : 'nemico')); c.dataset.id = u.id;
       const rit = UI.ritratto(def);
       const a = E.AFFINITA[u.aff];
@@ -289,9 +311,30 @@
       const dadi = el('div', 'dadi'); c.appendChild(dadi);
       c.onclick = () => this.clickCarta(u.id);
       $(u.lato === 'a' ? '#col-alleati' : '#col-nemici').appendChild(c);
+      // Figura sul palcoscenico
+      const pg = el('div', 'pg ' + (u.lato === 'a' ? 'alleato' : 'nemico') + (spec.figura === 'elefante' ? ' quadrupede' : '')); pg.dataset.id = u.id;
+      pg.style.setProperty('--sc', spec.scala || 1);
+      const mov = el('div', 'pg-mov'), fig = E.Arte ? E.Arte.figura(u.def) : el('div', 'fig');
+      mov.appendChild(fig); pg.append(el('div', 'pg-ombra'), mov);
+      pg.onclick = () => this.clickCarta(u.id);
+      $('#stage').appendChild(pg);
       this.els[u.id] = { card: c, rit, ritardo: $('.ritardo', c), pieno: $('.pieno', c), num: $('.barra-pv .num', c), san: $('.barra-sanita .riempi', c),
-        sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.intenzioni', c), dadi, tag: null };
+        sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.intenzioni', c), dadi, tag: null, pg, mov, fig, pgTag: null };
       this.render(u.id);
+    },
+    /** Posiziona le figure secondo le formazioni e ridimensiona in base al palcoscenico. */
+    layout() {
+      const st = $('#stage'); if (!st) return;
+      st.style.setProperty('--fh', clamp(st.clientHeight * 0.36, 56, 210) + 'px');
+      ['a', 'n'].forEach(l => {
+        const lista = Object.values(this.V).filter(u => u.lato === l);
+        const slots = FORM[l][clamp(lista.length, 1, 4)];
+        lista.forEach((u, i) => {
+          const p = this.els[u.id].pg, s = slots[i] || slots[slots.length - 1];
+          p.style.left = s[0] + '%'; p.style.top = s[1] + '%'; p.style.zIndex = Math.round(s[1] * 10);
+          p.dataset.z = p.style.zIndex;
+        });
+      });
     },
     render(id) {
       const u = this.V[id], e = this.els[id];
@@ -304,13 +347,17 @@
       e.sanNum.textContent = u.sanita;
       e.chips.innerHTML = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" title="${d.nome}: ${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
       e.card.classList.toggle('morto', !u.vivo);
-      e.card.classList.toggle('ced', u.ced > 0 && u.vivo);
-      let tag = u.ced > 0 && u.vivo ? ['CEDIMENTO', ''] : u.panico && u.vivo ? ['PANICO', 'panico'] : null;
-      if (e.tag) { e.tag.remove(); e.tag = null; }
-      if (tag) { e.tag = el('div', 'tag ' + tag[1], tag[0]); e.card.appendChild(e.tag); }
+      e.pg.classList.toggle('morto', !u.vivo);
+      const ced = u.ced > 0 && u.vivo;
+      e.card.classList.toggle('ced', ced);
+      if (ced) e.fig.classList.add('ced'); else e.fig.classList.remove('ced');
+      if (e.fig._sprite && E.Arte) E.Arte._sheet(e.fig, ced ? 'ced' : 'idle', 1);
+      const tag = ced ? ['CEDIMENTO', ''] : u.panico && u.vivo ? ['PANICO', 'panico'] : u.sanita >= C.SANITA_MAX && u.vivo ? ['ESALTAZIONE', 'esaltazione'] : null;
+      if (e.tag) { e.tag.remove(); e.tag = null; } if (e.pgTag) { e.pgTag.remove(); e.pgTag = null; }
+      if (tag) { e.tag = el('div', 'tag ' + tag[1], tag[0]); e.card.appendChild(e.tag); e.pgTag = el('div', 'pg-tag ' + tag[1], tag[0]); e.pg.appendChild(e.pgTag); }
     },
     renderDadi(id, anima) {
-      const e = this.els[id]; e.dadi.innerHTML = '';
+      const e = this.els[id]; if (!e) return; e.dadi.innerHTML = '';
       (this.dadi[id] || []).forEach(d => { const x = el('div', 'dado' + (anima ? ' rolla' : ''), d); e.dadi.appendChild(x); });
     },
     mostraArdore() {
@@ -344,7 +391,6 @@
     pianifica() {
       const B = this.B;
       this.fase = 'pianifica'; this.skip = false;
-      $('#btn-esegui').disabled = false;
       const prima = Object.keys(this.V).filter(id => this.V[id].lato === 'a' && this.V[id].vivo && B.azioni.some(a => a.u === id))[0];
       this.sel = this.sel && B.azioni.some(a => a.u === this.sel) && this.V[this.sel].vivo ? this.sel : prima;
       this.aggiornaPiano();
@@ -355,8 +401,8 @@
       if (this.fase !== 'pianifica') return;
       if (!Combat().pianoValido(this.B)) { this.log('Ardore insufficiente per il piano scelto.', 'imp'); return; }
       Snd.init(); Snd.sfx('ui');
-      this.fase = 'riproduzione'; $('#btn-esegui').disabled = true;
-      $$('.unit').forEach(c => c.classList.remove('sel', 'bersaglio-di-sel', 'bersagliabile'));
+      this.fase = 'riproduzione'; $('#btn-esegui').disabled = true; $('#btn-affondo').style.display = 'none';
+      $$('.unit, .pg').forEach(c => c.classList.remove('sel', 'bersaglio-di-sel', 'bersagliabile'));
       Object.keys(this.els).forEach(id => { this.els[id].intent.innerHTML = ''; });
       this.disegnaSkills();
       const r = this._pronto; this._pronto = null; r && r();
@@ -381,23 +427,39 @@
       Combat().pianifica(this.B, this.sel, idx, a.bers); Snd.sfx('ui');
       this.aggiornaPiano();
     },
+    /** Attiva/disattiva l'Affondo: la Voce selezionata colpisce gratis un nemico in Cedimento. */
+    toggleAffondo() {
+      if (this.fase !== 'pianifica') return;
+      const B = this.B;
+      if (B.affondo) { Combat().pianificaAffondo(B, null); this.log('Affondo annullato.'); }
+      else {
+        const ced = Combat().bersagliAffondo(B), act = B.azioni.find(x => x.u === this.sel);
+        const tgt = (act && ced.find(c => c.id === act.bers)) || ced[0];
+        if (!tgt || !this.sel || !Combat().pianificaAffondo(B, this.sel, tgt.id)) { this.log('Seleziona una Voce che possa agire per l\'Affondo.', 'imp'); return; }
+        this.log(`Affondo pianificato: ${B.byId[this.sel].breve} → ${tgt.breve} (gratis, ×${C.AFFONDO_MOLT} danni).`, 'imp');
+      }
+      Snd.sfx('ui'); this.aggiornaPiano();
+    },
     disponibile(a) { return this.B.ardore - (Combat().costoPiano(this.B) - E.SKILL[a.skill].costo); },
     aggiornaPiano() {
       const B = this.B;
       Object.keys(this.els).forEach(id => {
         const e = this.els[id], u = this.V[id];
-        e.card.classList.toggle('sel', id === this.sel);
-        e.card.classList.remove('bersaglio-di-sel');
-        e.card.classList.toggle('bersagliabile', u.lato === 'n' && u.vivo && !!this.sel);
-        // Intenzioni
+        [e.card, e.pg].forEach(x => { x.classList.toggle('sel', id === this.sel); x.classList.remove('bersaglio-di-sel'); x.classList.toggle('bersagliabile', u.lato === 'n' && u.vivo && !!this.sel); });
         e.intent.innerHTML = '';
         B.azioni.filter(a => a.u === id && !a.annullata && a.skill).forEach(a => {
           const s = E.SKILL[a.skill], t = this.V[a.bers];
           e.intent.appendChild(el('div', 'intenzione ' + (u.lato === 'a' ? 'alleata' : ''), `${s.nome} → ${t ? t.breve : '?'}`));
         });
+        if (B.affondo && B.affondo.u === id) e.intent.appendChild(el('div', 'intenzione alleata', `AFFONDO → ${this.V[B.affondo.bers].breve}`));
       });
       const act = B.azioni.find(a => a.u === this.sel);
-      if (act) { const t = this.els[act.bers]; if (t) t.card.classList.add('bersaglio-di-sel'); }
+      if (act) { const t = this.els[act.bers]; if (t) { t.card.classList.add('bersaglio-di-sel'); t.pg.classList.add('bersaglio-di-sel'); } }
+      // Pulsante Affondo: visibile solo con nemici in Cedimento
+      const ab = $('#btn-affondo'), ced = Combat().bersagliAffondo(B);
+      ab.style.display = ced.length ? '' : 'none';
+      ab.classList.toggle('attivo', !!B.affondo);
+      ab.textContent = B.affondo ? 'Affondo ✔' : 'Affondo';
       this.disegnaSkills(); this.mostraArdore();
       $('#btn-esegui').disabled = this.fase !== 'pianifica' || !Combat().pianoValido(B);
     },
@@ -423,7 +485,10 @@
     },
     async finale() {
       const B = this.B; this.fase = 'fine';
-      await this.sleep(500);
+      await this.rientraTutti();
+      // Posa di vittoria dei sopravvissuti
+      if (B.esito === 'vittoria') Object.keys(this.els).forEach(id => { if (this.V[id].lato === 'a' && this.V[id].vivo) this.els[id].fig.classList.add('a-vittoria'); });
+      await this.sleep(900);
       const r = $('#risultato'); r.className = 'overlay on ' + B.esito;
       Snd.sfx(B.esito);
       r.innerHTML = `<h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p>${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} Turni: ${B.turno}</p>`;
@@ -439,6 +504,7 @@
       if (v === 0) { this.skip = true; return; }
       this.velBase = v; this.ctx.save.opzioni.vel = v; this.ctx.persist(); this.aggiornaVel();
     },
+    get vel() { return this.skip ? 8 : this.velBase; },
     sleep(ms) {
       if (this.skip) return Promise.resolve();
       return new Promise(r => setTimeout(r, ms / this.velBase));
@@ -447,27 +513,28 @@
     /* ===================================================================== */
     /* Riproduzione degli eventi                                             */
     /* ===================================================================== */
+    /** Centro (schermo) del busto della figura: usato come origine/bersaglio degli effetti. */
     pos(id) {
-      const r = this.els[id].rit.getBoundingClientRect();
-      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      const r = this.els[id].fig.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height * 0.45, w: r.width, h: r.height };
     },
     async riproduci(evs) {
-      const prev = this.fase;
-      if (prev !== 'pianifica') this.fase = 'riproduzione';
+      if (this.fase !== 'pianifica') this.fase = 'riproduzione';
       for (const e of evs) {
         try { await this.gestisci(e); } catch (err) { console.error('Errore evento', e, err); }
       }
+      await this.rientraTutti();
       this.skip = false;
     },
     numero(id, testo, cls, dy) {
       if (!this.els[id]) return;
       const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), testo);
-      n.style.left = (p.x + rnd(-22, 22)) + 'px'; n.style.top = (p.y - 20 + (dy || 0) + rnd(-8, 8)) + 'px';
+      n.style.left = (p.x + rnd(-22, 22)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px';
       $('#app').appendChild(n); setTimeout(() => n.remove(), 1200);
     },
     shake(elem, amp, dur) {
       const k = []; for (let i = 0; i < 8; i++) k.push({ transform: `translate(${rnd(-amp, amp)}px,${rnd(-amp, amp)}px)` }); k.push({ transform: 'translate(0,0)' });
-      elem.animate(k, { duration: (dur || 300) / (this.skip ? 4 : this.velBase) });
+      elem.animate(k, { duration: (dur || 300) / this.vel });
     },
     /** Hit-stop: congela animazioni DOM e canvas per pochi millisecondi. */
     async hitStop(ms) {
@@ -481,27 +548,49 @@
     banner(testo) {
       const b = el('div', 'banner', testo); $('#app').appendChild(b); setTimeout(() => b.remove(), 1700);
     },
-    async lunge(att, bers, tImpatto) {
-      const a = this.els[att].card, pa = this.pos(att), pb = this.pos(bers);
-      const dx = (pb.x - pa.x) * 0.45, dy = (pb.y - pa.y) * 0.45;
-      a.style.zIndex = 20;
-      const dur = 380 / (this.skip ? 8 : this.velBase);
-      const an = a.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${dx}px,${dy}px) scale(1.12)`, offset: 0.4 }, { transform: 'translate(0,0) scale(1)' }], { duration: dur, easing: 'ease-out' });
-      an.onfinish = () => { a.style.zIndex = ''; };
-      await this.sleep(380 * 0.4);
+    /** Stile d'attacco di un'unità per una skill (da ARTE o dalla skill stessa). */
+    stile(unitId, skillId) {
+      const s = E.SKILL[skillId], u = this.V[unitId];
+      return (s && s.anim) || (E.ARTE && E.ARTE[u.def] && E.ARTE[u.def].attacco) || 'fendente';
     },
-    async miniMoneta(att, testa) {
-      if (this.skip) return;
-      const p = this.pos(att), m = creaMoneta(true);
-      const w = el('div'); w.style.cssText = `position:fixed;z-index:61;left:${p.x - 15}px;top:${p.y - 62}px;pointer-events:none`;
-      w.appendChild(m); $('#app').appendChild(w);
-      lanciaMoneta(m, testa); Snd.sfx('moneta');
-      await this.sleep(560);
-      w.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(-14px)' }], { duration: 250 / this.velBase }).onfinish = () => w.remove();
+    anima(id, nome) { return E.Arte ? E.Arte.anima(this.els[id].fig, nome, this.vel) : Promise.resolve(); },
+
+    /* ----- spostamenti delle figure ----- */
+    muovi(id, dx, dy) {
+      const e = this.els[id]; e.mov.style.transitionDuration = (0.18 / this.vel) + 's';
+      e.mov.style.transform = `translate(${dx}px,${dy}px)`;
+      e.pg.style.zIndex = 5000 + (+e.pg.dataset.z || 0); this.spostati.add(id);
+    },
+    /** L'attaccante scatta verso il bersaglio fermandosi a distanza di tiro (ravvicinata o no). */
+    async avanza(att, bers) {
+      const a = this.pos(att), b = this.pos(bers), dist = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const stile = this.stile(att, this.skillDi[att]);
+      const stop = (stile === 'sparo' || stile === 'lancio') ? Math.max(a.w * 2.6, 90) : Math.max(a.w * 0.85, 34);
+      const k = Math.max(0, (dist - stop) / dist);
+      this.muovi(att, (b.x - a.x) * k, (b.y - a.y) * k * 0.7);
+      await this.sleep(190);
+    },
+    /** Due combattenti si incontrano a metà strada. */
+    async incontra(ida, idb) {
+      const a = this.pos(ida), b = this.pos(idb), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const dist = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / dist, uy = (b.y - a.y) / dist, gap = Math.max(a.w * 0.9, 40);
+      this.muovi(ida, mx - ux * gap / 2 - a.x, (my - uy * gap / 2 - a.y) * 0.8);
+      this.muovi(idb, mx + ux * gap / 2 - b.x, (my + uy * gap / 2 - b.y) * 0.8);
+      await this.sleep(220);
+    },
+    async rientraTutti() {
+      if (!this.spostati.size) return;
+      this.spostati.forEach(id => {
+        const e = this.els[id]; if (!e) return;
+        e.mov.style.transitionDuration = (0.25 / this.vel) + 's'; e.mov.style.transform = '';
+        e.pg.style.zIndex = e.pg.dataset.z || '';
+      });
+      this.spostati.clear();
+      await this.sleep(260);
     },
 
     async gestisci(e) {
-      const B = this.B;
+      if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) await this.rientraTutti();
       switch (e.t) {
         case 'turno':
           $('#turno-n').textContent = 'Turno ' + e.n; this.ardoreV = e.ardore; this.mostraArdore();
@@ -509,12 +598,23 @@
         case 'dadi':
           this.dadi = e.dadi; Object.keys(e.dadi).forEach(id => this.renderDadi(id, true));
           Snd.sfx('moneta'); await this.sleep(600); break;
-        case 'regola': this.log(e.msg, 'imp'); Fx.flash('#a97be0', 0.2); await this.sleep(500); break;
+        case 'regola': this.log(e.msg, 'imp'); Fx.flash('#a97be0', 0.2); this.banner(e.msg.split(':')[0].slice(0, 28)); await this.sleep(700); break;
         case 'msg': this.log(e.msg); break;
         case 'azione': {
-          this.log(e.msg);
-          const s = E.SKILL[e.skill]; this.numero(e.att, s.nome, 'testo', -34);
-          await this.sleep(260); break;
+          this.log(e.msg); this.skillDi[e.att] = e.skill;
+          const s = E.SKILL[e.skill];
+          if (s.costo >= 5 || s.ultima) {            // skill culmine: banner a tutto schermo
+            this.banner(s.nome.toUpperCase()); Fx.flash(E.AFFINITA[s.aff].colore, 0.25); Snd.sfx('forte'); await this.sleep(750);
+          } else { this.numero(e.att, s.nome, 'testo', -34); await this.sleep(240); }
+          break;
+        }
+        case 'affondo': {
+          this.skillDi[e.att] = e.skill; this.log(e.msg, 'imp'); this.banner('AFFONDO!'); Fx.flash('#fff', 0.3); Snd.sfx('forte'); await this.sleep(700); break;
+        }
+        case 'schiva': {
+          this.numero(e.id, 'SCHIVATA!', 'testo', -20); this.log(e.msg);
+          const m = this.els[e.id].mov; m.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-34px)' }, { transform: 'translateX(0)' }], { duration: 400 / this.vel });
+          await this.sleep(450); break;
         }
         case 'clash': await this.apriClash(e); break;
         case 'round': await this.roundClash(e); break;
@@ -544,33 +644,37 @@
           const u = this.V[e.id]; u.pv = e.pvDopo; this.render(e.id);
           this.numero(e.id, '-' + e.danno, e.tipo === 'bruciatura' ? 'stato' : '');
           const p = this.pos(e.id); Fx.sparks(p.x, p.y, 8, e.tipo === 'bruciatura' ? '#ff8a3d' : '#e0455a', 0.5);
-          this.shake(this.els[e.id].card, 4, 200); Snd.sfx('colpo', 10);
-          this.log(`${u.breve} subisce ${e.danno} danni (${e.tipo}).`); await this.sleep(300); break;
+          this.anima(e.id, 'hit'); Snd.sfx('colpo', 10);
+          this.log(`${u.breve} subisce ${e.danno} danni (${e.tipo}).`); await this.sleep(320); break;
         }
         case 'cedimento': {
           const u = this.V[e.id]; u.ced = 2; this.render(e.id);
           this.log(e.msg, 'imp'); this.numero(e.id, 'CEDIMENTO!', 'testo', -30);
           const p = this.pos(e.id); Fx.ring(p.x, p.y, '#fff', 150); Fx.flash('#fff', 0.3); Fx.sparks(p.x, p.y, 40, '#fff', 1);
-          this.shake($('#campo'), 8, 400); Snd.sfx('ced'); await this.hitStop(160); await this.sleep(500); break;
+          this.shake($('#stage'), 8, 400); Snd.sfx('ced'); await this.hitStop(160); await this.sleep(500); break;
         }
+        case 'ced_agg': { const u = this.V[e.id]; u.ced = e.ced; this.render(e.id); break; }
+        case 'panico_fine': { this.V[e.id].panico = false; this.render(e.id); break; }
         case 'morte': {
-          const u = this.V[e.id]; u.vivo = false; u.pv = 0; this.render(e.id);
-          const p = this.pos(e.id); Fx.sparks(p.x, p.y, 50, this.els[e.id] ? u.colore : '#fff', 1.2); Fx.ring(p.x, p.y, u.colore, 130);
-          this.log(e.msg, 'imp'); Snd.sfx('morte'); await this.sleep(500); break;
+          const u = this.V[e.id]; u.vivo = false; u.pv = 0;
+          const p = this.pos(e.id); Fx.sparks(p.x, p.y, 50, u.colore, 1.2); Fx.ring(p.x, p.y, u.colore, 130);
+          this.log(e.msg, 'imp'); Snd.sfx('morte');
+          this.anima(e.id, 'morte'); this.render(e.id); await this.sleep(500); break;
         }
         case 'panico': {
           this.V[e.id].panico = true; this.render(e.id); this.log(e.msg, 'imp'); this.numero(e.id, 'PANICO!', 'testo', -30); await this.sleep(300); break;
         }
-        case 'fase': this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#campo'), 10, 500); await this.sleep(1000); break;
-        case 'evoca': this.aggiungiCarta(e.unit); this.log(e.msg, 'imp'); Snd.sfx('forte'); await this.sleep(500); break;
+        case 'fase': this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#stage'), 10, 500); await this.sleep(1000); break;
+        case 'evoca': this.aggiungiCarta(e.unit); this.layout(); this.log(e.msg, 'imp'); Snd.sfx('forte'); await this.sleep(700); break;
         case 'fine': break;
       }
     },
 
     /* ----- Clash ----- */
     async apriClash(e) {
+      this.skillDi[e.a.id] = e.a.skill; this.skillDi[e.b.id] = e.b.skill;
       const box = $('#clash'); box.innerHTML = '';
-      const cl = this.cl = { a: null, b: null };
+      const cl = this.cl = { a: null, b: null, sa: this.stile(e.a.id, e.a.skill), sb: this.stile(e.b.id, e.b.skill) };
       ['a', 'b'].forEach(k => {
         const s = e[k], u = this.V[s.id], lato = el('div', 'clash-lato');
         lato.appendChild(el('div', 'nome', `${u.breve} — ${E.SKILL[s.skill].nome}`));
@@ -579,16 +683,15 @@
         lato.appendChild(row);
         const pot = el('div', 'pot', ''); lato.appendChild(pot);
         cl[k] = { id: s.id, lato, coins, lost: 0, pot, perse: [] };
-        if (k === 'a') box.appendChild(lato);
       });
-      box.appendChild(el('div', 'clash-vs', 'SCONTRO'));
-      box.appendChild(cl.b.lato);
+      box.appendChild(cl.a.lato); box.appendChild(el('div', 'clash-vs', 'VS')); box.appendChild(cl.b.lato);
       box.className = 'on';
+      this.log(e.msg, 'imp'); Snd.sfx('clash');
+      await this.incontra(e.a.id, e.b.id);
       const a = this.pos(e.a.id), b = this.pos(e.b.id);
       this.linea = Fx.linea(a, b, E.AFFINITA[this.V[e.a.id].aff].colore, E.AFFINITA[this.V[e.b.id].aff].colore);
-      this.log(e.msg, 'imp'); Snd.sfx('clash');
       Fx.flash('#fff', 0.18); Fx.ring((a.x + b.x) / 2, (a.y + b.y) / 2, '#fff', 120);
-      await this.sleep(650);
+      await this.sleep(450);
     },
     async roundClash(e) {
       const cl = this.cl; if (!cl) return;
@@ -597,14 +700,19 @@
         e[k].flips.forEach((f, i) => { if (intatte[i]) lanciaMoneta(intatte[i], f); });
         cl[k].pot.textContent = ''; cl[k].lato.classList.remove('vince', 'perde');
       });
-      Snd.sfx('moneta'); await this.sleep(980);
+      Snd.sfx('moneta'); await this.sleep(950);
       ['a', 'b'].forEach(k => {
         cl[k].pot.textContent = e[k].pot;
         cl[k].lato.classList.toggle('vince', e.v === k); cl[k].lato.classList.toggle('perde', !!e.v && e.v !== k);
       });
+      // Entrambi i combattenti si lanciano l'uno contro l'altro; all'impatto scintille al centro
       const A = this.pos(cl.a.id), Bp = this.pos(cl.b.id), mx = (A.x + Bp.x) / 2, my = (A.y + Bp.y) / 2;
-      Fx.sparks(mx, my, 26, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); this.shake($('#campo'), 3, 200); Snd.sfx('clash');
-      await this.hitStop(60); await this.sleep(450);
+      const pa = this.anima(cl.a.id, cl.sa), pb = this.anima(cl.b.id, cl.sb);
+      const imp = Math.min(E.Arte.IMPATTO[cl.sa] * E.Arte.DURATA[cl.sa], E.Arte.IMPATTO[cl.sb] * E.Arte.DURATA[cl.sb]);
+      await this.sleep(imp * 1000);
+      Fx.sparks(mx, my, 28, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); this.shake($('#stage'), 3, 200); Snd.sfx('clash');
+      await this.hitStop(60);
+      await Promise.all([pa, pb]);
       if (e.v) {
         const l = e.v === 'a' ? 'b' : 'a', L = cl[l];
         const idx = L.coins.map((_, i) => i).filter(i => !L.perse.includes(i)).pop();
@@ -616,12 +724,13 @@
           const pc = L.coins[idx].getBoundingClientRect(); Fx.sparks(pc.left + pc.width / 2, pc.top + pc.height / 2, 18, '#ffd75e', 0.8);
         }
       } else this.log('Pareggio: si rilancia!');
-      await this.sleep(550);
+      await this.sleep(450);
     },
     async chiudiClash(e) {
       const cl = this.cl; if (!cl) return;
       this.log(e.msg);
       ['a', 'b'].forEach(k => { cl[k].lato.classList.toggle('vince', cl[k].id === e.vincitore); cl[k].lato.classList.toggle('perde', cl[k].id !== e.vincitore); });
+      this.anima(e.perdente, 'hit');
       await this.sleep(500);
       $('#clash').className = ''; Fx.pulisciLinee(); this.linea = null; this.cl = null;
     },
@@ -629,10 +738,21 @@
     /* ----- Colpo singolo ----- */
     async colpo(e) {
       const att = this.V[e.att], bers = this.V[e.bers];
+      const skillId = this.skillDi[e.att], stile = this.stile(e.att, skillId), s = E.SKILL[skillId] || {};
+      if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers);
       await this.miniMoneta(e.att, e.testa);
       const colore = E.AFFINITA[att.aff].colore;
-      // Avvicinamento; l'impatto avviene al 40% dell'animazione
-      await this.lunge(e.att, e.bers);
+      const figA = this.els[e.att].fig;
+      if (s.costo >= 5 || s.ultima) figA.classList.add('ultima');
+      const dur = E.Arte.DURATA[stile], tImp = dur * E.Arte.IMPATTO[stile];
+      const pAnim = this.anima(e.att, stile);
+      if (stile === 'sparo' || stile === 'lancio') {
+        const a = this.pos(e.att), b = this.pos(e.bers);
+        setTimeout(() => Fx.proiettile({ x: a.x + a.w * 0.5, y: a.y }, b, colore, 0.12), Math.max(0, (tImp - 0.12) * 1000 / this.vel));
+        if (stile === 'sparo') setTimeout(() => Snd.sfx('sparo'), Math.max(0, (tImp - 0.12) * 1000 / this.vel));
+      }
+      await this.sleep(tImp * 1000);
+      // ---- impatto ----
       const forte = e.danno >= 22 || e.rel === 1;
       bers.pv = e.pvDopo; this.render(e.bers);
       const p = this.pos(e.bers);
@@ -641,30 +761,43 @@
       if (forte) Fx.flash(colore, 0.2);
       this.numero(e.bers, e.danno, e.rel === 1 ? 'vant' : e.rel === -1 ? 'svant' : '');
       if (e.assorbito) this.numero(e.bers, 'assorbe ' + e.assorbito, 'assorbi', 24);
-      this.shake(this.els[e.bers].card, 5 + Math.min(12, e.danno / 4), 320);
-      if (forte) this.shake($('#campo'), 3 + Math.min(8, e.danno / 6), 320);
-      this.els[e.bers].rit.animate([{ filter: 'brightness(3)' }, { filter: 'none' }], { duration: 250 });
+      this.anima(e.bers, 'hit');
+      if (forte) this.shake($('#stage'), 3 + Math.min(8, e.danno / 6), 320);
       Snd.sfx(forte ? 'forte' : 'colpo', e.danno);
       this.log(`${att.breve} → ${bers.breve}: ${e.danno} danni${e.rel === 1 ? ' (vantaggio)' : e.rel === -1 ? ' (svantaggio)' : ''}${e.testa ? '' : ' [croce]'}.`);
       await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150));
-      await this.sleep(230);
+      await pAnim;
+      figA.classList.remove('ultima');
+      await this.sleep(120);
+    },
+    /** Piccola moneta 3D che gira sopra l'attaccante: mostra Testa/Croce del colpo. */
+    async miniMoneta(att, testa) {
+      if (this.skip) return;
+      const p = this.pos(att), m = creaMoneta(true);
+      const w = el('div'); w.style.cssText = `position:fixed;z-index:61;left:${p.x - 15}px;top:${p.y - p.h * 0.62}px;pointer-events:none`;
+      w.appendChild(m); $('#app').appendChild(w);
+      lanciaMoneta(m, testa); Snd.sfx('moneta');
+      await this.sleep(520);
+      w.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(-14px)' }], { duration: 220 / this.velBase }).onfinish = () => w.remove();
     }
   };
-  function Combat() { return E.Combat; }
 
   /* ----- Collegamento controlli (una sola volta) ----- */
   UI.init = function (ctx) {
     Fx.init();
     $('#btn-esegui').onclick = () => Bat.conferma();
+    $('#btn-affondo').onclick = () => Bat.toggleAffondo();
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
     $('#btn-audio').onclick = () => {
       Snd.init(); Snd.on = !Snd.on; ctx.save.opzioni.audio = Snd.on; ctx.persist();
       $('#btn-audio').textContent = 'Suono: ' + (Snd.on ? 'sì' : 'no');
     };
+    root.addEventListener('resize', () => { if (Bat.B) Bat.layout(); });
     document.addEventListener('keydown', e => {
       if (!$('#scr-battaglia').classList.contains('active') || Bat.fase !== 'pianifica') return;
       if (e.key >= '1' && e.key <= '3') Bat.scegliSkill(+e.key - 1);
       else if (e.key === 'Enter') Bat.conferma();
+      else if (e.key === 'a' || e.key === 'A') Bat.toggleAffondo();
     });
     document.addEventListener('pointerdown', () => Snd.init(), { once: true });
   };

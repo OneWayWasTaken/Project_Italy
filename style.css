@@ -71,21 +71,38 @@ select { background: var(--carta); color: var(--testo); border: 1px solid var(--
 .ritratto.grande { width: 84px; height: 84px; font-size: 40px; }
 
 /* ----- Battaglia ----- */
-#campo { flex: 1; display: flex; min-height: 0; padding: 8px 10px; gap: 8px; position: relative; }
-.colonna { width: 280px; display: flex; flex-direction: column; gap: 8px; justify-content: center; flex: none; }
-#centro { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-width: 0; }
-#turno-info { display: flex; gap: 16px; font-size: 18px; color: var(--testo2); margin-top: 4px; z-index: 3; }
+#campo { flex: 1; display: flex; min-height: 0; padding: 6px 8px; gap: 6px; position: relative; }
+.colonna { width: 230px; display: flex; flex-direction: column; gap: 6px; justify-content: center; flex: none; }
+#stage { flex: 1; position: relative; min-width: 0; overflow: hidden; border-radius: 14px; border: 1px solid var(--bordo); background: #0a0810; --fh: 130px; }
+#stage-bg { position: absolute; inset: 0; } #stage-bg svg { width: 100%; height: 100%; display: block; }
+#turno-info { position: absolute; top: 4px; left: 0; right: 0; display: flex; gap: 16px; justify-content: center; font-size: 17px; color: var(--testo2); z-index: 3; text-shadow: 0 1px 3px #000; pointer-events: none; }
 #ardore { color: var(--oro); font-weight: bold; }
-#clash { position: absolute; inset: 40px 0 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none; opacity: 0; transition: opacity .2s; z-index: 4; }
+#clash { position: absolute; top: 30px; left: 0; right: 0; display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 8px; pointer-events: none; opacity: 0; transition: opacity .2s; z-index: 5000; }
 #clash.on { opacity: 1; }
-.clash-lato { display: flex; flex-direction: column; align-items: center; gap: 6px; background: #0009; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--bordo); min-width: 190px; }
-.clash-lato .nome { font-size: 14px; color: var(--testo2); }
-.clash-lato .pot { font-size: 34px; font-weight: bold; min-height: 42px; text-shadow: 0 0 10px #000; }
+.clash-lato { display: flex; flex-direction: column; align-items: center; gap: 3px; background: #000b; padding: 5px 10px; border-radius: 10px; border: 1px solid var(--bordo); min-width: 150px; }
+.clash-lato .nome { font-size: 12px; color: var(--testo2); white-space: nowrap; }
+.clash-lato .pot { font-size: 28px; font-weight: bold; min-height: 34px; text-shadow: 0 0 10px #000; }
 .clash-lato.vince { border-color: var(--oro); box-shadow: 0 0 22px rgba(224, 180, 58, .6); }
 .clash-lato.vince .pot { color: var(--oro); }
 .clash-lato.perde .pot { color: var(--testo2); }
-.clash-vs { font-size: 22px; font-weight: bold; color: var(--rosso); letter-spacing: .3em; text-shadow: 0 0 12px var(--rosso); }
-.monete { display: flex; gap: 8px; min-height: 52px; align-items: center; }
+.clash-vs { font-size: 16px; font-weight: bold; color: var(--rosso); letter-spacing: .2em; text-shadow: 0 0 12px var(--rosso); align-self: center; }
+.monete { display: flex; gap: 6px; min-height: 46px; align-items: center; }
+
+/* Personaggi sul palcoscenico: .pg (posizione) > .pg-mov (spostamenti) > .fig (SVG o sprite) */
+.pg { position: absolute; width: calc(var(--fh) * var(--sc, 1) * .62); height: calc(var(--fh) * var(--sc, 1)); transform: translate(-50%, -100%); transition: left .5s, top .5s, opacity 1s; cursor: pointer; }
+.pg.quadrupede { width: calc(var(--fh) * var(--sc, 1) * 1.05); }
+.pg-mov { position: absolute; inset: 0; transition: transform .18s ease-out; }
+.pg .fig { position: absolute; inset: 0; }
+.pg.nemico .fig svg, .pg.nemico .fig .spr { transform: scaleX(-1); }
+.pg-ombra { position: absolute; left: 6%; right: 6%; bottom: -5px; height: 12px; border-radius: 50%; background: radial-gradient(#000c, #0000 72%); }
+.pg.sel .pg-ombra { box-shadow: 0 0 0 2px var(--oro), 0 0 14px var(--oro); background: radial-gradient(#ffd75e55, #0000 72%); }
+.pg.bersagliabile:hover .pg-ombra { box-shadow: 0 0 0 2px var(--rosso), 0 0 14px var(--rosso); }
+.pg.bersaglio-di-sel .pg-ombra { box-shadow: 0 0 0 2px var(--rosso); }
+.pg.morto { opacity: 0; pointer-events: none; }
+.pg-tag { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); font-size: 10px; padding: 0 6px; border-radius: 8px; background: var(--rosso); color: #fff; font-weight: bold; white-space: nowrap; animation: pop .3s; pointer-events: none; }
+.pg-tag.panico { background: #6a2fb0; } .pg-tag.esaltazione { background: var(--oro2); }
+.det-fig { height: 190px; display: flex; justify-content: center; margin-bottom: 8px; }
+.det-fig .fig { position: relative; height: 100%; width: auto; aspect-ratio: 120 / 200; }
 
 /* Monete 3D in CSS */
 .moneta { width: 44px; height: 44px; perspective: 260px; }
@@ -201,21 +218,155 @@ select { background: var(--carta); color: var(--testo); border: 1px solid var(--
 .opz-riga { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 10px 0; }
 .shake-schermo { animation: none; }
 
-/* ----- Schermi stretti ----- */
-@media (max-width: 860px) {
-  #campo { flex-direction: column; padding-top: 30px; }
-  .colonna { width: auto; flex-direction: row; flex: 1; align-items: stretch; }
-  #col-nemici { order: -1; }
-  .unit { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 6px; max-height: none; min-width: 0; }
-  .unit .ritratto { width: 42px; height: 42px; font-size: 20px; }
-  .unit .info { width: 100%; }
+/* ============================================================================
+ * FIGURE SVG: animazioni (idle, attacchi, stati). I selettori .fig .f-* corrispondono ai
+ * gruppi creati in art.js. Le variabili --aA/--aB sono gli angoli di riposo delle braccia,
+ * --t la durata dell'animazione corrente, --dl uno sfasamento casuale per l'idle.
+ * ========================================================================== */
+.fig svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.fig .f-tutto { animation: f-idle 2.8s var(--dl, 0s) ease-in-out infinite; }
+.fig .f-torso { animation: f-resp 2.8s var(--dl, 0s) ease-in-out infinite; }
+.fig .f-testa { animation: f-testa 3.4s var(--dl, 0s) ease-in-out infinite; }
+.fig .f-mantello, .fig .f-coda { animation: f-mant 2.4s var(--dl, 0s) ease-in-out infinite; }
+.fig .f-braccio-a { transform: rotate(var(--aA, -18deg)); animation: f-bra 2.8s var(--dl, 0s) ease-in-out infinite; }
+.fig .f-braccio-b { transform: rotate(var(--aB, 7deg)); animation: f-brb 2.8s var(--dl, 0s) ease-in-out infinite; }
+.fig .f-lampo, .fig .f-aura circle { opacity: 0; }
+.fig.eco svg { filter: drop-shadow(0 0 5px var(--glow)); animation: eco 3.2s var(--dl, 0s) ease-in-out infinite; }
+@keyframes eco { 0%, 100% { opacity: .92; } 45% { opacity: .68; } 52% { opacity: .96; } }
+@keyframes f-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.8px); } }
+@keyframes f-resp { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 1.03); } }
+@keyframes f-testa { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(2.2deg); } }
+@keyframes f-mant { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3.5deg); } }
+@keyframes f-bra { 0%, 100% { transform: rotate(var(--aA, -18deg)); } 50% { transform: rotate(calc(var(--aA, -18deg) + 5deg)); } }
+@keyframes f-brb { 0%, 100% { transform: rotate(var(--aB, 7deg)); } 50% { transform: rotate(calc(var(--aB, 7deg) - 5deg)); } }
+
+/* --- Fendente: alza e cala l'arma --- */
+.fig.a-fendente .f-braccio-a { animation: fe-a var(--t, .6s) ease-in-out both; }
+.fig.a-fendente .f-torso { animation: fe-t var(--t, .6s) ease-in-out both; }
+.fig.a-fendente .f-tutto { animation: fe-c var(--t, .6s) ease-in-out both; }
+@keyframes fe-a { 0% { transform: rotate(var(--aA)); } 35% { transform: rotate(-168deg); } 50% { transform: rotate(-172deg); } 66% { transform: rotate(-5deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes fe-t { 0%, 100% { transform: rotate(0); } 35% { transform: rotate(-8deg); } 66% { transform: rotate(10deg); } }
+@keyframes fe-c { 0%, 100% { transform: translateX(0); } 35% { transform: translateX(-4px); } 66% { transform: translateX(8px) scaleX(1.04); } }
+/* --- Affondo: stoccata in avanti --- */
+.fig.a-affondo .f-braccio-a { animation: af-a var(--t, .5s) ease-in-out both; }
+.fig.a-affondo .f-tutto { animation: af-c var(--t, .5s) ease-in-out both; }
+.fig.a-affondo .f-testa { animation: none; }
+@keyframes af-a { 0% { transform: rotate(var(--aA)); } 28% { transform: translateX(-6px) rotate(-60deg); } 52% { transform: translateX(14px) rotate(-90deg); } 75% { transform: translateX(14px) rotate(-90deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes af-c { 0%, 100% { transform: translateX(0) rotate(0); } 28% { transform: translateX(-5px) rotate(-3deg); } 52% { transform: translateX(8px) rotate(5deg); } }
+.fig.quadrupede.a-affondo .f-testa { animation: el-testa var(--t, .5s) ease-in-out both; }
+@keyframes el-testa { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-18deg); } 55% { transform: rotate(14deg) translateX(6px); } }
+/* --- Sparo --- */
+.fig.a-sparo .f-braccio-a { animation: sp-a var(--t, .55s) ease-out both; }
+.fig.a-sparo .f-tutto { animation: sp-c var(--t, .55s) ease-out both; }
+.fig.a-sparo .f-lampo { animation: sp-l var(--t, .55s) linear both; }
+@keyframes sp-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(-88deg); } 42% { transform: rotate(-104deg); } 52% { transform: rotate(-88deg); } 85% { transform: rotate(-88deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes sp-c { 0%, 100% { transform: translateX(0); } 42% { transform: translateX(-6px); } 52% { transform: translateX(0); } }
+@keyframes sp-l { 0%, 38% { opacity: 0; } 42%, 50% { opacity: 1; } 60%, 100% { opacity: 0; } }
+/* --- Lancio: l'oggetto parte in avanti --- */
+.fig.a-lancio .f-braccio-a { animation: la-a var(--t, .6s) ease-in-out both; }
+.fig.a-lancio .f-arma { animation: la-o var(--t, .6s) ease-in both; }
+.fig.a-lancio .f-tutto { animation: fe-c var(--t, .6s) ease-in-out both; }
+@keyframes la-a { 0% { transform: rotate(var(--aA)); } 32% { transform: rotate(-165deg); } 50% { transform: rotate(-70deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes la-o { 0%, 45% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(60px); opacity: 1; } 78% { transform: translateY(75px); opacity: 0; } 79%, 90% { transform: translateY(0); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+/* --- Preghiera / incantesimo: braccia al cielo --- */
+.fig.a-preghiera .f-braccio-a { animation: pr-a var(--t, .7s) ease-in-out both; }
+.fig.a-preghiera .f-braccio-b { animation: pr-b var(--t, .7s) ease-in-out both; }
+.fig.a-preghiera .f-testa { animation: pr-t var(--t, .7s) ease-in-out both; }
+.fig.a-preghiera .f-tutto { animation: pr-c var(--t, .7s) ease-in-out both; }
+.fig.a-preghiera .f-aura circle { animation: pr-au var(--t, .7s) ease-out both; }
+@keyframes pr-a { 0% { transform: rotate(var(--aA)); } 35%, 62% { transform: rotate(-150deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes pr-b { 0% { transform: rotate(var(--aB)); } 35%, 62% { transform: rotate(150deg); } 100% { transform: rotate(var(--aB)); } }
+@keyframes pr-t { 35%, 62% { transform: rotate(-10deg); } }
+@keyframes pr-c { 35%, 62% { transform: translateY(-5px); } }
+@keyframes pr-au { 0% { opacity: 0; r: 20; } 45% { opacity: .9; r: 44; } 100% { opacity: 0; r: 60; } }
+/* --- Colpo subito --- */
+.fig.a-hit .f-tutto { animation: hit var(--t, .38s) ease-out both; }
+.fig.a-hit .f-testa { animation: hit-t var(--t, .38s) ease-out both; }
+.fig.a-hit svg { animation: hit-f var(--t, .38s) ease-out both; }
+@keyframes hit { 0% { transform: translateX(0); } 18% { transform: translateX(-11px) rotate(-5deg) scaleY(.96); } 100% { transform: translateX(0); } }
+@keyframes hit-t { 18% { transform: rotate(-16deg); } }
+@keyframes hit-f { 0% { filter: brightness(3) saturate(0); } 40% { filter: brightness(1.6); } 100% { filter: none; } }
+/* --- Cedimento: accasciato --- */
+.fig.ced .f-tutto { animation: ced 1s ease-in-out infinite alternate; }
+.fig.ced .f-testa { animation: ced-t 1s ease-in-out infinite alternate; }
+.fig.ced .f-braccio-a, .fig.ced .f-braccio-b { animation: none; transform: rotate(20deg); }
+@keyframes ced { 0% { transform: translateY(8px) rotate(12deg); } 100% { transform: translateY(10px) rotate(15deg); } }
+@keyframes ced-t { 0% { transform: rotate(-14deg); } 100% { transform: rotate(-22deg); } }
+.fig.ced svg { filter: grayscale(.6) brightness(.85); }
+/* --- Sconfitta / vittoria --- */
+.fig.a-morte .f-tutto { animation: morte 1.1s ease-in forwards; }
+.fig.a-morte svg { animation: morte-f 1.1s ease-in forwards; }
+@keyframes morte { to { transform: translateY(18px) rotate(86deg); } }
+@keyframes morte-f { 0% { filter: brightness(2.5); } 100% { filter: grayscale(1) brightness(.4); opacity: 0; } }
+.fig.a-vittoria .f-braccio-a { animation: vit-a 1s ease-in-out infinite; }
+.fig.a-vittoria .f-tutto { animation: vit-c 1s ease-in-out infinite; }
+@keyframes vit-a { 0%, 100% { transform: rotate(-150deg); } 50% { transform: rotate(-175deg); } }
+@keyframes vit-c { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+.fig.ultima svg { filter: drop-shadow(0 0 7px var(--glow)) brightness(1.25); }
+/* Busto (HUD): niente animazioni */
+.ritratto.busto { overflow: hidden; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--c) 55%, #fff) 0%, color-mix(in srgb, var(--c) 45%, #20182a) 70%); }
+.ritratto.busto svg { width: 100%; height: 100%; display: block; }
+.ritratto.busto * { animation: none !important; }
+.ritratto.busto .f-braccio-a, .ritratto.busto .f-braccio-b { transform: none; }
+.spr-busto { width: 100%; height: 100%; background-size: cover; background-position: top center; }
+/* Sprite sostitutivi (vedi ARTE.md) */
+.sprite-fig .spr { image-rendering: auto; }
+.sprite-fig .spr:not(.sheet) { animation: f-idle 2.8s var(--dl, 0s) ease-in-out infinite; transform-origin: 50% 100%; }
+.sprite-fig:not([data-sprite]) .spr { }
+@keyframes spr-steps { from { background-position-x: 0%; } to { background-position-x: var(--to, 0%); } }
+.sprite-fig[class*="a-fendente"] .spr:not(.sheet), .sprite-fig[class*="a-affondo"] .spr:not(.sheet), .sprite-fig[class*="a-sparo"] .spr:not(.sheet),
+.sprite-fig[class*="a-lancio"] .spr:not(.sheet), .sprite-fig[class*="a-preghiera"] .spr:not(.sheet) { animation: spr-atk var(--t, .6s) ease-in-out both; }
+.sprite-fig.a-hit .spr:not(.sheet) { animation: spr-hit var(--t, .38s) ease-out both; }
+.sprite-fig.ced .spr:not(.sheet) { animation: none; transform: rotate(14deg) translateY(8px); filter: grayscale(.6); }
+.sprite-fig.a-morte .spr:not(.sheet) { animation: morte 1.1s ease-in forwards; }
+@keyframes spr-atk { 0%, 100% { transform: translateX(0) rotate(0); } 35% { transform: translateX(-8px) rotate(-7deg); } 66% { transform: translateX(14px) rotate(8deg) scale(1.05); } }
+@keyframes spr-hit { 0% { filter: brightness(3); } 18% { transform: translateX(-11px) rotate(-5deg); } 100% { filter: none; transform: none; } }
+
+/* ============================================================================
+ * LAYOUT COMPATTO: telefono in orizzontale (altezza ≤ 520px)
+ * ========================================================================== */
+@media (max-height: 520px) {
+  .colonna { width: 152px; gap: 3px; }
+  #campo { padding: 3px 4px; gap: 4px; }
+  .unit { grid-template-columns: 34px 1fr; gap: 5px; padding: 3px 6px; border-radius: 8px; border-width: 1px; max-height: none; }
+  .ritratto { width: 34px; height: 34px; font-size: 16px; border-width: 1px; }
   .unit .nome { font-size: 11px; }
-  .chip { font-size: 9px; }
-  #pannello { grid-template-columns: 1fr; grid-template-rows: auto auto 70px; }
-  #log { grid-column: 1; }
-  #skills { grid-template-columns: 1fr; }
-  .skill-btn .d { display: none; }
-  #comandi { flex-direction: row; }
-  #centro { position: absolute; inset: 0; pointer-events: none; }
-  .sq-dettaglio { display: none; }
+  .barra-pv { height: 9px; } .barra-pv .num { font-size: 8px; line-height: 9px; }
+  .barra-sanita { height: 4px; } .barra-sanita .num { display: none; }
+  .chips { min-height: 10px; } .chip { font-size: 9px; line-height: 12px; padding: 0 3px; }
+  .intenzione { font-size: 9px; padding: 0 4px; }
+  .dadi { top: -6px; right: 4px; } .dado { width: 16px; height: 16px; font-size: 10px; border-radius: 4px; }
+  .unit .tag { font-size: 8px; top: -6px; padding: 0 5px; }
+  #turno-info { font-size: 12px; top: 2px; }
+  #clash { top: 20px; gap: 4px; }
+  .clash-lato { min-width: 96px; padding: 2px 6px; gap: 1px; } .clash-lato .nome { font-size: 9px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .clash-lato .pot { font-size: 18px; min-height: 22px; } .monete { min-height: 30px; gap: 3px; }
+  .moneta { width: 27px; height: 27px; } .moneta .testa, .moneta .croce { font-size: 13px; border-width: 2px; }
+  .clash-vs { font-size: 10px; }
+  #pannello { grid-template-columns: minmax(0, 1fr) 128px; grid-template-rows: auto; padding: 4px 6px; gap: 4px 6px; }
+  #log { display: none; }
+  #skills { gap: 4px; }
+  .skill-btn { padding: 3px 6px; border-width: 1px; border-radius: 7px; }
+  .skill-btn .t { font-size: 11px; } .skill-btn .num { font-size: 9px; margin: 0; gap: 3px; } .skill-btn .d { display: none; } .skill-btn .rel { font-size: 9px; }
+  #comandi { gap: 3px; } #comandi .vel .btn { padding: 2px 0; font-size: 11px; }
+  #btn-esegui { font-size: 14px; padding: 5px 4px; } #btn-audio { display: none; } #btn-affondo { padding: 3px; font-size: 12px; }
+  .btn.piccolo { padding: 3px 8px; font-size: 11px; }
+  .num-fly { font-size: 20px !important; } .num-fly.vant { font-size: 26px !important; } .num-fly.stato, .num-fly.sanita, .num-fly.assorbi { font-size: 12px !important; }
+  .banner { font-size: 24px; top: 30%; }
+  .overlay h2 { font-size: 30px; }
+  .titolo h1 { font-size: 40px; } #scr-menu { gap: 12px; } .menu-btns { min-width: 220px; gap: 5px; } .menu-btns .btn { padding: 6px 12px; font-size: 14px; }
+  .barra { padding: 3px 10px; gap: 8px; } .barra h2 { font-size: 15px; } .barra .btn { padding: 4px 10px; font-size: 13px; }
+  .sq-griglia { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; padding: 6px; }
+  .sq-card { padding: 4px; } .sq-card .ritratto { width: 40px; height: 40px; } .sq-card .n { font-size: 11px; } .sq-card .m { font-size: 9px; } .sq-card .stelle { font-size: 9px; }
+  .sq-dettaglio { width: 38%; font-size: 11px; padding: 8px; } .sq-dettaglio .skill-box { padding: 4px 6px; margin: 4px 0; }
+  .det-fig { height: 110px; }
+  .pannello-modale { padding: 10px 14px; max-height: 96%; font-size: 12px; }
+  .opz-riga { margin: 5px 0; }
+  .tab-aff td, .tab-aff th { padding: 2px 6px; font-size: 11px; }
 }
+@media (max-height: 520px) and (max-width: 760px) { .colonna { width: 124px; } .unit .nome { font-size: 10px; } .clash-lato { min-width: 80px; } }
+/* Schermi alti ma stretti (telefono in verticale): chiede di ruotare */
+#ruota { display: none; position: fixed; inset: 0; z-index: 9999; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 30px; font-size: 18px; color: var(--oro); }
+#ruota .tel { font-size: 64px; animation: ruota 2.4s ease-in-out infinite; }
+@keyframes ruota { 0%, 20% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) and (max-width: 720px) { #ruota { display: flex; } }
