@@ -1,0 +1,13 @@
+{
+  "name": "Echi d'Italia",
+  "short_name": "Echi d'Italia",
+  "description": "Gioco a turni a clash di monete ambientato nella storia italiana",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0e0c12",
+  "theme_color": "#0e0c12",
+  "lang": "it",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
