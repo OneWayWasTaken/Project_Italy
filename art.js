@@ -180,6 +180,11 @@
     lettera: () => ({ svg: `<rect x="-8" y="2" width="16" height="11" fill="#f2ecd8" ${OUT}/><path d="M-8 2 L0 9 L8 2" fill="none" stroke="#1b1422" stroke-width="1"/><circle cx="0" cy="9" r="1.8" fill="#b02a2a"/>`, lampo: 0 }),
     cartella: () => ({ svg: `<rect x="-8" y="2" width="16" height="20" rx="2" fill="#8a6a3a" ${OUT}/><rect x="-8" y="9" width="16" height="3" fill="#5a4222"/>`, lampo: 0 }),
     palma: () => ({ svg: `<rect x="-1" y="-10" width="2" height="40" fill="#5a7a2a"/>${[6, 14, 22, 30].map(y => `<path d="M0 ${y} Q-10 ${y - 4} -12 ${y - 12} Q-3 ${y - 8} 0 ${y} M0 ${y} Q10 ${y - 4} 12 ${y - 12} Q3 ${y - 8} 0 ${y}" fill="#7fa84a" ${OUT}/>`).join('')}`, lampo: 0 }),
+    torcia: () => ({ svg: `<rect x="-1.8" y="-6" width="3.6" height="26" rx="1.5" fill="#6a4a2a" ${OUT}/><path d="M0 26 Q-7 36 0 46 Q7 36 0 26 Z" fill="#ff8a3d" ${OUT}/><path d="M0 30 Q-3 36 0 42 Q3 36 0 30 Z" fill="#ffd75e"/>`, lampo: 0 }),
+    spada: () => ({ svg: `<rect x="-6" y="3" width="12" height="3" fill="#8a6a2a" ${OUT}/><path d="M-2.4 6 L2.4 6 L2.4 40 L0 46 L-2.4 40 Z" fill="#d6dde6" ${OUT}/><rect x="-1.6" y="-5" width="3.2" height="8.5" fill="#3a2a1a"/>`, lampo: 0 }),
+    mazza: () => ({ svg: `<rect x="-1.6" y="-8" width="3.2" height="30" rx="1.4" fill="#6a4a2a" ${OUT}/><circle cx="0" cy="26" r="7" fill="#5a5a66" ${OUT}/><path d="M-7 26 L-10 26 M7 26 L10 26 M0 33 L0 36 M0 19 L0 16" stroke="#5a5a66" stroke-width="3" stroke-linecap="round"/>`, lampo: 0 }),
+    fucile: () => ({ svg: `<rect x="-2.6" y="-10" width="5.2" height="16" rx="2" fill="#6a4a2a" ${OUT}/><rect x="-1.4" y="4" width="2.8" height="38" fill="#4a4a54" ${OUT}/><path d="M0 42 L-1.6 56 L1.6 56 Z" fill="#cfd6df" ${OUT}/>`, lampo: 44 }),
+    lanterna: () => ({ svg: `<path d="M0 -2 L0 6" stroke="#8a6a2a" stroke-width="1.6"/><rect x="-5" y="6" width="10" height="13" rx="2" fill="#3a2f20" ${OUT}/><rect x="-3.4" y="8" width="6.8" height="9" fill="#ffd75e"/><circle cx="0" cy="12.5" r="9" fill="#ffd75e" opacity=".25"/>`, lampo: 0 }),
     ruota: () => ({ svg: `<circle cx="0" cy="12" r="12" fill="none" stroke="#1b1422" stroke-width="3"/><circle cx="0" cy="12" r="12" fill="none" stroke="#c9ccd6" stroke-width="1.4"/><path d="M0 0 L0 24 M-12 12 L12 12 M-8.5 3.5 L8.5 20.5 M8.5 3.5 L-8.5 20.5" stroke="#9a9ca8" stroke-width="0.8"/>`, lampo: 0 })
   };
   const SCUDI = {
@@ -236,6 +241,10 @@
     basco: (c1) => `<ellipse cx="58" cy="22" rx="15.5" ry="6.4" fill="${c1}" ${OUT} transform="rotate(-12 58 22)"/><circle cx="55" cy="15" r="1.7" fill="${c1}"/>`,
     cappellino_ciclista: (c1) => `<path d="M48.5 30 Q48.5 17 60 17 Q71.5 17 72.5 30 Z" fill="${c1}" ${OUT}/><path d="M70 28 L84 31 L70 33 Z" fill="${c1}" ${OUT}/>`,
     cappuccio: (c1) => `<path d="M43.5 48 Q41.5 10 60 10 Q78.5 10 77.5 48 L72 55 Q60 42 48 55 Z" fill="${c1}" ${OUT}/><path d="M50 28 Q60 22 71 28 L72 44 Q60 50 49 44 Z" fill="#0a0810"/>`,
+    bicorno: (c1, c2) => `<path d="M42 30 Q60 14 80 28 Q76 33 60 28 Q46 33 42 30 Z" fill="${c1}" ${OUT}/><path d="M42 30 Q46 22 50 26 M80 28 Q76 20 72 24" stroke="${c2}" stroke-width="2" fill="none"/><circle cx="61" cy="22" r="2.2" fill="${c2}"/>`,
+    elmetto: (c1) => `<path d="M46.5 32 Q45.5 15 60 15 Q74.5 15 74.5 30 L46.5 32 Z" fill="${c1}" ${OUT}/><path d="M60 15 L60 12" stroke="${c1}" stroke-width="3"/><path d="M46 32 L49 46 L54 35 Z" fill="${c1}" ${OUT}/><path d="M47 30 L74 30" stroke="${scuro(c1, 0.3)}" stroke-width="2"/>`,
+    cappuccio_aperto: (c1) => ({ dietro: `<path d="M44 28 Q40 52 46 68 L66 62 L62 40 Z" fill="${scuro(c1, 0.15)}" ${OUT}/>`,
+      davanti: `<path d="M45 36 Q43 14 60 13 Q76 13 75 31 Q68 24.5 60 24.5 Q52 24.5 47.5 33 Z" fill="${c1}" ${OUT}/><path d="M45 36 Q47 46 50 50 L53 38 Z" fill="${c1}" ${OUT}/>` }),
     fascia: (c1) => `<path d="M47.5 28.5 Q60 22 73.5 28.5 L73.5 32 Q60 26 47.5 32 Z" fill="${c1}" ${OUT}/>`
   };
 

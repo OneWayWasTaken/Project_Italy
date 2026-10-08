@@ -181,10 +181,10 @@
   v('garibaldi', 'Giuseppe Garibaldi', 'Garibaldi', 5, 'gloria', 5, 100, [4, 6],
     ['sciabola', 'carica_calatafimi', 'obbedisco'],
     P('camicia_rossa', 'Camicia Rossa', 'Ogni Testa con PM ≥ 3 dà +1 Splendore (max 6 per turno).', 'splendore_testa', { pmMin: 3, maxTurno: 6 }), 'Attaccante');
-  v('cavour', 'Camillo Benso, conte di Cavour', 'Cavour', 5, 'astuzia', 4, 70, [2, 5],
+  v('cavour', 'Camillo Benso, conte di Cavour', 'Cavour', 5, 'astuzia', 3, 70, [2, 5],
     ['lettera_riservata', 'intesa_plombieres', 'gran_tessitore'],
     P('realpolitik', 'Realpolitik', 'I Marchi che infligge valgono +1 stack.', 'bonus_stato', { stato: 'marchio' }), 'Stratega');
-  v('baracca', 'Francesco Baracca', 'Baracca', 6, 'gloria', 4, 70, [5, 8],
+  v('baracca', 'Francesco Baracca', 'Baracca', 6, 'gloria', 3, 70, [5, 8],
     ['picchiata', 'duello_aereo', 'cielo_montello'],
     P('asso_cielo', 'Asso del Cielo', 'Se il suo dado è il più alto del turno, +1 moneta alla skill.', 'moneta_se_piu_veloce'), 'Assassino');
   v('mentil', 'Maria Plozner Mentil', 'Maria', 6, 'fede', 3, 85, [2, 4],
@@ -193,10 +193,10 @@
   v('perlasca', 'Giorgio Perlasca', 'Perlasca', 7, 'astuzia', 5, 75, [3, 6],
     ['lettera_protetta', 'documenti_perfetti', 'casa_protetta'],
     P('falsa_identita', 'Falsa Identità', 'La prima moneta che perderebbe in ogni scontro è ignorata.', 'prima_moneta_ignorata'), 'Protettore');
-  v('anselmi', 'Tina Anselmi', 'Tina', 7, 'ordine', 4, 80, [3, 6],
+  v('anselmi', 'Tina Anselmi', 'Tina', 7, 'ordine', 3, 80, [3, 6],
     ['messaggio_cifrato', 'rete_memoria', 'giustizia_paziente'],
     P('staffetta', 'Staffetta', 'A inizio turno l’alleato con il dado più basso ottiene +1.', 'dado_alleato_minimo', { bonus: 1 }), 'Tattica');
-  v('bartali', 'Gino Bartali', 'Bartali', 7, 'fede', 4, 85, [5, 8],
+  v('bartali', 'Gino Bartali', 'Bartali', 7, 'fede', 3, 85, [5, 8],
     ['salita_dolomitica', 'telaio_segreto', 'corsa_alba'],
     P('gamba_campione', 'Gamba da Campione', '+1 PM se il suo dado è ≥ 6.', 'pm_dado_min', { min: 6 }), 'Mobilità');
 

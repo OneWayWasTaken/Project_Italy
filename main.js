@@ -10,15 +10,20 @@
   E.Save = {
     data: null,
     def() {
+      const roster = {}; E.ROSTER_INIZIALE.forEach(id => { roster[id] = { lv: 0 }; });
       return {
-        v: 1,
+        v: 2,
         squadra: ['scipione', 'spartaco', 'perpetua', 'leonardo'],
         incontro: 'pattuglia',
         opzioni: { vel: 1, audio: true },
         stats: { vittorie: 0, sconfitte: 0 },
-        flag: {},                       // flag narrativi (Fase 3)
-        valute: { denari: 0, sigilli: 0 }, // Fase 4
-        roster: {}                      // livelli/duplicati delle Voci (Fase 4)
+        flag: {},                                   // flag narrativi (scelte nei dialoghi)
+        valute: { denari: 100, sigilli: E.GACHA.SIGILLI_INIZIALI },
+        roster,                                     // Voci possedute: { id: { lv } }  (lv = livello Eco, dai duplicati)
+        gacha: { pity: {}, evocazioni: 0 },
+        progresso: { completati: [], sbloccato: 1 },// capitoli completati / massimo capitolo giocabile
+        codex: {},                                  // schede sbloccate
+        run: null                                   // spedizione (dungeon) in corso: vedi campagna.js
       };
     },
     load() {
@@ -28,8 +33,9 @@
         if (raw) {
           const d = JSON.parse(raw);
           this.data = Object.assign(base, d);
-          this.data.opzioni = Object.assign(base.opzioni, d.opzioni || {});
-          this.data.stats = Object.assign(this.def().stats, d.stats || {});
+          ['opzioni', 'stats', 'valute', 'gacha', 'progresso'].forEach(k => { this.data[k] = Object.assign(this.def()[k], d[k] || {}); });
+          if (!d.roster || !Object.keys(d.roster).length) this.data.roster = this.def().roster;       // migrazione dalla v1
+          this.data.v = 2;
           return this.data;
         }
       } catch (e) { console.warn('Salvataggio non leggibile, ne creo uno nuovo.', e); }
@@ -37,7 +43,21 @@
       return base;
     },
     save() { try { root.localStorage.setItem(C.SAVE_KEY, JSON.stringify(this.data)); } catch (e) { /* storage non disponibile */ } },
-    reset() { try { root.localStorage.removeItem(C.SAVE_KEY); } catch (e) { /* ignora */ } }
+    reset() { try { root.localStorage.removeItem(C.SAVE_KEY); } catch (e) { /* ignora */ } },
+    /* --- utilità di gioco --- */
+    possiede(id) { return !!(this.data.roster && this.data.roster[id]); },
+    livello(id) { return this.possiede(id) ? this.data.roster[id].lv || 0 : 0; },
+    livelli() { const o = {}; Object.keys(this.data.roster).forEach(id => { o[id] = this.data.roster[id].lv || 0; }); return o; },
+    /** Aggiunge una Voce: se già posseduta aumenta il livello Eco (fino al massimo). */
+    aggiungiVoce(id) {
+      if (!this.possiede(id)) { this.data.roster[id] = { lv: 0 }; return { nuova: true, lv: 0 }; }
+      const r = this.data.roster[id];
+      if (r.lv >= E.GACHA.MAX_LV) return { nuova: false, lv: r.lv, max: true };
+      r.lv++; return { nuova: false, lv: r.lv, max: false };
+    },
+    aggiungi(valuta, n) { this.data.valute[valuta] = Math.max(0, (this.data.valute[valuta] || 0) + n); },
+    spendi(valuta, n) { if ((this.data.valute[valuta] || 0) < n) return false; this.data.valute[valuta] -= n; return true; },
+    sblocca(codex) { (codex || []).forEach(k => { this.data.codex[k] = true; }); }
   };
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -65,6 +85,8 @@
     };
 
     E.UI.init(ctx);
+    E.Story.init(ctx); E.Campagna.init(ctx);
+    document.getElementById('m-esci').onclick = () => E.Campagna.hub();
     E.UI.menuScena(save);
     // Primo avvio: propone il tutorial (con possibilità di saltarlo del tutto)
     if (save.tutorial === undefined) {
@@ -83,9 +105,12 @@
         E.UI.Snd.init();
         switch (b.dataset.azione) {
           case 'nuova-prova': E.UI.squadra.init(ctx); E.UI.mostra('squadra'); break;
-          case 'menu': E.UI.mostra('menu'); break;
+          case 'menu': E.UI.mostra('menu'); E.UI.menuScena(save); break;
           case 'opzioni': E.UI.opzioni(save, persist, () => {}); break;
           case 'tutorial': ctx.avviaTutorial(); break;
+          case 'campagna': E.Campagna.hub(); break;
+          case 'gacha': E.Gacha.ui.apri(ctx); break;
+          case 'archivio': E.Archivio.apri(); break;
           case 'manuale': E.UI.manuale(0); break;
         }
       });

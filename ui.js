@@ -329,16 +329,23 @@
   /* ===================================================================== */
   UI.squadra = {
     sel: [], ctx: null, filtro: null,
-    init(ctx) {
-      this.ctx = ctx; const save = ctx.save; this.filtro = null;
-      this.sel = (save.squadra || []).filter(id => E.VOCI[id]).slice(0, C.SQUADRA_MAX);
+    init(ctx, opts) {
+      this.ctx = ctx; const save = ctx.save; this.filtro = null; this.opts = opts = opts || {};
+      const pool = opts.pool || Object.keys(E.VOCI);
+      this.pool = pool;
+      this.sel = (save.squadra || []).filter(id => E.VOCI[id] && pool.includes(id)).slice(0, C.SQUADRA_MAX);
+      if (this.sel.length < C.SQUADRA_MAX) pool.forEach(id => { if (this.sel.length < C.SQUADRA_MAX && !this.sel.includes(id)) this.sel.push(id); });
+      $('#scr-squadra .barra h2').textContent = opts.titolo || 'Scegli 4 Voci';
+      $('#sq-via').textContent = opts.testoVia || 'Combatti';
+      $('#sq-incontro').parentElement.style.display = opts.nascondiIncontro ? 'none' : '';
       const g = $('#sq-griglia'); g.innerHTML = '';
-      Object.values(E.VOCI).sort((a, b) => a.epoca - b.epoca).forEach(v => {
+      Object.values(E.VOCI).filter(v => pool.includes(v.id)).sort((a, b) => a.epoca - b.epoca).forEach(v => {
         const c = el('div', 'sq-card'); c.dataset.id = v.id; c.dataset.aff = v.aff;
         c.appendChild(UI.ritratto(v));
         c.appendChild(el('div', 'n', v.breve));
         c.appendChild(el('div', 'm', `<span style="color:${E.AFFINITA[v.aff].colore}">${E.AFFINITA[v.aff].simbolo} ${E.AFFINITA[v.aff].nome}</span> · Cap. ${E.CAPITOLI[v.epoca - 1].num}`));
         c.appendChild(el('div', 'stelle', '★'.repeat(v.rarita)));
+        const lvl = E.Save && E.Save.livello ? E.Save.livello(v.id) : 0; if (opts.pool && lvl) c.appendChild(el('div', 'eco-lv', 'Eco ' + lvl));
         c.onclick = () => { Snd.sfx('ui'); this.toggle(v.id); };
         g.appendChild(c);
       });
@@ -349,15 +356,16 @@
       const s = $('#sq-incontro'); s.innerHTML = '';
       Object.values(E.INCONTRI).filter(i => !i.tutorial).forEach(i => { const o = el('option', '', i.nome); o.value = i.id; s.appendChild(o); });
       s.value = save.incontro && E.INCONTRI[save.incontro] ? save.incontro : 'pattuglia';
-      $('#sq-via').onclick = () => ctx.onAvvia(this.sel.slice(), s.value);
+      $('#sq-via').onclick = () => (opts.onVia ? opts.onVia(this.sel.slice()) : ctx.onAvvia(this.sel.slice(), s.value));
       $('#sq-affinita').onclick = () => UI.tabellaAffinita();
-      $('#sq-consigliata').onclick = () => { this.sel = ['scipione', 'spartaco', 'perpetua', 'leonardo']; this.salva(); this.aggiorna(); this.dettaglio(this.sel[0]); };
+      $('#sq-consigliata').onclick = () => { this.sel = ['scipione', 'spartaco', 'perpetua', 'leonardo'].filter(id => pool.includes(id)); pool.forEach(id => { if (this.sel.length < C.SQUADRA_MAX && !this.sel.includes(id)) this.sel.push(id); }); this.salva(); this.aggiorna(); this.dettaglio(this.sel[0]); };
       $('#sq-casuale').onclick = () => {
-        const tutte = Object.keys(E.VOCI).sort(() => Math.random() - 0.5), sc = [], usate = new Set();
+        const tutte = pool.slice().sort(() => Math.random() - 0.5), sc = [], usate = new Set();
         tutte.forEach(id => { if (sc.length < C.SQUADRA_MAX && !usate.has(E.VOCI[id].aff)) { sc.push(id); usate.add(E.VOCI[id].aff); } });
+        tutte.forEach(id => { if (sc.length < C.SQUADRA_MAX && !sc.includes(id)) sc.push(id); });
         this.sel = sc; this.salva(); this.aggiorna(); this.dettaglio(sc[0]);
       };
-      this.aggiorna(); this.dettaglio(this.sel[0] || Object.keys(E.VOCI)[0]);
+      this.aggiorna(); this.dettaglio(this.sel[0] || pool[0]);
     },
     applicaFiltro() {
       $$('.chip-filtro').forEach(b => b.classList.toggle('on', (b.dataset.aff || null) === this.filtro));
@@ -413,8 +421,8 @@
     c.innerHTML = '<div class="ms-bg"></div><div class="ms-floor"><div class="arena-disco"></div></div>';
     $('.ms-bg', c).innerHTML = E.Arte.sfondo(0);
     const alleati = (save.squadra && save.squadra.length ? save.squadra : ['scipione', 'spartaco', 'perpetua', 'leonardo']).slice(0, 4);
-    const pos = [[12, 70], [24, 86], [8, 92], [30, 72]];
-    const nem = [['annibale', 82, 86], ['eco_cartaginese', 70, 72], ['legionario', 92, 72]];
+    const pos = [[8, 70], [17, 88], [4, 94], [22, 78]];
+    const nem = [['annibale', 86, 88], ['eco_cartaginese', 76, 76], ['legionario', 95, 74]];
     const add = (id, x, y, enemy) => {
       const d = document.createElement('div'); d.className = 'ms-pg' + (enemy ? ' nem' : ''); d.style.left = x + '%'; d.style.top = y + '%'; d.style.zIndex = Math.round(y);
       if (E.ARTE[id] && E.ARTE[id].scala) d.style.setProperty('--sc', E.ARTE[id].scala);
@@ -705,16 +713,22 @@
       await this.sleep(900);
       const r = $('#risultato'); r.className = 'overlay on ' + B.esito;
       Snd.sfx(B.esito);
-      const alleati = B.unita.filter(x => x.lato === 'a'), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
+      const alleati = B.unita.filter(x => x.lato === 'a' && !x.npc), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
       let righe = '';
       alleati.forEach(x => { const st = this.stat[x.id], v = this.V[x.id]; righe += `<tr class="${v.vivo ? '' : 'caduto'}"><td>${x === mvp && st.danno ? '★ ' : ''}${x.breve}${v.vivo ? '' : ' ✝'}</td><td>${st.danno}</td><td>${st.colpi}</td><td>${st.max}</td><td>${st.subito}</td></tr>`; });
       r.innerHTML = `<h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p class="sub">${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} · ${B.turno} turni</p>
         <table class="tab-risultato"><tr><th>Voce</th><th>Danni</th><th>Colpi</th><th>Max</th><th>Subiti</th></tr>${righe}</table><div class="risultato-extra"></div>`;
       const bx = el('div', 'risultato-btn');
-      const b1 = el('button', 'btn grande', 'Riprova'), b2 = el('button', 'btn', 'Cambia squadra'), b3 = el('button', 'btn', 'Menu');
-      b1.onclick = () => this.ctx.onRiprova(); b2.onclick = () => this.ctx.onSquadra(); b3.onclick = () => this.ctx.onMenu();
-      bx.append(b1, b2, b3); r.appendChild(bx);
-      this.ctx.onFine(B.esito, B);
+      if (this.ctx.fineCampagna) {            // modalità campagna: ricompense e pulsanti decisi dalla campagna
+        const f = this.ctx.fineCampagna(B.esito, B); $('.risultato-extra', r).innerHTML = f.html;
+        f.bottoni.forEach(bt => { const b = el('button', 'btn ' + (bt.cls || ''), bt.testo); b.onclick = () => { r.classList.remove('on'); bt.fn(); }; bx.appendChild(b); });
+      } else {
+        const b1 = el('button', 'btn grande', 'Riprova'), b2 = el('button', 'btn', 'Cambia squadra'), b3 = el('button', 'btn', 'Menu');
+        b1.onclick = () => this.ctx.onRiprova(); b2.onclick = () => this.ctx.onSquadra(); b3.onclick = () => this.ctx.onMenu();
+        bx.append(b1, b2, b3);
+      }
+      r.appendChild(bx);
+      if (!this.ctx.fineCampagna) this.ctx.onFine(B.esito, B);
     },
 
     /* ----- controlli velocità ----- */
@@ -867,7 +881,7 @@
       if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) await this.rientraTutti();
       switch (e.t) {
         case 'turno':
-          $('#turno-n').textContent = 'Turno ' + e.n; this.ardoreV = e.ardore; this.mostraArdore();
+          $('#turno-n').textContent = 'Turno ' + e.n + (this.B.obiettivo && this.B.obiettivo.turni ? ' / ' + this.B.obiettivo.turni : ''); this.ardoreV = e.ardore; this.mostraArdore();
           this.log('— Turno ' + e.n + ' —', 'imp'); this.banner('TURNO ' + e.n); await this.sleep(700); break;
         case 'dadi':
           this.dadi = e.dadi; Object.keys(e.dadi).forEach(id => this.renderDadi(id, true));

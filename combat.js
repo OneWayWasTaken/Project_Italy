@@ -13,7 +13,7 @@
  *
  * Eventi (campo `t`): turno, dadi, regola, azione, clash, round, clash_fine,
  *   colpo, stato, sanita, ardore, cura, cedimento, morte, dot, panico, fase,
- *   evoca, schiva, affondo, ced_agg, panico_fine, msg, fine
+ *   evoca, schiva, affondo, ced_agg, panico_fine, aff, msg, fine
  * ========================================================================== */
 (function (root) {
   'use strict';
@@ -43,19 +43,35 @@
   Combat.chanceTesta = u => (u.panico ? 0.05 : clamp(0.5 + u.sanita / 100, 0.05, 0.95));
 
   /* ---------- Creazione ---------- */
-  function creaUnita(B, def, lato) {
+  function creaUnita(B, def, lato, opt) {
+    opt = opt || {};
     const n = B.unita.filter(u => u.lato === lato).length;
     const u = {
       id: lato + n, lato, def: def.id, nome: def.nome, breve: def.breve || def.nome, aff: def.aff,
-      pv: def.pv, pvMax: def.pv, sanita: 0, vel: def.vel.slice(), azioni: def.azioni || 1,
+      pv: def.pv, pvMax: def.pv, sanita: 0, vel: def.vel.slice(), azioni: def.azioni != null ? def.azioni : 1,
       skills: def.skills.slice(), passiva: def.passiva || null, ia: def.ia ? def.ia.slice() : null,
       fasi: (def.fasi || []).map(f => Object.assign({ fatta: false }, f)), regole: def.regole || [],
       soglie: def.soglie || C.SOGLIE_CEDIMENTO,
       stati: {}, bonusPM: 0, bonusPMProx: 0, evade: false, noCed: false, ced: 0, sogliaIdx: 0, panico: false, vivo: true, dadi: [], bonusDado: 0,
       ultimaSkill: null, appunti: 0, usate: [], passivaUsata: false, bleedTurno: false, splTurno: 0,
-      boss: !!def.boss, colore: def.colore, sigla: def.sigla || def.breve.slice(0, 1)
+      boss: !!def.boss, colore: def.colore, sigla: def.sigla || def.breve.slice(0, 1),
+      npc: !!def.npc, immortale: !!def.immortale, lv: 0, bonusPMlv: 0
     };
+    // Livello "Eco" delle Voci possedute (duplicati del gacha): +5% PV per livello, +1 PM dal 3°, +10 Sanità iniziale al 5°
+    if (opt.lv) {
+      u.lv = opt.lv; u.pvMax = u.pv = Math.round(def.pv * (1 + 0.05 * opt.lv));
+      if (opt.lv >= 3) u.bonusPMlv = 1;
+      if (opt.lv >= 5) u.sanita = 10;
+    }
+    // Scala di difficoltà dei nemici (per capitolo)
+    if (lato === 'n' && opt.scalaPv) { u.pvMax = u.pv = Math.round(def.pv * opt.scalaPv); }
+    // Danni e sanità portati dalle battaglie precedenti (dungeon)
+    if (opt.stato) {
+      u.pv = Math.max(1, Math.min(u.pvMax, Math.round(opt.stato.pv != null ? opt.stato.pv : u.pv)));
+      if (opt.stato.sanita != null) u.sanita = clamp(opt.stato.sanita, C.SANITA_MIN, C.SANITA_MAX);
+    }
     B.unita.push(u); B.byId[u.id] = u;
+    if (def.statiIniziali) Object.keys(def.statiIniziali).forEach(k => { u.stati[k] = def.statiIniziali[k]; });
     return u;
   }
 
@@ -63,10 +79,15 @@
   Combat.creaBattaglia = function (opz) {
     const B = {
       rng: creaRng(opz.seed != null ? opz.seed : (Math.random() * 4294967296) >>> 0),
-      turno: 0, ardore: C.ARDORE_START, unita: [], byId: {}, azioni: [], eventi: [], esito: null
+      turno: 0, ardore: C.ARDORE_START + (opz.bonusArdore || 0), unita: [], byId: {}, azioni: [], eventi: [], esito: null,
+      obiettivo: opz.obiettivo || null, scalaDan: opz.scalaDan || 1, scalaPv: opz.scalaPv || 1
     };
-    opz.alleati.forEach(id => creaUnita(B, E.VOCI[id], 'a'));
-    opz.nemici.forEach(id => creaUnita(B, E.NEMICI[id], 'n'));
+    const lvls = opz.livelli || {}, stati = opz.stati || {};
+    opz.alleati.forEach(id => creaUnita(B, E.VOCI[id], 'a', { lv: lvls[id] || 0, stato: stati[id] }));
+    (opz.npc || []).forEach(id => creaUnita(B, E.NPC[id], 'a'));
+    opz.nemici.forEach(id => creaUnita(B, E.NEMICI[id], 'n', { scalaPv: B.scalaPv }));
+    // Oggetti/bonus del dungeon: stati iniziali per tutta la squadra giocabile
+    Object.keys(opz.bonusStati || {}).forEach(k => B.unita.filter(u => u.lato === 'a' && !u.npc).forEach(u => { u.stati[k] = (u.stati[k] || 0) + opz.bonusStati[k]; }));
     // Passive di inizio battaglia
     B.unita.forEach(u => {
       if (hasPass(u, 'inizio_stato_per_alleato')) {
@@ -123,6 +144,7 @@
   /** Sottrae PV (con eventuale passiva di sopravvivenza). Ritorna i PV dopo. */
   function sottraiPv(B, T, d) {
     T.pv = Math.max(0, T.pv - d);
+    if (T.pv === 0 && T.immortale) T.pv = 1;               // entità che non si possono sconfiggere (es. Il Silenzio)
     if (T.pv === 0 && hasPass(T, 'sopravvivenza') && !T.passivaUsata) {
       T.passivaUsata = true; T.pv = 1;
       ev(B, { t: 'msg', msg: T.breve + ' resta in piedi per un soffio: ' + T.passiva.nome + '!' });
@@ -162,6 +184,9 @@
       f.fatta = true;
       if (f.ia) T.ia = f.ia.slice();
       if (f.azioni) T.azioni = f.azioni;
+      if (f.aff) { T.aff = f.aff; ev(B, { t: 'aff', id: T.id, aff: f.aff }); }
+      if (f.stati) Object.keys(f.stati).forEach(k => addStato(B, T, k, f.stati[k]));
+      if (f.sanitaAlleati) vivi(B, 'a').forEach(a => addSanita(B, a, f.sanitaAlleati));
       ev(B, { t: 'fase', id: T.id, testo: f.testo, msg: f.testo });
       (f.evoca || []).forEach(id => {
         if (vivi(B, 'n').length >= 4) return;
@@ -172,8 +197,11 @@
   }
   function controllaEsito(B) {
     if (B.esito) return;
-    if (!vivi(B, 'a').length) B.esito = 'sconfitta';
-    else if (!vivi(B, 'n').length) B.esito = 'vittoria';
+    const giocabili = vivi(B, 'a').filter(u => !u.npc), npc = vivi(B, 'a').filter(u => u.npc);
+    const haNpc = B.unita.some(u => u.npc);
+    if (!giocabili.length || (B.obiettivo && B.obiettivo.proteggi && haNpc && !npc.length)) B.esito = 'sconfitta';
+    else if (!B.obiettivo && !vivi(B, 'n').length) B.esito = 'vittoria';
+    else if (B.obiettivo && B.obiettivo.tipo === 'elimina' && !vivi(B, 'n').length) B.esito = 'vittoria';
   }
 
   /* ---------- Effetti (fx) ---------- */
@@ -235,7 +263,7 @@
   }
   function prepara(B, u, s, az, rival) {
     const rel = E.rel(s.aff, rival.aff);
-    let pb = s.pb, pm = s.pm + rel + u.bonusPM, molt = 1, monete = s.monete;
+    let pb = s.pb, pm = s.pm + rel + u.bonusPM + u.bonusPMlv, molt = 1, monete = s.monete;
     if (s.monetePiuSeCed && rival.ced > 0) monete += s.monetePiuSeCed;
     pb += Math.min(6, (u.stati.splendore || 0) * 0.5);
     pm += Math.min(3, Math.floor((u.stati.formazione || 0) / 3));
@@ -282,7 +310,7 @@
       const testa = B.rng() < Combat.chanceTesta(U);
       if (testa) teste++;
       const pot = p.pb + teste * p.pm;
-      let d = pot * C.DANNO_MOLT * p.molt;
+      let d = pot * C.DANNO_MOLT * p.molt * (U.lato === 'n' ? B.scalaDan : 1);
       if (p.rel === 1) d *= C.BONUS_VANTAGGIO; else if (p.rel === -1) d *= C.MALUS_SVANTAGGIO;
       const mk = T.stati.marchio || 0;
       if (mk) d *= 1 + 0.05 * mk;
@@ -406,8 +434,13 @@
     // Regole automatiche (boss)
     vivi(B, 'n').forEach(u => u.regole.forEach(r => {
       if (B.turno < r.da) return;
-      const tgt = r.a === 'alleati' ? vivi(B, 'a') : vivi(B, 'n');
-      tgt.forEach(t => addStato(B, t, r.stato, r.n));
+      const tgt = r.a === 'alleati' ? vivi(B, 'a') : r.a === 'se' ? [u] : vivi(B, 'n');
+      const n = (r.n || 0) + (r.crescente ? Math.floor((B.turno - r.da) / r.crescente) : 0);
+      tgt.forEach(t => {
+        if (r.stato && n) addStato(B, t, r.stato, n);
+        if (r.sanita) addSanita(B, t, r.sanita);
+        if (r.rimuovi && t.stati[r.rimuovi]) addStato(B, t, r.rimuovi, -t.stati[r.rimuovi]);
+      });
       ev(B, { t: 'regola', id: u.id, msg: r.testo });
     }));
     // Azioni
@@ -524,14 +557,24 @@
       u.bleedTurno = false; u.splTurno = 0; u.evade = false; u.noCed = false;
     });
     controllaEsito(B);
+    if (!B.esito && B.obiettivo && B.obiettivo.tipo === 'sopravvivi' && B.turno >= B.obiettivo.turni) B.esito = 'vittoria';
     if (B.esito) ev(B, { t: 'fine', esito: B.esito });
   }
+
+  /** Stato delle Voci a fine battaglia (per il dungeon): chi cade si rialza al 25% dei PV con Sanità −15. */
+  Combat.statoFinale = function (B) {
+    const out = {};
+    B.unita.filter(u => u.lato === 'a' && !u.npc).forEach(u => {
+      out[u.def] = u.vivo ? { pv: u.pv, sanita: u.sanita, caduto: false } : { pv: Math.max(1, Math.round(u.pvMax * 0.25)), sanita: -15, caduto: true };
+    });
+    return out;
+  };
 
   /* ---------- Snapshot per la UI ---------- */
   Combat.pubblica = u => ({
     id: u.id, lato: u.lato, def: u.def, nome: u.nome, breve: u.breve, aff: u.aff, pv: u.pv, pvMax: u.pvMax, sanita: u.sanita,
     stati: Object.assign({}, u.stati), ced: u.ced, vivo: u.vivo, panico: u.panico, boss: u.boss, colore: u.colore, sigla: u.sigla,
-    passiva: u.passiva, skills: u.skills.slice()
+    passiva: u.passiva, skills: u.skills.slice(), npc: u.npc, lv: u.lv
   });
   Combat.snapshot = B => B.unita.map(Combat.pubblica);
 })(typeof window !== 'undefined' ? window : globalThis);
