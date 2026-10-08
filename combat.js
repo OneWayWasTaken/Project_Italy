@@ -1,0 +1,493 @@
+/* ============================================================================
+ * combat.js — logica PURA del combattimento (nessun DOM).
+ *
+ * Il motore muta lo stato della battaglia `B` e produce una lista di EVENTI
+ * (B.eventi) che la UI riproduce con le animazioni. Gli eventi portano i valori
+ * assoluti (pvDopo, totale, valore…) così la UI può mostrare lo stato "al momento
+ * dell'evento" anche se il motore ha già risolto tutto il turno.
+ *
+ * Flusso di un turno:
+ *   Combat.iniziaTurno(B)   → tira i dadi, crea le azioni, pianifica i nemici
+ *   Combat.pianifica(...)   → il giocatore sceglie skill/bersaglio (UI)
+ *   Combat.esegui(B)        → risolve scontri e colpi, fine turno
+ *
+ * Eventi (campo `t`): turno, dadi, regola, azione, clash, round, clash_fine,
+ *   colpo, stato, sanita, ardore, cura, cedimento, morte, dot, panico, fase,
+ *   evoca, msg, fine
+ * ========================================================================== */
+(function (root) {
+  'use strict';
+  const E = root.Echi, C = E.CONFIG;
+  const Combat = E.Combat = {};
+
+  /* ---------- Utilità ---------- */
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  /** RNG deterministico (mulberry32): permette test e replay riproducibili. */
+  function creaRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const get = (B, id) => B.byId[id];
+  const vivi = (B, lato) => B.unita.filter(u => u.lato === lato && u.vivo);
+  const opposto = l => (l === 'a' ? 'n' : 'a');
+  const ev = (B, o) => { B.eventi.push(o); return o; };
+  const pick = (B, arr) => arr[Math.floor(B.rng() * arr.length)];
+  const hasPass = (u, tipo) => u.passiva && u.passiva.tipo === tipo;
+
+  /** Probabilità di Testa in base alla Sanità (design.md §2.2). */
+  Combat.chanceTesta = u => (u.panico ? 0.05 : clamp(0.5 + u.sanita / 100, 0.05, 0.95));
+
+  /* ---------- Creazione ---------- */
+  function creaUnita(B, def, lato) {
+    const n = B.unita.filter(u => u.lato === lato).length;
+    const u = {
+      id: lato + n, lato, def: def.id, nome: def.nome, breve: def.breve || def.nome, aff: def.aff,
+      pv: def.pv, pvMax: def.pv, sanita: 0, vel: def.vel.slice(), azioni: def.azioni || 1,
+      skills: def.skills.slice(), passiva: def.passiva || null, ia: def.ia ? def.ia.slice() : null,
+      fasi: (def.fasi || []).map(f => Object.assign({ fatta: false }, f)), regole: def.regole || [],
+      soglie: def.soglie || C.SOGLIE_CEDIMENTO,
+      stati: {}, ced: 0, sogliaIdx: 0, panico: false, vivo: true, dadi: [], bonusDado: 0,
+      ultimaSkill: null, appunti: 0, usate: [], passivaUsata: false, bleedTurno: false, splTurno: 0,
+      boss: !!def.boss, colore: def.colore, sigla: def.sigla || def.breve.slice(0, 1)
+    };
+    B.unita.push(u); B.byId[u.id] = u;
+    return u;
+  }
+
+  /** Crea una battaglia. opz = { alleati:[idVoce], nemici:[idNemico], seed } */
+  Combat.creaBattaglia = function (opz) {
+    const B = {
+      rng: creaRng(opz.seed != null ? opz.seed : (Math.random() * 4294967296) >>> 0),
+      turno: 0, ardore: C.ARDORE_START, unita: [], byId: {}, azioni: [], eventi: [], esito: null
+    };
+    opz.alleati.forEach(id => creaUnita(B, E.VOCI[id], 'a'));
+    opz.nemici.forEach(id => creaUnita(B, E.NEMICI[id], 'n'));
+    // Passive di inizio battaglia
+    B.unita.forEach(u => {
+      if (hasPass(u, 'inizio_stato_per_alleato')) {
+        addStato(B, u, u.passiva.stato, vivi(B, u.lato).length, u);
+      }
+    });
+    // Concordie: coppie di affinità opposte in squadra (design.md §3.2)
+    let conc = 0;
+    E.CONCORDIE.forEach(([x, y]) => {
+      const a = vivi(B, 'a').filter(u => u.aff === x), b = vivi(B, 'a').filter(u => u.aff === y);
+      if (a.length && b.length) {
+        conc++;
+        [a[0], b[0]].forEach(u => addSanita(B, u, 4));
+        ev(B, { t: 'msg', msg: 'Concordia: ' + E.AFFINITA[x].nome + ' e ' + E.AFFINITA[y].nome + ' risuonano insieme.' });
+      }
+    });
+    B.ardore = clamp(B.ardore + conc, 0, C.ARDORE_MAX);
+    B.eventiIniziali = B.eventi; B.eventi = [];
+    return B;
+  };
+
+  /* ---------- Stati / Sanità ---------- */
+  function addStato(B, tgt, stato, n, src) {
+    if (!tgt.vivo || !n) return 0;
+    const def = E.STATI[stato];
+    if (n > 0 && src && src.passiva) {
+      const p = src.passiva;
+      if (p.tipo === 'bonus_stato' && p.stato === stato) n += 1;
+      if (p.tipo === 'bonus_stato_se_meno_pv' && p.stato === stato && tgt.pv < src.pv) n += 1;
+    }
+    const cur = tgt.stati[stato] || 0;
+    const nuovo = clamp(cur + n, 0, Math.min(def.max, C.STATO_MAX));
+    if (nuovo === cur) return 0;
+    if (nuovo === 0) delete tgt.stati[stato]; else tgt.stati[stato] = nuovo;
+    ev(B, { t: 'stato', id: tgt.id, stato, delta: nuovo - cur, totale: nuovo });
+    return nuovo - cur;
+  }
+  function addSanita(B, u, d) {
+    if (!u.vivo || !d) return;
+    const nuovo = clamp(u.sanita + d, C.SANITA_MIN, C.SANITA_MAX);
+    if (nuovo === u.sanita) return;
+    ev(B, { t: 'sanita', id: u.id, delta: nuovo - u.sanita, valore: nuovo });
+    u.sanita = nuovo;
+  }
+  function cura(B, u, pv) {
+    if (!u.vivo) return;
+    const nuovo = Math.min(u.pvMax, u.pv + pv);
+    if (nuovo === u.pv) return;
+    ev(B, { t: 'cura', id: u.id, n: nuovo - u.pv, pvDopo: nuovo });
+    u.pv = nuovo;
+  }
+
+  /* ---------- Danno, cedimento, fasi, morte ---------- */
+  /** Sottrae PV (con eventuale passiva di sopravvivenza). Ritorna i PV dopo. */
+  function sottraiPv(B, T, d) {
+    T.pv = Math.max(0, T.pv - d);
+    if (T.pv === 0 && hasPass(T, 'sopravvivenza') && !T.passivaUsata) {
+      T.passivaUsata = true; T.pv = 1;
+      ev(B, { t: 'msg', msg: T.breve + ' resta in piedi per un soffio: ' + T.passiva.nome + '!' });
+      addStato(B, T, T.passiva.stato, T.passiva.n, T);
+    }
+    return T.pv;
+  }
+  function annullaAzioni(B, u) {
+    B.azioni.forEach(a => { if (a.u === u.id && !a.usata) { a.usata = true; a.annullata = true; } });
+  }
+  function morte(B, T, killer) {
+    T.vivo = false; T.pv = 0;
+    annullaAzioni(B, T);
+    ev(B, { t: 'morte', id: T.id, msg: T.breve + ' si dissolve.' });
+    vivi(B, T.lato).forEach(u => addSanita(B, u, -5));
+    if (killer && killer.vivo) addSanita(B, killer, 3);
+    controllaEsito(B);
+  }
+  /** Dopo ogni danno: morte, soglie di Cedimento, fasi del boss. */
+  function dopoDanno(B, T, src) {
+    if (!T.vivo) return;
+    if (T.pv <= 0) { morte(B, T, src); return; }
+    const fr = T.pv / T.pvMax;
+    // Cedimento (stagger)
+    let trig = false;
+    while (T.sogliaIdx < T.soglie.length && fr <= T.soglie[T.sogliaIdx]) { T.sogliaIdx++; trig = true; }
+    if (trig) {
+      T.ced = 2; annullaAzioni(B, T);
+      ev(B, { t: 'cedimento', id: T.id, msg: T.breve + ' va in Cedimento!' });
+      vivi(B, T.lato).forEach(u => { if (u !== T) addSanita(B, u, -5); });
+      vivi(B, T.lato).forEach(u => { if (hasPass(u, 'cedimento_alleato_sanita') && u !== T) vivi(B, T.lato).forEach(x => addSanita(B, x, u.passiva.sanita)); });
+    }
+    // Fasi
+    T.fasi.forEach(f => {
+      if (f.fatta || fr > f.soglia) return;
+      f.fatta = true;
+      if (f.ia) T.ia = f.ia.slice();
+      if (f.azioni) T.azioni = f.azioni;
+      ev(B, { t: 'fase', id: T.id, testo: f.testo, msg: f.testo });
+      (f.evoca || []).forEach(id => {
+        if (vivi(B, 'n').length >= 4) return;
+        const nu = creaUnita(B, E.NEMICI[id], 'n');
+        ev(B, { t: 'evoca', unit: Combat.pubblica(nu), msg: nu.breve + ' appare sul campo.' });
+      });
+    });
+  }
+  function controllaEsito(B) {
+    if (B.esito) return;
+    if (!vivi(B, 'a').length) B.esito = 'sconfitta';
+    else if (!vivi(B, 'n').length) B.esito = 'vittoria';
+  }
+
+  /* ---------- Effetti (fx) ---------- */
+  function alleatoDebole(B, u) {
+    const l = vivi(B, u.lato).filter(x => x !== u).sort((x, y) => x.pv / x.pvMax - y.pv / y.pvMax);
+    return l[0] || u;
+  }
+  function bersagliFx(B, to, u, T) {
+    switch (to) {
+      case 'self': return [u];
+      case 'target': return T && T.vivo ? [T] : [];
+      case 'ally': return [alleatoDebole(B, u)];
+      case 'team': return vivi(B, u.lato);
+      case 'nemici': return vivi(B, opposto(u.lato));
+      default: return [];
+    }
+  }
+  /** Applica gli effetti di una skill per un dato momento (on). */
+  function applicaFx(B, s, on, u, T, soloPerTesta) {
+    (s.fx || []).forEach(f => {
+      if (f.on !== on) return;
+      if (!!f.perTesta !== !!soloPerTesta) return;
+      bersagliFx(B, f.to || 'self', u, T).forEach(t => {
+        if (f.stato) addStato(B, t, f.stato, f.n, u);
+        if (f.sanita != null) addSanita(B, t, f.sanita);
+        if (f.cura) cura(B, t, Math.ceil(t.pvMax * f.cura));
+        if (f.rimuoviNegativi) E.NEGATIVI.forEach(st => { if (t.stati[st]) addStato(B, t, st, -t.stati[st]); });
+        if (f.rimuoviPositivi) {
+          let resto = f.rimuoviPositivi;
+          E.POSITIVI.forEach(st => { if (resto > 0 && t.stati[st]) { const r = Math.min(resto, t.stati[st]); addStato(B, t, st, -r); resto -= r; } });
+        }
+        if (f.raddoppia && t.stati[f.raddoppia]) addStato(B, t, f.raddoppia, t.stati[f.raddoppia]);
+        if (f.velProx) t.bonusDado += f.velProx;
+        if (f.perdiPv) {
+          const d = Math.min(t.pv - 1, Math.ceil(t.pvMax * f.perdiPv));
+          if (d > 0) { t.pv -= d; ev(B, { t: 'dot', id: t.id, tipo: 'costo', danno: d, pvDopo: t.pv }); }
+        }
+      });
+      if (f.ardore && u.lato === 'a') {
+        B.ardore = clamp(B.ardore + f.ardore, 0, C.ARDORE_MAX);
+        ev(B, { t: 'ardore', valore: B.ardore });
+      }
+    });
+  }
+
+  /* ---------- Preparazione di una skill (potenze effettive) ---------- */
+  function dadoMax(B, unitId) {
+    return Math.max(0, ...B.azioni.filter(a => a.u === unitId).map(a => a.dado));
+  }
+  function prepara(B, u, s, az, rival) {
+    const rel = E.rel(s.aff, rival.aff);
+    let pb = s.pb, pm = s.pm + rel, molt = 1, monete = s.monete;
+    pb += Math.min(6, (u.stati.splendore || 0) * 0.5);
+    pm += Math.min(3, Math.floor((u.stati.formazione || 0) / 3));
+    if (u.sanita >= C.SANITA_MAX) pm += 1;                       // Esaltazione
+    if (s.pbPer) {
+      const n = u.stati[s.pbPer.s] || 0;
+      pb += n * s.pbPer.k;
+      if (s.pbPer.consuma && n) addStato(B, u, s.pbPer.s, -Math.ceil(n * s.pbPer.consuma));
+    }
+    if (s.pmPerStato) pm += Math.min(s.pmPerStato.max, (u.stati[s.pmPerStato.s] || 0) * s.pmPerStato.k);
+    const rd = dadoMax(B, rival.id);
+    if (s.pmSePiuVeloce && az.dado > rd) pm += s.pmSePiuVeloce;
+    if (s.pbPerVel) pb += s.pbPerVel * Math.max(0, az.dado - rd);
+    if (s.moltSeStato) {
+      const n = rival.stati[s.moltSeStato.s] || 0;
+      if (n >= s.moltSeStato.min) { molt *= s.moltSeStato.molt; if (s.moltSeStato.consuma) addStato(B, rival, s.moltSeStato.s, -n); }
+    }
+    if (s.moltPerStato) {
+      const n = rival.stati[s.moltPerStato.s] || 0;
+      molt *= 1 + s.moltPerStato.per * n;
+      if (s.moltPerStato.consuma && n) addStato(B, rival, s.moltPerStato.s, -n);
+    }
+    // Passive
+    const p = u.passiva;
+    if (p) switch (p.tipo) {
+      case 'pm_pv_mancanti': pm += Math.min(p.max, Math.floor((1 - u.pv / u.pvMax) / p.passo + 1e-9)); break;
+      case 'pm_skill_diversa': if (u.ultimaSkill && u.ultimaSkill !== s.id) pm += 1; break;
+      case 'pm_dado_min': if (az.dado >= p.min) pm += 1; break;
+      case 'moneta_se_piu_veloce': if (az.dado === Math.max(...B.azioni.map(a => a.dado))) monete += 1; break;
+      case 'taccuino':
+        if (u.appunti >= p.soglia) { monete += 1; u.appunti = 0; u.usate = []; ev(B, { t: 'msg', msg: u.breve + ' consulta il Taccuino: +1 moneta!' }); }
+        if (!u.usate.includes(s.id)) { u.usate.push(s.id); u.appunti++; }
+        break;
+    }
+    return { u, s, az, rival, rel, pb, pm, molt, monete };
+  }
+
+  const lancia = (B, u, n) => Array.from({ length: n }, () => B.rng() < Combat.chanceTesta(u));
+
+  /* ---------- Sequenza di colpi ---------- */
+  function colpi(B, p, T, n) {
+    const U = p.u; let teste = 0, riusciti = 0;
+    for (let i = 0; i < n && T.vivo; i++) {
+      const testa = B.rng() < Combat.chanceTesta(U);
+      if (testa) teste++;
+      const pot = p.pb + teste * p.pm;
+      let d = pot * C.DANNO_MOLT * p.molt;
+      if (p.rel === 1) d *= C.BONUS_VANTAGGIO; else if (p.rel === -1) d *= C.MALUS_SVANTAGGIO;
+      const mk = T.stati.marchio || 0;
+      if (mk) d *= 1 + 0.05 * mk;
+      d *= 1 - Math.min(0.5, 0.05 * (T.stati.formazione || 0));
+      if (T.ced > 0) d *= C.MOLT_CEDIMENTO;
+      d = Math.max(1, Math.round(d));
+      // Voto: assorbe 3 danni per stack
+      let assorbito = 0;
+      const voto = T.stati.voto || 0;
+      if (voto) {
+        const usa = Math.min(voto, Math.ceil(d / 3));
+        assorbito = Math.min(d, usa * 3); d -= assorbito;
+        addStato(B, T, 'voto', -usa); addSanita(B, T, usa);
+      }
+      const pvDopo = sottraiPv(B, T, d);
+      ev(B, { t: 'colpo', att: U.id, bers: T.id, idx: i, n, testa, pot: Math.round(pot * 10) / 10, danno: d, assorbito, pvDopo, rel: p.rel, ced: T.ced > 0 });
+      riusciti++;
+      if (mk) addStato(B, T, 'marchio', -1);
+      if (testa && hasPass(U, 'splendore_testa') && p.pm >= U.passiva.pmMin && U.splTurno < U.passiva.maxTurno) { U.splTurno++; addStato(B, U, 'splendore', 1); }
+      if (testa) applicaFx(B, p.s, 'hit', U, T, true);
+      dopoDanno(B, T, U);
+    }
+    if (riusciti) applicaFx(B, p.s, 'hit', U, T, false);
+  }
+
+  /* ---------- Scontro (clash) ---------- */
+  function scontro(B, aA, aB) {
+    const uA = get(B, aA.u), uB = get(B, aB.u), sA = E.SKILL[aA.skill], sB = E.SKILL[aB.skill];
+    aA.usata = aB.usata = true;
+    applicaFx(B, sA, 'use', uA, uB); applicaFx(B, sB, 'use', uB, uA);
+    const pA = prepara(B, uA, sA, aA, uB), pB = prepara(B, uB, sB, aB, uA);
+    let cA = pA.monete, cB = pB.monete;
+    let ignA = hasPass(uA, 'prima_moneta_ignorata'), ignB = hasPass(uB, 'prima_moneta_ignorata');
+    const info = (u, p, c) => ({ id: u.id, skill: p.s.id, monete: c, pb: p.pb, pm: p.pm, rel: p.rel });
+    ev(B, { t: 'clash', a: info(uA, pA, cA), b: info(uB, pB, cB), msg: uA.breve + ' (' + sA.nome + ') contro ' + uB.breve + ' (' + sB.nome + ')!' });
+    let round = 0;
+    while (cA > 0 && cB > 0) {
+      round++;
+      const fa = lancia(B, uA, cA), fb = lancia(B, uB, cB);
+      const potA = pA.pb + fa.filter(Boolean).length * pA.pm, potB = pB.pb + fb.filter(Boolean).length * pB.pm;
+      let v = potA > potB ? 'a' : potB > potA ? 'b' : null;
+      if (round > 40) v = B.rng() < 0.5 ? 'a' : 'b';
+      const r = { t: 'round', n: round, v, ignorata: null,
+        a: { id: uA.id, flips: fa, pot: Math.round(potA * 10) / 10, monete: cA },
+        b: { id: uB.id, flips: fb, pot: Math.round(potB * 10) / 10, monete: cB } };
+      if (v === 'a') { if (ignB) { ignB = false; r.ignorata = 'b'; } else cB--; }
+      else if (v === 'b') { if (ignA) { ignA = false; r.ignorata = 'a'; } else cA--; }
+      r.restanti = { a: cA, b: cB };
+      ev(B, r);
+    }
+    const vincA = cA > 0, wp = vincA ? pA : pB, lp = vincA ? pB : pA, n = vincA ? cA : cB;
+    ev(B, { t: 'clash_fine', vincitore: wp.u.id, perdente: lp.u.id, restanti: n, msg: wp.u.breve + ' vince lo scontro!' });
+    addSanita(B, wp.u, 4); addSanita(B, lp.u, -4);
+    if (wp.u.stati.splendore) addSanita(B, wp.u, 2);
+    if (lp.u.stati.formazione) addStato(B, lp.u, 'formazione', -1);
+    applicaFx(B, wp.s, 'win', wp.u, lp.u);
+    colpi(B, wp, lp.u, n);
+    wp.u.ultimaSkill = wp.s.id; lp.u.ultimaSkill = lp.s.id;
+  }
+
+  /** Azione libera: nessun avversario può rispondere. */
+  function attaccoLibero(B, a, T) {
+    const u = get(B, a.u), s = E.SKILL[a.skill];
+    a.usata = true;
+    applicaFx(B, s, 'use', u, T);
+    const p = prepara(B, u, s, a, T);
+    ev(B, { t: 'msg', msg: u.breve + ' colpisce ' + T.breve + ' senza opposizione.' });
+    colpi(B, p, T, p.monete);
+    u.ultimaSkill = s.id;
+  }
+
+  /** Sceglie quale azione di T viene "agganciata" dall'attacco `a`. */
+  function azioneDifensiva(B, T, a) {
+    const libere = B.azioni.filter(x => x.u === T.id && !x.usata && !x.annullata && x.skill);
+    if (!libere.length) return null;
+    return libere.find(x => x.bers === a.u) || libere.sort((x, y) => y.dado - x.dado)[0];
+  }
+
+  /* ---------- Turno ---------- */
+  Combat.iniziaTurno = function (B) {
+    B.turno++; B.eventi = []; B.azioni = [];
+    if (B.turno > 1) B.ardore = clamp(B.ardore + C.ARDORE_TURNO, 0, C.ARDORE_MAX);
+    ev(B, { t: 'turno', n: B.turno, ardore: B.ardore });
+    B.unita.forEach(u => {
+      if (u.vivo && u.sanita <= C.SANITA_MIN && !u.panico) {
+        u.panico = true; ev(B, { t: 'panico', id: u.id, msg: u.breve + ' è in preda al Panico!' });
+      }
+    });
+    // Dadi di velocità
+    const dadi = {};
+    vivi(B, 'a').concat(vivi(B, 'n')).forEach(u => {
+      u.dadi = [];
+      if (u.ced > 0) { dadi[u.id] = []; return; }
+      for (let i = 0; i < u.azioni; i++) {
+        const d = u.vel[0] + Math.floor(B.rng() * (u.vel[1] - u.vel[0] + 1)) + (i === 0 ? u.bonusDado : 0);
+        u.dadi.push(Math.max(1, d));
+      }
+      u.bonusDado = 0;
+    });
+    // Passive di inizio turno
+    vivi(B, 'a').concat(vivi(B, 'n')).forEach(u => {
+      const p = u.passiva; if (!p) return;
+      if (p.tipo === 'inizio_turno_stato_alleati') vivi(B, u.lato).forEach(x => { if (x.ced === 0) addStato(B, x, p.stato, p.n, u); });
+      if (p.tipo === 'inizio_turno_sanita_minore') {
+        const l = vivi(B, u.lato).sort((x, y) => x.sanita - y.sanita)[0]; if (l) addSanita(B, l, p.sanita);
+      }
+      if (p.tipo === 'dado_alleato_minimo') {
+        const l = vivi(B, u.lato).filter(x => x.dadi.length).sort((x, y) => x.dadi[0] - y.dadi[0])[0];
+        if (l) l.dadi[0] += p.bonus;
+      }
+    });
+    vivi(B, 'a').concat(vivi(B, 'n')).forEach(u => { dadi[u.id] = u.dadi.slice(); });
+    ev(B, { t: 'dadi', dadi });
+    // Regole automatiche (boss)
+    vivi(B, 'n').forEach(u => u.regole.forEach(r => {
+      if (B.turno < r.da) return;
+      const tgt = r.a === 'alleati' ? vivi(B, 'a') : vivi(B, 'n');
+      tgt.forEach(t => addStato(B, t, r.stato, r.n));
+      ev(B, { t: 'regola', id: u.id, msg: r.testo });
+    }));
+    // Azioni
+    B.unita.forEach(u => {
+      if (!u.vivo) return;
+      u.dadi.forEach((dado, i) => B.azioni.push({ id: u.id + '#' + i, u: u.id, i, dado, skill: null, bers: null, usata: false, annullata: false }));
+    });
+    pianificaAutomatico(B);
+    return B.eventi;
+  };
+
+  /** Piano predefinito: nemici via IA; alleati skill 1 sul primo nemico (modificabile dalla UI). */
+  function pianificaAutomatico(B) {
+    B.azioni.forEach(a => {
+      const u = get(B, a.u);
+      if (u.lato === 'n') {
+        a.skill = u.ia[(B.turno - 1 + a.i) % u.ia.length];
+        a.bers = pick(B, vivi(B, 'a')).id;
+      } else {
+        a.skill = u.skills[0];
+        a.bers = vivi(B, 'n')[0].id;
+        if (u.panico) a.bers = pick(B, vivi(B, 'n')).id;
+      }
+    });
+  }
+
+  /** La UI imposta il piano di una Voce alleata. */
+  Combat.pianifica = function (B, unitId, skillIdx, bersId) {
+    const u = get(B, unitId);
+    const a = B.azioni.find(x => x.u === unitId);
+    if (!a || u.lato !== 'a' || u.panico) return false;
+    a.skill = u.skills[skillIdx]; a.bers = bersId;
+    return true;
+  };
+  Combat.costoPiano = B => B.azioni.filter(a => get(B, a.u).lato === 'a' && !a.annullata).reduce((t, a) => t + E.SKILL[a.skill].costo, 0);
+  Combat.pianoValido = B => Combat.costoPiano(B) <= B.ardore;
+
+  Combat.esegui = function (B) {
+    B.eventi = [];
+    const costo = Combat.costoPiano(B);
+    B.ardore -= costo;
+    if (costo) ev(B, { t: 'ardore', valore: B.ardore });
+    const ordine = B.azioni.slice().sort((x, y) => (y.dado - x.dado) || (B.rng() - 0.5));
+    for (const a of ordine) {
+      if (B.esito) break;
+      if (a.usata) continue;
+      const u = get(B, a.u);
+      if (!u.vivo || u.ced > 0) { a.usata = true; continue; }
+      // Sanguinamento: danno quando agisce (una volta per turno)
+      if (!u.bleedTurno && u.stati.sanguinamento) {
+        u.bleedTurno = true;
+        const n = u.stati.sanguinamento;
+        const pvDopo = sottraiPv(B, u, n);
+        ev(B, { t: 'dot', id: u.id, tipo: 'sanguinamento', danno: n, pvDopo });
+        addStato(B, u, 'sanguinamento', -Math.floor(n / 2));
+        dopoDanno(B, u, null);
+        if (!u.vivo || u.ced > 0) { a.usata = true; continue; }
+      }
+      u.bleedTurno = true;
+      let T = get(B, a.bers);
+      if (!T || !T.vivo) { const l = vivi(B, opposto(u.lato)); if (!l.length) break; T = pick(B, l); a.bers = T.id; }
+      const s = E.SKILL[a.skill];
+      ev(B, { t: 'azione', att: u.id, bers: T.id, skill: s.id, msg: u.breve + ' usa ' + s.nome + ' su ' + T.breve + '.' });
+      const dif = T.ced === 0 ? azioneDifensiva(B, T, a) : null;
+      if (dif) scontro(B, a, dif); else attaccoLibero(B, a, T);
+    }
+    fineTurno(B);
+    return B.eventi;
+  };
+
+  function fineTurno(B) {
+    B.unita.forEach(u => {
+      if (!u.vivo) return;
+      const br = u.stati.bruciatura || 0;
+      if (br) {
+        const pvDopo = sottraiPv(B, u, br);
+        ev(B, { t: 'dot', id: u.id, tipo: 'bruciatura', danno: br, pvDopo });
+        addSanita(B, u, -1);
+        addStato(B, u, 'bruciatura', -1);
+        dopoDanno(B, u, null);
+      }
+    });
+    B.unita.forEach(u => {
+      if (!u.vivo) return;
+      const sp = u.stati.splendore || 0;
+      if (sp) addStato(B, u, 'splendore', -Math.ceil(sp / 2));
+      if (u.ced > 0) u.ced--;
+      if (u.panico) { u.panico = false; addSanita(B, u, -15 - u.sanita); }
+      u.bleedTurno = false; u.splTurno = 0;
+    });
+    controllaEsito(B);
+    if (B.esito) ev(B, { t: 'fine', esito: B.esito });
+  }
+
+  /* ---------- Snapshot per la UI ---------- */
+  Combat.pubblica = u => ({
+    id: u.id, lato: u.lato, def: u.def, nome: u.nome, breve: u.breve, aff: u.aff, pv: u.pv, pvMax: u.pvMax, sanita: u.sanita,
+    stati: Object.assign({}, u.stati), ced: u.ced, vivo: u.vivo, panico: u.panico, boss: u.boss, colore: u.colore, sigla: u.sigla,
+    passiva: u.passiva, skills: u.skills.slice()
+  });
+  Combat.snapshot = B => B.unita.map(Combat.pubblica);
+})(typeof window !== 'undefined' ? window : globalThis);

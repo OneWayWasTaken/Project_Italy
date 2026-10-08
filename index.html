@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echi d'Italia</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="fx"></canvas>
+
+  <!-- MENU -->
+  <section id="scr-menu" class="screen active">
+    <div class="titolo">
+      <h1>ECHI D'ITALIA</h1>
+      <p class="sub">Il Custode ascolta ciò che la storia ha taciuto</p>
+    </div>
+    <div class="menu-btns">
+      <button class="btn grande" data-azione="nuova-prova">Battaglia di prova</button>
+      <button class="btn" data-azione="opzioni">Opzioni</button>
+      <button class="btn" disabled title="Fase 3">Storia (presto)</button>
+      <button class="btn" disabled title="Fase 4">Evocazioni (presto)</button>
+      <button class="btn" disabled title="Fase 5">Dungeon (presto)</button>
+    </div>
+    <p class="nota-fase">Fase 1 · sistema di scontri a monete</p>
+  </section>
+
+  <!-- SELEZIONE SQUADRA -->
+  <section id="scr-squadra" class="screen">
+    <header class="barra"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Scegli 4 Voci</h2><span id="sq-conta">0/4</span></header>
+    <div class="squadra-layout">
+      <div id="sq-griglia" class="sq-griglia"></div>
+      <aside id="sq-dettaglio" class="sq-dettaglio"></aside>
+    </div>
+    <footer class="barra">
+      <label>Incontro <select id="sq-incontro"></select></label>
+      <button id="sq-affinita" class="btn piccolo">Tabella affinità</button>
+      <button id="sq-via" class="btn grande" disabled>Combatti</button>
+    </footer>
+  </section>
+
+  <!-- BATTAGLIA -->
+  <section id="scr-battaglia" class="screen">
+    <div id="campo">
+      <div id="col-alleati" class="colonna"></div>
+      <div id="centro">
+        <div id="turno-info"><span id="turno-n">Turno 1</span> <span id="ardore">Ardore 3</span></div>
+        <div id="clash"></div>
+      </div>
+      <div id="col-nemici" class="colonna"></div>
+    </div>
+    <div id="pannello">
+      <div id="skills"></div>
+      <div id="comandi">
+        <div class="vel">
+          <button class="btn piccolo" data-vel="1">×1</button><button class="btn piccolo" data-vel="2">×2</button><button class="btn piccolo" data-vel="4">×4</button><button class="btn piccolo" data-vel="0" title="Salta animazioni">Salta</button>
+        </div>
+        <button id="btn-esegui" class="btn grande" disabled>Esegui turno</button>
+        <button id="btn-audio" class="btn piccolo">Suono: sì</button>
+      </div>
+      <div id="log"></div>
+    </div>
+    <div id="risultato" class="overlay"></div>
+  </section>
+
+  <div id="modale" class="overlay"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="combat.js"></script>
+<script src="story.js"></script>
+<script src="gacha.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
