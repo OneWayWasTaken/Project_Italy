@@ -266,6 +266,29 @@
     annibale:        { idle: 'regale', idleVars: { '--cape': '10deg' }, eco: true, glow: '#8c5cc4', corpo: 'g', scala: 1.3, pelle: '#8a6a5a', capelli: { stile: 'corto', colore: '#15101c', barba: 'barba' }, viso: 'benda', abito: { tipo: 'armatura', c1: '#5a3a7a', c2: '#d9b44a' }, mantello: '#3a1f55', testa: { tipo: 'elmo_cartaginese', c1: '#b8923a', c2: '#2a1a3a' }, arma: 'sciabola', attacco: 'fendente' }
   };
 
+  /* ---------- Animazioni d'attacco per skill ----------
+   * Ogni skill ha un movimento diverso (nomi definiti in art.js → Arte.ANIM). Se una skill non è qui,
+   * vale E.SKILL[id].anim oppure lo stile predefinito del personaggio (E.ARTE[id].attacco). */
+  E.ANIM_SKILL = {
+    gladio_disciplinato: 'fendente', manovra_avvolgente: 'sweep', giornata_zama: 'salto',
+    colpo_gladio: 'doppio', rete_tridente: 'lancio_alto', rivolta_schiavi: 'turbine',
+    ordine_marcia: 'affondo', editto: 'benedizione', pax_romana: 'invocazione',
+    preghiera_arena: 'preghiera', fermezza: 'benedizione', il_rifiuto: 'invocazione',
+    falcone_addestrato: 'lancio', macchina_assedio: 'lancio_alto', stupor_mundi: 'invocazione',
+    lancia_canossiana: 'lungo', mediazione: 'colpo_scudo', castello_tiene: 'salto',
+    balestra_girevole: 'sparo_rapido', ornitottero: 'lancio_alto', grande_carro: 'sparo_mira',
+    colpo_archibugio: 'sparo', stratagemma_ravaldino: 'sparo_rapido', rappresaglia: 'sparo_mira',
+    sciabola: 'fendente', carica_calatafimi: 'carica', obbedisco: 'turbine',
+    lettera_riservata: 'lancio', intesa_plombieres: 'benedizione', gran_tessitore: 'invocazione',
+    picchiata: 'carica', duello_aereo: 'sparo_rapido', cielo_montello: 'sparo_mira',
+    gerla_pesante: 'sweep', sentiero_carnico: 'lungo', il_carico: 'salto',
+    lettera_protetta: 'lancio', documenti_perfetti: 'benedizione', casa_protetta: 'invocazione',
+    messaggio_cifrato: 'lancio', rete_memoria: 'lancio_alto', giustizia_paziente: 'colpo_scudo',
+    salita_dolomitica: 'carica', telaio_segreto: 'lancio', corsa_alba: 'turbine',
+    n_dardo: 'lancio', n_imboscata: 'doppio', n_carica: 'ele_carica', n_barrito: 'ele_barrito',
+    n_gladio_ombra: 'fendente', n_testuggine: 'colpo_scudo', a_stratagemma: 'sweep', a_accerchiamento: 'doppio', a_canne: 'salto'
+  };
+
   /* ---------- Helper: descrizione testuale di una skill (per la UI) ---------- */
   const TO = { self: 'sé', target: 'bersaglio', ally: 'alleato', team: 'squadra', nemici: 'nemici' };
   const ON = { use: 'Uso', hit: 'Al colpo', win: 'Se vince lo scontro' };

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galleria — Echi d'Italia</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="figure.css">
+<style>
+  html, body { overflow: auto; height: auto; }
+  body { padding: 12px; background: #120e18; }
+  h1 { font-size: 18px; margin: 0 0 8px; color: var(--oro); }
+  .barra-g { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; position: sticky; top: 0; z-index: 5; background: #120e18ee; padding: 6px 0; }
+  .barra-g .btn { padding: 4px 10px; font-size: 12px; }
+  .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+  .cella { background: radial-gradient(ellipse at 50% 90%, #5a4a38, #1e1828 70%); border: 1px solid var(--bordo); border-radius: 10px; padding: 8px 8px 10px; text-align: center; }
+  .cella .fig { height: var(--h, 240px); margin: 0 auto; }
+  .cella .n { font-size: 13px; margin-top: 4px; } .cella .n small { color: var(--testo2); display: block; }
+  .cella.nem .fig-in { transform: scaleX(-1); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gOmbra" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></linearGradient>
+  <linearGradient id="gVert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></linearGradient>
+  <radialGradient id="gTesta" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".36"/></radialGradient>
+</defs></svg>
+<h1>Galleria dei personaggi · anteprima di modelli e animazioni</h1>
+<div class="barra-g" id="barra"></div>
+<div class="griglia" id="griglia"></div>
+<script src="data.js"></script>
+<script src="art.js"></script>
+<script>
+  const E = window.Echi, A = E.Arte, g = document.getElementById('griglia'), b = document.getElementById('barra');
+  const figs = [];
+  Object.keys(E.ARTE).forEach(id => {
+    const d = E.VOCI[id] || E.NEMICI[id];
+    const c = document.createElement('div'); c.className = 'cella' + (E.NEMICI[id] ? ' nem' : '');
+    const f = A.figura(id); c.appendChild(f); figs.push(f);
+    const n = document.createElement('div'); n.className = 'n'; n.innerHTML = (d.breve || d.nome) + '<small>' + (E.ARTE[id].idle || '') + '</small>'; c.appendChild(n);
+    g.appendChild(c);
+  });
+  const btn = (txt, fn) => { const x = document.createElement('button'); x.className = 'btn'; x.textContent = txt; x.onclick = fn; b.appendChild(x); return x; };
+  Object.keys(A.ANIM).filter(k => k !== 'vittoria').forEach(k => btn(k, () => figs.forEach(f => { if (k.indexOf('ele_') === 0 && !f.classList.contains('quadrupede')) return; if (k.indexOf('ele_') !== 0 && f.classList.contains('quadrupede')) return; A.anima(f, k, 1); })));
+  btn('ced', () => figs.forEach(f => f.classList.toggle('ced')));
+  btn('corre', () => figs.forEach(f => f.classList.toggle('corre')));
+  btn('morte', () => figs.forEach(f => A.anima(f, 'morte', 1)));
+  btn('reset', () => figs.forEach(f => { A.reset(f); f.classList.remove('ced', 'corre'); }));
+  btn('grande', () => { g.style.setProperty('--h', '420px'); document.querySelectorAll('.cella .fig').forEach(f => f.style.setProperty('--h', '420px')); });
+  document.querySelectorAll('.cella .fig').forEach(f => { f.style.height = '240px'; });
+</script>
+</body>
+</html>

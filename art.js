@@ -1,13 +1,16 @@
 /* ============================================================================
- * art.js — personaggi SVG stilizzati con animazioni (FASE 2).
+ * art.js — personaggi SVG stilizzati con animazioni.
  *
- * Ogni personaggio/nemico è descritto da una piccola tabella in data.js (E.ARTE[id]):
- * corpo, colori, abito, copricapo, arma, stile d'attacco… Questo modulo la trasforma in
- * una figura SVG "a pezzi" (testa, torso, braccia, gambe, mantello, arma) che il CSS anima:
+ * Ogni personaggio/nemico è descritto da una tabella in data.js (E.ARTE[id]): corpo, colori, abito,
+ * copricapo, arma, stile d'attacco, personalità di riposo… Questo modulo la trasforma in una figura
+ * "a pezzi": ogni parte (testa, occhi, torso, braccia, gambe, mantello, arma) è un <div> con il suo
+ * piccolo SVG. Le animazioni CSS agiscono sui <div> (trasformazioni accelerate dalla GPU), non sui
+ * gruppi SVG: niente scatti né "tearing", anche con molti personaggi insieme.
  *
- *   idle        sempre attivo (respiro, ondeggiare del mantello)
- *   a-fendente  a-affondo  a-sparo  a-lancio  a-preghiera   (attacchi)
- *   a-hit  ced  a-morte  a-vittoria                          (stati)
+ *   struttura:  .fig > .fig-in > .f-tutto > [ .f-aura .f-mantello .f-gamba… .f-torso .f-braccio-b
+ *                                              .f-testa(>.f-occhi,.f-viso) .f-braccio-a(>.f-arma) ]
+ *
+ * ANIMAZIONI (classi .a-xxx messe sulla .fig da Arte.anima): vedi Arte.ANIM per l'elenco completo.
  *
  * COME SOSTITUIRE UNA FIGURA CON UNO SPRITE TUO (vedi anche ARTE.md):
  *   in data.js, nella voce E.ARTE[id], aggiungi
@@ -22,9 +25,37 @@
   const E = root.Echi = root.Echi || {};
   const Arte = E.Arte = {};
 
-  /** Durata (s) e momento d'impatto (0-1) di ogni stile d'attacco: la UI li usa per sincronizzare gli effetti. */
-  Arte.DURATA = { fendente: 0.62, affondo: 0.5, sparo: 0.55, lancio: 0.62, preghiera: 0.7, hit: 0.38, vittoria: 1.2 };
-  Arte.IMPATTO = { fendente: 0.62, affondo: 0.5, sparo: 0.42, lancio: 0.55, preghiera: 0.5 };
+  /* ---------- Animazioni d'attacco ----------
+   * dur: durata (s) · imp: momento d'impatto (0-1) · dist: come si avvicina al bersaglio
+   *   vicino (corpo a corpo) | medio | lontano (a distanza) | carica (scatta addosso) | sul_posto
+   * fx: effetto grafico all'impatto (vedi UI.battaglia.effettoImpatto) · n/gap: colpi multipli visivi */
+  Arte.ANIM = {
+    fendente:     { dur: 0.62, imp: 0.60, dist: 'vicino',  fx: 'taglio' },
+    sweep:        { dur: 0.72, imp: 0.56, dist: 'vicino',  fx: 'taglio_o' },
+    doppio:       { dur: 0.84, imp: 0.55, dist: 'vicino',  fx: 'x' },
+    affondo:      { dur: 0.50, imp: 0.50, dist: 'vicino',  fx: 'raggi' },
+    lungo:        { dur: 0.64, imp: 0.50, dist: 'vicino',  fx: 'raggi_forti' },
+    salto:        { dur: 1.00, imp: 0.62, dist: 'vicino',  fx: 'onda' },
+    turbine:      { dur: 1.00, imp: 0.50, dist: 'vicino',  fx: 'turbine' },
+    carica:       { dur: 0.55, imp: 0.50, dist: 'carica',  fx: 'onda' },
+    colpo_scudo:  { dur: 0.58, imp: 0.50, dist: 'vicino',  fx: 'raggi_forti' },
+    sparo:        { dur: 0.55, imp: 0.42, dist: 'lontano', fx: 'proiettile' },
+    sparo_rapido: { dur: 0.78, imp: 0.30, dist: 'lontano', fx: 'proiettile', n: 2, gap: 0.2 },
+    sparo_mira:   { dur: 1.00, imp: 0.64, dist: 'lontano', fx: 'proiettile_forte' },
+    lancio:       { dur: 0.62, imp: 0.55, dist: 'lontano', fx: 'proiettile' },
+    lancio_alto:  { dur: 0.84, imp: 0.64, dist: 'lontano', fx: 'proiettile_arco' },
+    benedizione:  { dur: 0.78, imp: 0.55, dist: 'medio',   fx: 'luce' },
+    invocazione:  { dur: 1.00, imp: 0.58, dist: 'medio',   fx: 'luce_forte' },
+    preghiera:    { dur: 0.70, imp: 0.50, dist: 'medio',   fx: 'luce' },
+    ele_carica:   { dur: 0.72, imp: 0.55, dist: 'carica',  fx: 'onda' },
+    ele_barrito:  { dur: 0.95, imp: 0.65, dist: 'medio',   fx: 'onda' },
+    ele_pestone:  { dur: 0.84, imp: 0.60, dist: 'vicino',  fx: 'onda' },
+    hit:          { dur: 0.38 },
+    vittoria:     { dur: 1.20 }
+  };
+  // Compatibilità con le versioni precedenti
+  Arte.DURATA = {}; Arte.IMPATTO = {};
+  Object.keys(Arte.ANIM).forEach(k => { Arte.DURATA[k] = Arte.ANIM[k].dur; Arte.IMPATTO[k] = Arte.ANIM[k].imp; });
 
   /* ---------- Colori e utilità ---------- */
   const OUT = 'stroke="#1b1422" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"';
@@ -35,14 +66,20 @@
   }
   const scuro = (c, t) => mix(c, '#000000', t == null ? 0.35 : t);
   const chiaro = (c, t) => mix(c, '#ffffff', t == null ? 0.3 : t);
+  const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+
+  /** Un "pezzo" della figura: <div> animabile con il suo SVG (viewBox comune a tutta la figura). */
+  function pezzo(vb, cls, ox, oy, inner, figli, stile) {
+    const po = ((ox - vb.x) / vb.w * 100).toFixed(2) + '% ' + ((oy - vb.y) / vb.h * 100).toFixed(2) + '%';
+    return `<div class="p ${cls}" style="transform-origin:${po};${stile || ''}">` +
+      (inner ? `<svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>` : '') + (figli || '') + '</div>';
+  }
+  const VB_UMANO = { x: 0, y: 0, w: 120, h: 190 };
+  const VB_ELEFANTE = { x: -6, y: 0, w: 140, h: 190 };
 
   /* ---------- Dimensioni del corpo ---------- */
   // sw = mezza larghezza spalle, ww = mezza larghezza vita, gw = spessore arti
-  const DIM = {
-    m: { sw: 15, ww: 12, gw: 9 },
-    f: { sw: 12, ww: 9.5, gw: 8 },
-    g: { sw: 18, ww: 15, gw: 11 }
-  };
+  const DIM = { m: { sw: 15, ww: 12, gw: 9 }, f: { sw: 12, ww: 9.5, gw: 8 }, g: { sw: 18, ww: 15, gw: 11 } };
 
   /* ---------- Abiti: ritornano il disegno del busto (+ gonne) e i colori di maniche/pantaloni ---------- */
   const T = d => `M${60 - d.sw} 58 Q60 51 ${60 + d.sw} 58 L${60 + d.ww} 106 L${60 - d.ww} 106 Z`;
@@ -127,48 +164,6 @@
     })
   };
 
-  /* ---------- Capelli e barba ---------- */
-  function capelli(stile, c) {
-    const alto = `<path d="M47 36 Q46 20 60 20 Q74 20 73 36 Q68 28 60 28 Q52 28 47 36 Z" fill="${c}" ${OUT}/>`;
-    switch (stile) {
-      case 'lungo': return { dietro: `<path d="M46 30 Q42 56 52 66 L70 66 Q78 56 74 30 Z" fill="${c}" ${OUT}/>`, davanti: alto };
-      case 'trecce': return { dietro: `<path d="M48 38 Q44 52 50 66" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M72 38 Q76 52 70 66" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>`, davanti: alto };
-      case 'raccolto': return { dietro: '', davanti: alto + `<circle cx="55" cy="19" r="5.5" fill="${c}" ${OUT}/>` };
-      case 'riccio': return { dietro: '', davanti: `<g fill="${c}" ${OUT}>${[[50, 28], [56, 22], [64, 22], [71, 28], [60, 18], [48, 36], [72, 36]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="6"/>`).join('')}</g>` };
-      case 'calvo': return { dietro: '', davanti: `<path d="M48 36 Q47 30 50 28 Q49 34 48 36 Z" fill="${c}"/>` };
-      default: return { dietro: '', davanti: alto };
-    }
-  }
-  function barba(tipo, c) {
-    switch (tipo) {
-      case 'barba': return `<path d="M49 36 Q50 58 62 59 Q72 57 72 38 Q66 47 60 47 Q54 47 49 36 Z" fill="${c}" ${OUT}/>`;
-      case 'pizzo': return `<path d="M56 46 Q60 56 66 46 Q61 49 56 46 Z" fill="${c}" ${OUT}/>`;
-      case 'baffi': return `<path d="M60 42 Q66 40 73 43 Q66 47 60 44 Z" fill="${c}" ${OUT}/>`;
-      default: return '';
-    }
-  }
-
-  /* ---------- Copricapi (colori c1 = principale, c2 = accento) ---------- */
-  const TESTE = {
-    elmo_romano: (c1, c2) => `<path d="M46 33 Q45 15 60 15 Q75 15 74 33 L46 33 Z" fill="${c1}" ${OUT}/><rect x="44" y="30.5" width="32" height="3.6" rx="1.5" fill="${scuro(c1, 0.2)}" ${OUT}/>
-      <path d="M46 34 L50 50 L54 36 Z M74 34 L70 50 L66 36 Z" fill="${c1}" ${OUT}/><path d="M48 20 Q60 -1 72 20 L67 20 Q60 8 53 20 Z" fill="${c2}" ${OUT}/>`,
-    elmo_cartaginese: (c1, c2) => `<path d="M46 33 Q45 14 60 14 Q75 14 74 33 L46 33 Z" fill="${c1}" ${OUT}/><rect x="44" y="30.5" width="32" height="3.6" rx="1.5" fill="${scuro(c1, 0.2)}" ${OUT}/>
-      <path d="M52 18 Q54 -4 62 0 Q58 6 64 18 Z" fill="${c2}" ${OUT}/><path d="M46 34 L50 52 L54 36 Z" fill="${c1}" ${OUT}/>`,
-    elmo_medievale: (c1) => `<path d="M46 33 Q45 15 60 15 Q75 15 74 33 L46 33 Z" fill="${c1}" ${OUT}/><rect x="58" y="33" width="3.6" height="12" fill="${c1}" ${OUT}/><rect x="44" y="30.5" width="32" height="3.2" fill="${scuro(c1, 0.25)}" ${OUT}/>`,
-    alloro: (c1) => `<g fill="${c1}" ${OUT}>${[0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = Math.PI * (1.08 + i * 0.12); return `<ellipse cx="${60 + 13 * Math.cos(a)}" cy="${37 + 13 * Math.sin(a)}" rx="3.6" ry="1.9" transform="rotate(${(a * 180 / Math.PI) + 90} ${60 + 13 * Math.cos(a)} ${37 + 13 * Math.sin(a)})"/>`; }).join('')}</g>`,
-    corona: (c1) => `<path d="M48 28 L50 18 L55 25 L60 15 L65 25 L70 18 L72 28 Z" fill="${c1}" ${OUT}/><circle cx="60" cy="22" r="1.6" fill="#c0303f"/>`,
-    velo_corona: (c1) => `<path d="M46 38 Q46 17 60 17 Q74 17 74 38 L78 70 L62 52 L46 62 Z" fill="#e9e1cf" ${OUT}/><path d="M49 26 L51 18 L56 24 L60 15 L64 24 L69 18 L71 26 Z" fill="${c1}" ${OUT}/>`,
-    cappello_piuma: (c1, c2) => `<ellipse cx="58" cy="25" rx="16" ry="6" fill="${c1}" ${OUT} transform="rotate(-10 58 25)"/><path d="M68 24 Q84 14 88 30 Q80 22 70 28 Z" fill="${c2}" ${OUT}/>`,
-    berretto: (c1) => `<path d="M46 34 Q48 16 66 19 Q78 22 74 34 Q60 27 46 34 Z" fill="${c1}" ${OUT}/>`,
-    aviatore: (c1, c2) => `<path d="M46 38 Q45 18 60 18 Q75 18 74 38 L71 31 Q60 25 49 31 Z" fill="${c1}" ${OUT}/><rect x="52" y="24" width="20" height="6" rx="3" fill="${scuro(c1)}" ${OUT}/>
-      <circle cx="58" cy="27" r="3.4" fill="${c2}" ${OUT}/><circle cx="67" cy="27" r="3.4" fill="${c2}" ${OUT}/>`,
-    fazzoletto: (c1) => `<path d="M46 38 Q45 17 60 17 Q75 17 74 38 Q66 30 60 30 Q54 30 46 38 Z" fill="${c1}" ${OUT}/><path d="M48 36 L40 52 L52 44 Z" fill="${c1}" ${OUT}/>`,
-    fedora: (c1, c2) => `<ellipse cx="60" cy="28" rx="18" ry="4.2" fill="${c1}" ${OUT}/><path d="M49 28 Q49 14 60 14 Q71 14 71 28 Z" fill="${c1}" ${OUT}/><rect x="49" y="23" width="22" height="4" fill="${c2}"/>`,
-    basco: (c1) => `<ellipse cx="57" cy="25" rx="15" ry="7" fill="${c1}" ${OUT} transform="rotate(-12 57 25)"/><circle cx="55" cy="18" r="1.6" fill="${c1}"/>`,
-    cappellino_ciclista: (c1) => `<path d="M48 33 Q48 20 60 20 Q72 20 72 33 Z" fill="${c1}" ${OUT}/><path d="M70 31 L83 34 L70 36 Z" fill="${c1}" ${OUT}/>`,
-    cappuccio: (c1) => `<path d="M43 44 Q42 12 60 12 Q78 12 77 44 L72 52 Q60 40 48 52 Z" fill="${c1}" ${OUT}/><path d="M49 30 Q60 24 71 30 L71 44 Q60 50 49 44 Z" fill="#0a0810"/>`,
-    fascia: (c1) => `<path d="M47 30 Q60 24 73 30 L73 34 Q60 28 47 34 Z" fill="${c1}" ${OUT}/>`
-  };
 
   /* ---------- Armi e oggetti in mano (disegnati con l'impugnatura in (0,0), puntando verso il basso, lungo +y) ---------- */
   const ARMI = {
@@ -192,7 +187,59 @@
     clipeo: (c1, c2) => `<circle cx="42" cy="86" r="15" fill="${c1}" ${OUT}/><circle cx="42" cy="86" r="10" fill="none" stroke="${c2}" stroke-width="2"/><circle cx="42" cy="86" r="3.5" fill="${c2}" ${OUT}/>`
   };
 
-  /* ---------- Accessori ---------- */
+
+
+  /* ---------- Capelli e barba ----------
+   * Il volto guarda a destra (3/4). I capelli stanno SOPRA la fronte (mai sotto y≈29) e dietro l'orecchio:
+   * `dietro` si disegna prima del torso/testa, `davanti` sulla testa. Gli occhi sono un pezzo a parte, sempre in cima. */
+  function capelli(stile, c) {
+    const calotta = `<path d="M47.5 33 Q45.5 20 59.5 19 Q74.5 19 74.5 31 Q69 27.5 62.5 27.3 Q55.5 27.3 51 31.5 L50 37 Z" fill="${c}" ${OUT}/>
+      <path d="M52 22.5 Q60 19.5 68 23" stroke="${chiaro(c, 0.28)}" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".7"/>`;
+    const basette = `<path d="M47.5 33 Q46 44 51.5 46.5 L52.5 37 Z" fill="${c}" ${OUT}/>`;
+    switch (stile) {
+      case 'lungo': return { dietro: `<path d="M47 27 Q37 50 44.5 68 Q53 73 66 67.5 L64 47 L52 40 Z" fill="${c}" ${OUT}/><path d="M44 52 Q47 62 52 68" stroke="${scuro(c, 0.3)}" stroke-width="1.2" fill="none"/>`, davanti: calotta + basette };
+      case 'trecce': return { dietro: `<path d="M49 39 Q42 53 47 69" stroke="${c}" stroke-width="5.5" fill="none" stroke-linecap="round"/><path d="M49 39 Q42 53 47 69" stroke="${scuro(c, 0.35)}" stroke-width="1" fill="none" stroke-dasharray="2 3"/><circle cx="47.2" cy="70" r="2.4" fill="#c04040"/>`, davanti: calotta + basette };
+      case 'raccolto': return { dietro: `<circle cx="51" cy="20.5" r="5.8" fill="${c}" ${OUT}/>`, davanti: calotta + basette };
+      case 'riccio': return { dietro: `<g fill="${c}" ${OUT}><circle cx="47" cy="30" r="5.5"/><circle cx="45.5" cy="39" r="5"/><circle cx="51" cy="23.5" r="5.5"/></g>`,
+        davanti: `<g fill="${c}" ${OUT}>${[[57, 22.5], [64, 21], [70.5, 24.5], [51, 26]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="5.4"/>`).join('')}</g>` };
+      case 'calvo': return { dietro: '', davanti: `<path d="M47.5 33 Q46.5 27 50 25.5 Q49 31 49.5 37 Z" fill="${c}"/>` };
+      default: return { dietro: '', davanti: calotta + basette };
+    }
+  }
+  function barba(tipo, c) {
+    switch (tipo) {
+      case 'barba': return `<path d="M49.5 38 Q50 58 62 59 Q72 56 72.8 41 Q68 49.5 62 49.5 Q55 49.5 49.5 38 Z" fill="${c}" ${OUT}/><path d="M60 52 Q63 54 67 52" stroke="${scuro(c, 0.3)}" stroke-width="1" fill="none"/>`;
+      case 'pizzo': return `<path d="M58 47.5 Q63 58 69 47.5 Q63.5 50.5 58 47.5 Z" fill="${c}" ${OUT}/>`;
+      case 'baffi': return `<path d="M62 42.4 Q67.5 40.6 73 43 Q67.5 46.4 62 43.8 Z" fill="${c}" ${OUT}/>`;
+      default: return '';
+    }
+  }
+
+  /* ---------- Copricapi (c1 = principale, c2 = accento). Bordo inferiore SEMPRE sopra gli occhi (y ≤ 30). ---------- */
+  const TESTE = {
+    elmo_romano: (c1, c2) => `<path d="M47 31 Q46 13.5 60 13.5 Q74 13.5 74.5 30 L47 31 Z" fill="${c1}" ${OUT}/><rect x="46" y="29.2" width="29" height="3.2" rx="1.4" fill="${scuro(c1, 0.2)}" ${OUT}/>
+      <path d="M47 32 L49.5 48 L54.5 34 Z" fill="${c1}" ${OUT}/><path d="M49 19 Q60 -2 71 19 L66.5 19 Q60 7 53.5 19 Z" fill="${c2}" ${OUT}/><path d="M52 18 Q60 13 68 18" stroke="${chiaro(c1, 0.4)}" stroke-width="1.2" fill="none" opacity=".7"/>`,
+    elmo_cartaginese: (c1, c2) => `<path d="M47 31 Q46 13 60 13 Q74 13 74.5 30 L47 31 Z" fill="${c1}" ${OUT}/><rect x="46" y="29.2" width="29" height="3.2" rx="1.4" fill="${scuro(c1, 0.2)}" ${OUT}/>
+      <path d="M52 17 Q53 -6 63 -1 Q58 5 64 17 Z" fill="${c2}" ${OUT}/><path d="M47 32 L50 50 L54.5 34 Z" fill="${c1}" ${OUT}/>`,
+    elmo_medievale: (c1) => `<path d="M47 31 Q46 14 60 14 Q74 14 74.5 30 L47 31 Z" fill="${c1}" ${OUT}/><rect x="46" y="29.2" width="29" height="3" fill="${scuro(c1, 0.25)}" ${OUT}/><rect x="58.2" y="31" width="2.8" height="13" fill="${c1}" ${OUT}/><path d="M47 32 L49 46 L54 34 Z" fill="${c1}" ${OUT}/>`,
+    alloro: (c1) => `<g fill="${c1}" ${OUT}>${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => { const a = Math.PI * (1.0 + i * 0.105), x = 60.5 + 13.5 * Math.cos(a), y = 33 + 12.5 * Math.sin(a); return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.6" ry="1.9" transform="rotate(${(a * 180 / Math.PI + 90).toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`; }).join('')}</g>`,
+    corona: (c1) => `<path d="M49 27 L50.5 16 L55 22.5 L60 13 L65 22.5 L69.5 16 L71 27 Z" fill="${c1}" ${OUT}/><circle cx="60" cy="21" r="1.7" fill="#c0303f"/>`,
+    // il velo sta DIETRO la testa (non copre il volto); sopra resta solo la corona
+    velo_corona: (c1) => ({ dietro: `<path d="M46 26 Q38 40 40 62 L47 74 L64 66 L62 44 L52 36 Z" fill="#e9e1cf" ${OUT}/>`,
+      davanti: `<path d="M47.5 28 Q47 18 60 17 Q73 17 74 28 Q67 24.5 60 24.5 Q53 24.5 47.5 28 Z" fill="#e9e1cf" ${OUT}/><path d="M49 25 L50.5 16 L55 21.5 L60 12.5 L65 21.5 L69.5 16 L71 25 Z" fill="${c1}" ${OUT}/>` }),
+    cappello_piuma: (c1, c2) => `<ellipse cx="58" cy="22.5" rx="16" ry="5.6" fill="${c1}" ${OUT} transform="rotate(-10 58 22.5)"/><path d="M69 21 Q86 10 88 27 Q80 19 71 25 Z" fill="${c2}" ${OUT}/>`,
+    berretto: (c1) => `<path d="M46.5 31 Q47 14 66 17 Q79 20 74.5 31 Q60 25.5 46.5 31 Z" fill="${c1}" ${OUT}/>`,
+    aviatore: (c1, c2) => `<path d="M46.5 33 Q45.5 15 60 15 Q74.5 15 74.5 31 L72 27.5 Q60 23.5 49.5 28.5 Z" fill="${c1}" ${OUT}/><path d="M46.5 33 L47 46 L52 40 Z" fill="${c1}" ${OUT}/>
+      <rect x="52" y="21" width="21" height="6.5" rx="3.2" fill="${scuro(c1)}" ${OUT}/><circle cx="58" cy="24.3" r="3.3" fill="${c2}" ${OUT}/><circle cx="67" cy="24.3" r="3.3" fill="${c2}" ${OUT}/>`,
+    fazzoletto: (c1) => `<path d="M46.5 34 Q45 14 60 14 Q74.5 14 74.5 30 Q66 25.5 60 25.5 Q54 25.5 46.5 34 Z" fill="${c1}" ${OUT}/><path d="M48 30 L38 52 L53 45 Z" fill="${c1}" ${OUT}/>`,
+    fedora: (c1, c2) => `<path d="M50.5 24 Q50.5 9 61 9 Q71.5 9 71.5 24 Z" fill="${c1}" ${OUT}/><rect x="50.5" y="18" width="21" height="4.6" fill="${c2}"/><ellipse cx="61" cy="25" rx="18" ry="4.2" fill="${c1}" ${OUT}/>`,
+    basco: (c1) => `<ellipse cx="58" cy="22" rx="15.5" ry="6.4" fill="${c1}" ${OUT} transform="rotate(-12 58 22)"/><circle cx="55" cy="15" r="1.7" fill="${c1}"/>`,
+    cappellino_ciclista: (c1) => `<path d="M48.5 30 Q48.5 17 60 17 Q71.5 17 72.5 30 Z" fill="${c1}" ${OUT}/><path d="M70 28 L84 31 L70 33 Z" fill="${c1}" ${OUT}/>`,
+    cappuccio: (c1) => `<path d="M43.5 48 Q41.5 10 60 10 Q78.5 10 77.5 48 L72 55 Q60 42 48 55 Z" fill="${c1}" ${OUT}/><path d="M50 28 Q60 22 71 28 L72 44 Q60 50 49 44 Z" fill="#0a0810"/>`,
+    fascia: (c1) => `<path d="M47.5 28.5 Q60 22 73.5 28.5 L73.5 32 Q60 26 47.5 32 Z" fill="${c1}" ${OUT}/>`
+  };
+
+  /* ---------- Accessori e segni sul viso ---------- */
   function accessorio(nome, c, d) {
     switch (nome) {
       case 'catene': return `<g fill="none" stroke="#8a8a94" stroke-width="2"><circle cx="${60 + d.sw - 2}" cy="94" r="3.4"/><circle cx="${60 - d.sw + 2}" cy="94" r="3.4"/><path d="M${60 + d.sw + 1} 94 l5 5 m-4 -1 l4 6" /></g>`;
@@ -200,33 +247,25 @@
       default: return '';
     }
   }
-  function sulViso(acc, c) {
+  function sulViso(acc) {
     switch (acc) {
-      case 'occhiali': return `<g fill="none" stroke="#1b1422" stroke-width="1.1"><circle cx="62" cy="36" r="3.2"/><circle cx="70" cy="36" r="3.2"/><path d="M65.2 36 L66.8 36"/></g>`;
-      case 'benda': return `<ellipse cx="70" cy="36" rx="3.8" ry="3.4" fill="#15101c"/><path d="M47 30 L73 40" stroke="#15101c" stroke-width="1.5"/>`;
+      case 'occhiali': return `<g fill="none" stroke="#1b1422" stroke-width="1.1"><circle cx="64.3" cy="36.8" r="3.9"/><circle cx="70.6" cy="36.8" r="3.2"/><path d="M68.2 36.6 L67.4 36.6"/><path d="M60.4 36.4 L50 35.5"/></g>`;
+      case 'benda': return `<ellipse cx="70.6" cy="36.8" rx="3.6" ry="4" fill="#15101c"/><path d="M49 29 L74 40" stroke="#15101c" stroke-width="1.6"/>`;
       default: return '';
     }
   }
 
   /* ---------- Mantelli e gerla (dietro al corpo) ---------- */
-  function dietro(spec, d) {
-    let s = '';
-    if (spec.mantello) {
-      const c = spec.mantello;
-      s += `<g class="f-mantello" style="transform-origin:${60 - d.sw + 4}px 58px"><path d="M${60 - d.sw + 2} 56 Q${34 - d.sw / 2} 100 ${30 - d.sw / 2} 156 Q56 150 ${60 + d.ww} 120 L${60 + d.sw - 4} 56 Z" fill="${c}" ${OUT}/>
-        <path d="M${60 - d.sw + 4} 60 Q${44 - d.sw / 2} 104 ${42 - d.sw / 2} 150" stroke="${scuro(c, 0.3)}" stroke-width="1" fill="none"/></g>`;
-    }
-    if (spec.dorso === 'gerla') {
-      s += `<g class="f-mantello" style="transform-origin:46px 62px"><path d="M30 64 L46 64 L48 112 L28 112 Z" fill="#8a6a3a" ${OUT}/><path d="M30 76 L46 76 M29 88 L47 88 M28 100 L48 100" stroke="#5a4222" stroke-width="1.2"/>
-        <path d="M46 62 L58 60 M46 112 L52 104" stroke="#5a4222" stroke-width="2" fill="none"/></g>`;
-    }
-    return s;
+  function mantello(spec, d) {
+    const c = spec.mantello;
+    return `<path d="M${60 - d.sw + 2} 56 Q${34 - d.sw / 2} 100 ${30 - d.sw / 2} 156 Q56 150 ${60 + d.ww} 120 L${60 + d.sw - 4} 56 Z" fill="${c}" ${OUT}/>
+      <path d="M${60 - d.sw + 4} 60 Q${44 - d.sw / 2} 104 ${42 - d.sw / 2} 150" stroke="${scuro(c, 0.3)}" stroke-width="1" fill="none"/>`;
   }
+  const GERLA = `<path d="M30 64 L46 64 L48 112 L28 112 Z" fill="#8a6a3a" ${OUT}/><path d="M30 76 L46 76 M29 88 L47 88 M28 100 L48 100" stroke="#5a4222" stroke-width="1.2"/><path d="M46 62 L58 60 M46 112 L52 104" stroke="#5a4222" stroke-width="2" fill="none"/>`;
 
-  /* ---------- Figura umanoide ---------- */
-  function umanoide(id, spec, o) {
-    o = o || {};
-    const d = DIM[spec.corpo || 'm'];
+  /* ---------- Figura umanoide (parti separate) ---------- */
+  function umanoide(spec) {
+    const vb = VB_UMANO, d = DIM[spec.corpo || 'm'];
     const pelle = spec.pelle || '#e6bf9f';
     const ab = spec.abito || { tipo: 'tunica', c1: '#999', c2: '#666' };
     const A = ABITI[ab.tipo](ab.c1, ab.c2, d);
@@ -238,67 +277,80 @@
       <path d="M${x1 + d.gw * 0.26} ${y1 + 1} L${x2 + d.gw * 0.26} ${y2 - 1}" stroke="#000" stroke-opacity=".22" stroke-width="${d.gw * 0.3}" stroke-linecap="round" fill="none"/>`;
     const gamba = (x0, x1) => `${arto(x0, 104, x1, 178, pant)}${A.fasce ? `<path d="M${x1 - 4} 160 L${x1 + 4} 164 M${x1 - 4} 168 L${x1 + 4} 172" stroke="${scuro(pant)}" stroke-width="1.4"/>` : ''}<path d="M${x1 - 5} 184 Q${x1 - 6} 177 ${x1 + 1} 177 Q${x1 + 6} 177 ${x1 + 10} 182 L${x1 + 10} 187 L${x1 - 5} 187 Z" fill="${A.stivale || '#222'}" ${OUT}/>`;
     const arma = spec.arma && ARMI[spec.arma] ? ARMI[spec.arma](spec.armaC1, spec.armaC2) : null;
-    const hair = capelli((spec.capelli || {}).stile, (spec.capelli || {}).colore || '#3a2a1c');
-    const bc = (spec.capelli || {}).colore || '#3a2a1c';
-    const th = spec.testa && TESTE[spec.testa.tipo || spec.testa] ? TESTE[spec.testa.tipo || spec.testa](spec.testa.c1 || '#888', spec.testa.c2 || '#c33') : '';
+    const cap = spec.capelli || {};
+    const hair = capelli(cap.stile, cap.colore || '#3a2a1c');
+    const bc = cap.colore || '#3a2a1c';
+    let th = spec.testa && TESTE[spec.testa.tipo || spec.testa] ? TESTE[spec.testa.tipo || spec.testa](spec.testa.c1 || '#888', spec.testa.c2 || '#c33') : '';
+    let thDietro = '';
+    if (th && typeof th === 'object') { thDietro = th.dietro || ''; th = th.davanti || ''; }
     const occhio = spec.eco ? (spec.glow || '#ffd75e') : '#1b1422';
-    const testa = `${hair.dietro}<rect x="56" y="44" width="9" height="12" fill="${pelle}" ${OUT}/>
-      <circle cx="60" cy="36" r="12" fill="${pelle}" ${OUT}/><circle cx="60" cy="36" r="12" fill="url(#gTesta)"/><circle cx="49.5" cy="38" r="2.6" fill="${pelle}" ${OUT}/>
-      <path d="M72.5 37 Q76 39 72.6 41.5" fill="${pelle}" ${OUT}/>
-      <g class="f-occhi" style="transform-origin:67px 36px">${spec.eco ? `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="${occhio}"/>`
-        : `<ellipse cx="64" cy="36" rx="2.3" ry="2.8" fill="#fff"/><ellipse cx="70" cy="36" rx="1.9" ry="2.8" fill="#fff"/><circle cx="64.7" cy="36.4" r="1.45" fill="#1b1422"/><circle cx="70.5" cy="36.4" r="1.3" fill="#1b1422"/><circle cx="65.2" cy="35.7" r=".45" fill="#fff"/><circle cx="71" cy="35.7" r=".4" fill="#fff"/>`}</g>
-      <path d="M61.5 32 Q64 30.5 66.5 32 M67.5 32 Q70 30.5 72.5 32" stroke="#1b1422" stroke-width="1" fill="none" stroke-linecap="round"/>
-      <path d="M65.5 43 Q68.5 45.2 71.5 43" stroke="#1b1422" stroke-width="1.1" fill="none" stroke-linecap="round"/>
-      <ellipse cx="66" cy="40.5" rx="2.4" ry="1.3" fill="#e0707a" opacity=".22"/>
-      ${sulViso(spec.viso)}${barba((spec.capelli || {}).barba, bc)}${hair.davanti}${th}${spec.eco && spec.testa && spec.testa.tipo === 'cappuccio' ? `<g class="f-occhi" style="transform-origin:67px 37px"><ellipse cx="64" cy="37" rx="2.2" ry="2.8" fill="${occhio}"/><ellipse cx="70" cy="37" rx="1.9" ry="2.8" fill="${occhio}"/></g>` : ''}`;
-    const gambe = A.nascondiGambe || spec.eco ? '' : `<g class="f-gamba f-gamba-b" style="transform-origin:${xL + 6}px 104px">${gamba(xL + 6, 52)}</g><g class="f-gamba f-gamba-a" style="transform-origin:${xR - 6}px 104px">${gamba(xR - 6, 70)}</g>`;
-    const coda = spec.eco ? `<g class="f-coda"><path d="M${60 - d.ww - 4} 104 Q${60 - d.ww - 8} 140 ${52} 160 Q58 172 50 186 Q66 170 64 158 Q80 150 ${60 + d.ww + 4} 104 Z" fill="${mix(ab.c1, '#000', 0.25)}" opacity=".85"/></g>` : '';
+    const cappuccio = spec.testa && spec.testa.tipo === 'cappuccio';
+
+    // Testa: collo + cranio a uovo (mento in avanti) + orecchio + naso, poi barba, capelli e copricapo
+    const testa = `<rect x="55.5" y="44" width="9" height="13" fill="${pelle}" ${OUT}/><path d="M55.5 49 L64.5 49 L64.5 52 Q60 54 55.5 52 Z" fill="#000" opacity=".16"/>
+      <path d="M48.5 33 Q47.5 21.5 59.5 21 Q72.5 21 73.5 32.5 Q74.5 40.5 70.5 45.5 Q65.5 50 59 48.5 Q49.5 46 48.5 33 Z" fill="${pelle}" ${OUT}/>
+      <path d="M48.5 33 Q47.5 21.5 59.5 21 Q72.5 21 73.5 32.5 Q74.5 40.5 70.5 45.5 Q65.5 50 59 48.5 Q49.5 46 48.5 33 Z" fill="url(#gTesta)"/>
+      <ellipse cx="50.6" cy="38.6" rx="2.3" ry="3.4" fill="${pelle}" ${OUT}/><path d="M73.2 36.8 Q77 40.2 73.2 42.4" fill="${pelle}" ${OUT}/>
+      <path d="M65.6 44 Q68.4 45.4 71 43.8" stroke="#1b1422" stroke-width="1.1" fill="none" stroke-linecap="round"/><ellipse cx="67.4" cy="41.2" rx="2.7" ry="1.4" fill="#e0707a" opacity=".24"/>
+      ${barba(cap.barba, bc)}${hair.davanti}${th}`;
+    const occhi = spec.eco
+      ? `<ellipse cx="64.3" cy="36.8" rx="2.4" ry="3" fill="${occhio}"/><ellipse cx="70.6" cy="36.8" rx="1.8" ry="3" fill="${occhio}"/>`
+      : `<ellipse cx="64.3" cy="36.8" rx="2.5" ry="3.1" fill="#fff"/><ellipse cx="70.6" cy="36.8" rx="1.8" ry="3.1" fill="#fff"/>
+         <circle cx="65.4" cy="37.2" r="1.7" fill="${occhio}"/><circle cx="71.3" cy="37.2" r="1.35" fill="${occhio}"/><circle cx="65.9" cy="36.4" r=".55" fill="#fff"/><circle cx="71.7" cy="36.4" r=".45" fill="#fff"/>
+         <path d="M61.2 32.4 Q64.3 30.4 67.2 32.2 M68.4 32.6 Q70.8 31.2 73 32.8" stroke="${scuro(bc, 0.1)}" stroke-width="1.25" fill="none" stroke-linecap="round"/>`;
+    const gambe = A.nascondiGambe || spec.eco ? '' :
+      pezzo(vb, 'f-gamba f-gamba-b', xL + 6, 104, gamba(xL + 6, 52)) + pezzo(vb, 'f-gamba f-gamba-a', xR - 6, 104, gamba(xR - 6, 70));
+    const coda = spec.eco ? pezzo(vb, 'f-coda', 60, 104, `<path d="M${60 - d.ww - 4} 104 Q${60 - d.ww - 8} 140 52 160 Q58 172 50 186 Q66 170 64 158 Q80 150 ${60 + d.ww + 4} 104 Z" fill="${mix(ab.c1, '#000', 0.25)}" opacity=".85"/>`) : '';
     const fx = arma && arma.lampo ? `<g class="f-lampo" transform="translate(0,${arma.lampo})"><path d="M0 -8 L3 -2 L9 0 L3 2 L0 8 L-3 2 L-9 0 L-3 -2 Z" fill="#fff3a0"/><circle r="4" fill="#ff9a2a"/></g>` : '';
     const scudo = spec.scudo ? SCUDI[spec.scudo.tipo](spec.scudo.c1, spec.scudo.c2) : '';
-    return `<g class="f-tutto" style="transform-origin:60px 188px">
-      <g class="f-aura"><circle cx="60" cy="100" r="46" fill="none" stroke="${spec.glow || '#ffd75e'}" stroke-width="3" opacity="0"/></g>
-      ${dietro(spec, d)}${gambe}${coda}
-      <g class="f-torso" style="transform-origin:60px 106px">${A.svg}<path d="${T(d)}" fill="url(#gVert)"/><path d="${T(d)}" fill="url(#gOmbra)"/>${A.nascondiGambe ? `<path d="M${60 - d.ww} 100 L${60 + d.ww} 100 L${60 + d.ww + 16} 178 L${60 - d.ww - 16} 178 Z" fill="url(#gOmbra)"/>` : ''}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}</g>
-      <g class="f-braccio-b" style="transform-origin:${xL}px 60px">${arto(xL, 60, xL - 2, 92, manica)}<circle cx="${xL - 2}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>${scudo}</g>
-      <g class="f-testa" style="transform-origin:60px 50px">${testa}</g>
-      <g class="f-braccio-a" style="transform-origin:${xR}px 60px">${arto(xR, 60, xR, 92, manica)}<circle cx="${xR}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>
-        ${arma ? `<g transform="translate(${xR},93)"><g class="f-arma" style="transform-origin:0 0">${arma.svg}${fx}</g></g>` : ''}</g>
-    </g>`;
+    const torsoSvg = `${A.svg}<path d="${T(d)}" fill="url(#gVert)"/><path d="${T(d)}" fill="url(#gOmbra)"/>${A.nascondiGambe ? `<path d="M${60 - d.ww} 100 L${60 + d.ww} 100 L${60 + d.ww + 16} 178 L${60 - d.ww - 16} 178 Z" fill="url(#gOmbra)"/>` : ''}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}`;
+
+    const braccioA = pezzo(vb, 'f-braccio-a', xR, 60, `${arto(xR, 60, xR, 92, manica)}<circle cx="${xR}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>`,
+      arma ? pezzo(vb, 'f-arma', xR, 93, `<g transform="translate(${xR},93)">${arma.svg}${fx}</g>`) : '');
+    const testaPezzo = pezzo(vb, 'f-testa', 60, 50, testa,
+      pezzo(vb, 'f-occhi', 67, 37, occhi) + (spec.viso ? pezzo(vb, 'f-viso', 67, 37, sulViso(spec.viso)) : '') +
+      (cappuccio && spec.eco ? pezzo(vb, 'f-occhi', 67, 37, `<ellipse cx="64.3" cy="37.2" rx="2.2" ry="2.8" fill="${occhio}"/><ellipse cx="70.6" cy="37.2" rx="1.8" ry="2.8" fill="${occhio}"/>`) : ''));
+    return pezzo(vb, 'f-tutto', 60, 188,
+      '', pezzo(vb, 'f-aura', 60, 100, `<circle cx="60" cy="100" r="46" fill="none" stroke="${spec.glow || '#ffd75e'}" stroke-width="3" opacity="0"/>`) +
+      (spec.mantello ? pezzo(vb, 'f-mantello', xL + 4, 58, mantello(spec, d)) : '') +
+      (spec.dorso === 'gerla' ? pezzo(vb, 'f-mantello', 46, 62, GERLA) : '') +
+      (hair.dietro || thDietro ? pezzo(vb, 'f-testa f-capelli-d', 60, 50, thDietro + hair.dietro) : '') +
+      gambe + coda +
+      pezzo(vb, 'f-torso', 60, 106, torsoSvg) +
+      pezzo(vb, 'f-braccio-b', xL, 60, `${arto(xL, 60, xL - 2, 92, manica)}<circle cx="${xL - 2}" cy="93" r="4.6" fill="${pelle}" ${OUT}/>${scudo}`) +
+      testaPezzo + braccioA);
   }
 
   /* ---------- Elefante (nemico quadrupede) ---------- */
-  function elefante(id, spec) {
-    const c = spec.pelle || '#8a8090', cs = scuro(c, 0.28), cc = chiaro(c, 0.12);
-    const zampa = (x, cls) => `<g class="f-gamba ${cls}" style="transform-origin:${x + 8}px 128px"><path d="M${x} 126 L${x + 16} 126 L${x + 17} 180 Q${x + 8} 190 ${x - 1} 180 Z" fill="${cs}" ${OUT}/><path d="M${x + 1} 178 h4 M${x + 7} 180 h4 M${x + 13} 178 h3" stroke="#e9e1cf" stroke-width="2.4" stroke-linecap="round"/></g>`;
-    return `<g class="f-tutto" style="transform-origin:60px 188px">
-      <g class="f-aura"><circle cx="60" cy="110" r="70" fill="none" stroke="${spec.glow || '#c0303f'}" stroke-width="3" opacity="0"/></g>
-      ${zampa(14, 'f-gamba-b')}${zampa(72, 'f-gamba-b')}
-      <g class="f-mantello" style="transform-origin:8px 96px"><path d="M10 96 Q-4 106 2 130" stroke="${cs}" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="2" cy="132" r="3" fill="${cs}"/></g>
-      <g class="f-torso" style="transform-origin:60px 150px"><path d="M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z" fill="${c}" ${OUT}/>
-        <path d="M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z" fill="url(#gVert)"/><path d="M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z" fill="url(#gOmbra)"/>
-        <path d="M30 90 Q44 84 56 90 M40 110 Q56 104 70 112" stroke="${cs}" stroke-width="1.2" fill="none" opacity=".6"/></g>
-      ${zampa(32, 'f-gamba-a')}${zampa(90, 'f-gamba-a')}
-      <g class="f-testa" style="transform-origin:100px 96px">
-        <path d="M96 78 Q122 66 128 96 Q132 112 124 124 Q118 156 128 176 Q116 182 112 168 Q106 140 104 124 L92 118 Z" fill="${c}" ${OUT}/>
+  function elefante(spec) {
+    const vb = VB_ELEFANTE;
+    const c = spec.pelle || '#8a8090', cs = scuro(c, 0.28);
+    const zampa = (x, cls) => pezzo(vb, 'f-gamba ' + cls, x + 8, 128,
+      `<path d="M${x} 126 L${x + 16} 126 L${x + 17} 180 Q${x + 8} 190 ${x - 1} 180 Z" fill="${cs}" ${OUT}/><path d="M${x + 1} 178 h4 M${x + 7} 180 h4 M${x + 13} 178 h3" stroke="#e9e1cf" stroke-width="2.4" stroke-linecap="round"/>`);
+    const corpo = 'M10 112 Q8 76 48 72 Q92 70 104 96 Q112 122 98 138 L24 138 Q8 132 10 112 Z';
+    return pezzo(vb, 'f-tutto', 60, 188, '',
+      pezzo(vb, 'f-aura', 60, 110, `<circle cx="60" cy="110" r="70" fill="none" stroke="${spec.glow || '#c0303f'}" stroke-width="3" opacity="0"/>`) +
+      zampa(14, 'f-gamba-b') + zampa(72, 'f-gamba-b') +
+      pezzo(vb, 'f-mantello', 8, 96, `<path d="M10 96 Q-4 106 2 130" stroke="${cs}" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="2" cy="132" r="3" fill="${cs}"/>`) +
+      pezzo(vb, 'f-torso', 60, 150, `<path d="${corpo}" fill="${c}" ${OUT}/><path d="${corpo}" fill="url(#gVert)"/><path d="${corpo}" fill="url(#gOmbra)"/><path d="M30 90 Q44 84 56 90 M40 110 Q56 104 70 112" stroke="${cs}" stroke-width="1.2" fill="none" opacity=".6"/>`) +
+      zampa(32, 'f-gamba-a') + zampa(90, 'f-gamba-a') +
+      pezzo(vb, 'f-testa', 100, 96, `<path d="M96 78 Q122 66 128 96 Q132 112 124 124 Q118 156 128 176 Q116 182 112 168 Q106 140 104 124 L92 118 Z" fill="${c}" ${OUT}/>
         <path d="M112 98 Q122 100 126 112" stroke="${cs}" stroke-width="1.1" fill="none"/><path d="M110 112 Q124 114 128 126" stroke="${cs}" stroke-width="1.1" fill="none"/>
         <ellipse cx="94" cy="96" rx="15" ry="24" fill="${cs}" ${OUT}/><ellipse cx="96" cy="96" rx="9" ry="17" fill="${scuro(c, 0.1)}" opacity=".7"/>
         <path d="M114 118 Q132 124 134 106 Q124 114 112 108 Z" fill="#efe6cf" ${OUT}/>
-        <circle cx="116" cy="94" r="2.6" fill="${spec.glow || '#ffd75e'}"/><circle cx="116" cy="94" r="1" fill="#1b1422"/>
-      </g>
-    </g>`;
+        <circle cx="116" cy="94" r="2.6" fill="${spec.glow || '#ffd75e'}"/><circle cx="116" cy="94" r="1" fill="#1b1422"/>`));
   }
 
-  /* ---------- API: figura, busto, animazioni ---------- */
-  function sprite(spec, o) {
+
+  /* ---------- Sprite sostitutivi ---------- */
+  function sprite(spec) {
     const sp = spec.sprite, d = el('div', 'fig sprite-fig' + (spec.eco ? ' eco' : ''));
     const w = sp.w || 128, h = sp.h || 192;
-    d.dataset.sprite = '1'; d.style.setProperty('--sw', w + 'px'); d.style.setProperty('--sh', h + 'px');
-    d.style.aspectRatio = w + ' / ' + h;
+    d.dataset.sprite = '1'; d.style.aspectRatio = w + ' / ' + h;
     const s = el('div', 'spr'); s.style.backgroundImage = 'url("' + sp.src + '")'; s.style.width = '100%'; s.style.height = '100%';
-    if (sp.anim) { s.classList.add('sheet'); }
+    if (sp.anim) s.classList.add('sheet');
     else { s.style.backgroundSize = 'contain'; s.style.backgroundRepeat = 'no-repeat'; s.style.backgroundPosition = 'bottom center'; }
-    d.appendChild(s);
-    d._sprite = sp;
+    d.appendChild(s); d._sprite = sp;
     if (sp.anim) Arte._sheet(d, 'idle');
     return d;
   }
@@ -307,12 +359,10 @@
     const sp = fig._sprite; if (!sp || !sp.anim) return 0;
     const a = sp.anim[nome] || sp.anim.idle; if (!a) return 0;
     const s = fig.firstChild, n = a.frame || 1;
-    // Dimensioni dello sheet (in frame): colonne = max frame, righe = max riga + 1 (sovrascrivibili in sprite.colonne / sprite.righe).
     const all = Object.values(sp.anim);
     const N = sp.colonne || Math.max(...all.map(x => x.frame || 1)), R = sp.righe || Math.max(...all.map(x => (x.riga || 0) + 1));
     s.style.animation = 'none'; void s.offsetWidth;
-    s.style.backgroundSize = (N * 100) + '% ' + (R * 100) + '%';
-    s.style.backgroundRepeat = 'no-repeat';
+    s.style.backgroundSize = (N * 100) + '% ' + (R * 100) + '%'; s.style.backgroundRepeat = 'no-repeat';
     s.style.backgroundPositionY = R > 1 ? ((a.riga || 0) / (R - 1) * 100) + '%' : '0%';
     s.style.setProperty('--to', N > 1 ? (n / (N - 1) * 100) + '%' : '0%');
     const loop = nome === 'idle' || nome === 'ced';
@@ -320,29 +370,26 @@
     s.style.animation = `spr-steps ${dur}s steps(${n}) ${loop ? 'infinite' : '1 forwards'}`;
     return dur;
   };
-  function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
 
-  /** Costruisce l'elemento figura (full body). `id` = id della Voce o del nemico. */
+  /** Costruisce l'elemento figura (corpo intero). `id` = id della Voce o del nemico. */
   Arte.figura = function (id, opz) {
     const spec = E.ARTE[id]; opz = opz || {};
     if (!spec) { const d = el('div', 'fig'); d.textContent = '?'; return d; }
-    if (spec.sprite) return sprite(spec, opz);
-    const vb = spec.figura === 'elefante' ? '-6 0 140 190' : '0 0 120 190';
-    const body = spec.figura === 'elefante' ? elefante(id, spec) : umanoide(id, spec, opz);
-    const d = el('div', 'fig' + (spec.eco ? ' eco' : '') + (spec.figura === 'elefante' ? ' quadrupede' : ''));
+    if (spec.sprite) return sprite(spec);
+    const quad = spec.figura === 'elefante', vb = quad ? VB_ELEFANTE : VB_UMANO;
+    const d = el('div', 'fig' + (spec.eco ? ' eco' : '') + (quad ? ' quadrupede' : ''));
     const aA = spec.attacco === 'sparo' ? -14 : -18;
-    // Ogni personaggio ha una "personalità" di riposo (spec.idle → classe idle-xxx nel CSS) più una
-    // piccola variazione dei tempi ricavata dal suo id, così nessuno si muove in sincrono con gli altri.
+    // Personalità di riposo (spec.idle → classe idle-xxx) + piccola variazione dei tempi ricavata dall'id.
     let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) % 997;
     const jf = (0.86 + (h % 40) / 100).toFixed(2);
     d.classList.add('idle-' + (spec.idle || (spec.eco ? 'spettro' : 'sereno')));
     const extra = Object.keys(spec.idleVars || {}).map(k => `${k}:${spec.idleVars[k]}`).join(';');
     d.style.cssText = `--aA:${aA}deg;--aB:7deg;--dl:${(-Math.random() * 6).toFixed(2)}s;--jf:${jf};--glow:${spec.glow || '#ffd75e'};${extra}`;
-    d.dataset.vb = vb;
-    d.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">${body}</svg>`;
+    d.style.aspectRatio = vb.w + ' / ' + vb.h;
+    d.innerHTML = `<div class="fig-in">${quad ? elefante(spec) : umanoide(spec)}</div>`;
     return d;
   };
-  /** Ritratto circolare (HUD): testa e spalle della stessa figura. */
+  /** Ritratto circolare (HUD): testa e spalle della stessa figura, ritagliati. */
   Arte.busto = function (def, cls) {
     const id = def.id, spec = E.ARTE[id];
     const d = el('div', 'ritratto busto ' + (cls || ''));
@@ -351,36 +398,50 @@
     if (spec.sprite) {
       const sp = spec.sprite, i = el('div', 'spr-busto');
       i.style.backgroundImage = 'url("' + (sp.busto || sp.src) + '")';
-      if (sp.anim && !sp.busto) {       // sheet: mostra il primo frame
+      if (sp.anim && !sp.busto) {
         const all = Object.values(sp.anim);
         i.style.backgroundSize = ((sp.colonne || Math.max(...all.map(x => x.frame || 1))) * 100) + '% ' + ((sp.righe || Math.max(...all.map(x => (x.riga || 0) + 1))) * 100) + '%';
         i.style.backgroundPosition = '0 0';
       }
       d.appendChild(i); return d;
     }
-    const vb = spec.figura === 'elefante' ? '70 62 72 72' : '28 6 64 64';
-    const body = spec.figura === 'elefante' ? elefante(id, spec) : umanoide(id, spec);
-    d.innerHTML = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" class="busto-svg">${body}</svg>`;
-    return d;
+    const quad = spec.figura === 'elefante';
+    const f = Arte.figura(id, { busto: true });
+    f.classList.add('statico');
+    const box = quad ? { x: 70, y: 62, w: 72, h: 72 } : { x: 28, y: 4, w: 64, h: 64 }, vb = quad ? VB_ELEFANTE : VB_UMANO;
+    // ritaglio: la figura viene ingrandita e spostata in modo che si veda solo il riquadro `box`
+    f.style.position = 'absolute'; f.style.aspectRatio = 'auto';
+    f.style.width = (vb.w / box.w * 100) + '%'; f.style.height = (vb.h / box.h * 100) + '%';
+    f.style.left = (-(box.x - vb.x) / box.w * 100) + '%'; f.style.top = (-(box.y - vb.y) / box.h * 100) + '%';
+    d.appendChild(f); return d;
   };
-  /** Riproduce un'animazione "a-xxx" sulla figura. Ritorna una promessa risolta a fine animazione. */
+
+  /**
+   * Riproduce un'animazione "a-xxx" sulla figura; la promessa si risolve a fine animazione.
+   * Ogni figura ha un "gettone" (_tok): un'animazione più recente invalida il timer di quella precedente,
+   * così due animazioni ravvicinate non si cancellano a vicenda (era la causa degli scatti nell'idle).
+   */
   Arte.anima = function (fig, nome, velocita) {
     if (!fig) return Promise.resolve();
     velocita = velocita || 1;
-    const dur = (Arte.DURATA[nome] || 0.5) / velocita;
+    const meta = Arte.ANIM[nome] || { dur: 0.5 };
+    const dur = meta.dur / velocita;
+    const tok = fig._tok = (fig._tok || 0) + 1;
     [...fig.classList].filter(c => c.startsWith('a-')).forEach(c => fig.classList.remove(c));
     fig.style.setProperty('--t', dur + 's');
     void fig.offsetWidth;
     fig.classList.add('a-' + nome);
-    if (fig._sprite) { const map = { fendente: 'attacco', affondo: 'attacco', sparo: 'attacco', lancio: 'attacco', preghiera: 'attacco', hit: 'colpo', morte: 'morte' }; Arte._sheet(fig, map[nome] || 'idle', velocita); }
+    if (fig._sprite) { const map = { hit: 'colpo', morte: 'morte' }; Arte._sheet(fig, map[nome] || 'attacco', velocita); }
     if (nome === 'morte' || nome === 'vittoria') return Promise.resolve();
     return new Promise(res => setTimeout(() => {
-      fig.classList.remove('a-' + nome);
-      if (fig._sprite) Arte._sheet(fig, fig.classList.contains('ced') ? 'ced' : 'idle', velocita);
+      if (fig._tok === tok) {                       // solo l'animazione più recente ripulisce la classe
+        fig.classList.remove('a-' + nome);
+        if (fig._sprite) Arte._sheet(fig, fig.classList.contains('ced') ? 'ced' : 'idle', velocita);
+      }
       res();
     }, dur * 1000));
   };
-  Arte.reset = function (fig) { [...fig.classList].filter(c => c.startsWith('a-')).forEach(c => fig.classList.remove(c)); };
+  Arte.reset = function (fig) { fig._tok = (fig._tok || 0) + 1; [...fig.classList].filter(c => c.startsWith('a-')).forEach(c => fig.classList.remove(c)); };
 
   /* ---------- Sfondo e arena per capitolo ---------- */
   /** Palette per capitolo: cielo, luna, sagome, sabbia/pietra dell'arena, bordo, colore delle particelle d'ambiente. */

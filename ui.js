@@ -70,7 +70,7 @@
   /* Motore effetti su canvas                                              */
   /* ===================================================================== */
   const Fx = UI.Fx = {
-    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], proiettili: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
+    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], proiettili: [], pilastri: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
     init() {
       this.cv = $('#fx'); this.ctx = this.cv.getContext('2d');
       const res = () => {
@@ -125,7 +125,9 @@
     ring(x, y, colore, r) { this.rings.push({ x, y, c: colore, t: 0, max: 0.45, r: r || 90 }); },
     flash(colore, alpha) { this.flashes.push({ c: colore, a: alpha || 0.35, t: 0, max: 0.35 }); },
     /** Proiettile luminoso da a verso b in `dur` secondi (colpi a distanza). */
-    proiettile(a, b, colore, dur) { this.proiettili.push({ a, b, c: colore, t: 0, max: dur || 0.2 }); },
+    proiettile(a, b, colore, dur, arco, spessore) { this.proiettili.push({ a, b, c: colore, t: 0, max: dur || 0.2, arco: arco || 0, w: spessore || 1 }); },
+    /** Colonna di luce verticale che cala sul bersaglio. */
+    pilastro(x, y, colore) { this.pilastri.push({ x, y, c: colore, t: 0, max: 0.65 }); },
     /** Linea "elettrica" persistente tra due punti: restituisce l'oggetto (poi .fine = true per toglierla). */
     linea(a, b, c1, c2) { const l = { a, b, c1, c2, pts: [], t: 0, ag: 0 }; this.lines.push(l); return l; },
     pulisciLinee() { this.lines.forEach(l => { l.fine = true; }); },
@@ -172,10 +174,16 @@
       this.rings.forEach(r => { const k = r.t / r.max; g.globalAlpha = 1 - k; g.strokeStyle = r.c; g.lineWidth = 6 * (1 - k) + 1; g.beginPath(); g.arc(r.x, r.y, 8 + r.r * k, 0, 7); g.stroke(); });
       this.proiettili = this.proiettili.filter(p => (p.t += dt) < p.max);
       this.proiettili.forEach(p => {
-        const k = p.t / p.max, k0 = Math.max(0, k - 0.22);
-        const x1 = p.a.x + (p.b.x - p.a.x) * k, y1 = p.a.y + (p.b.y - p.a.y) * k, x0 = p.a.x + (p.b.x - p.a.x) * k0, y0 = p.a.y + (p.b.y - p.a.y) * k0;
-        g.globalAlpha = 0.5; g.strokeStyle = p.c; g.lineWidth = 8; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-        g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        const k = p.t / p.max, k0 = Math.max(0, k - 0.22), arc = kk => -p.arco * Math.sin(Math.PI * kk);
+        const x1 = p.a.x + (p.b.x - p.a.x) * k, y1 = p.a.y + (p.b.y - p.a.y) * k + arc(k), x0 = p.a.x + (p.b.x - p.a.x) * k0, y0 = p.a.y + (p.b.y - p.a.y) * k0 + arc(k0);
+        g.globalAlpha = 0.5; g.strokeStyle = p.c; g.lineWidth = 8 * p.w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 3 * p.w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      });
+      this.pilastri = this.pilastri.filter(p => (p.t += dt) < p.max);
+      this.pilastri.forEach(p => {
+        const k = p.t / p.max, w = 34 * (1 - k * 0.6), top = Math.max(0, p.y - 420), gr = g.createLinearGradient(0, top, 0, p.y);
+        gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.6, p.c); gr.addColorStop(1, '#fff');
+        g.globalAlpha = (1 - k) * 0.85; g.fillStyle = gr; g.fillRect(p.x - w, top, w * 2, p.y - top);
       });
       this.parts = this.parts.filter(p => (p.life += dt) < p.max);
       this.parts.forEach(p => {
@@ -635,7 +643,7 @@
     /** Stile d'attacco di un'unità per una skill (da ARTE o dalla skill stessa). */
     stile(unitId, skillId) {
       const s = E.SKILL[skillId], u = this.V[unitId];
-      return (s && s.anim) || (E.ARTE && E.ARTE[u.def] && E.ARTE[u.def].attacco) || 'fendente';
+      return (E.ANIM_SKILL && E.ANIM_SKILL[skillId]) || (s && s.anim) || (E.ARTE && E.ARTE[u.def] && E.ARTE[u.def].attacco) || 'fendente';
     },
     anima(id, nome) { return E.Arte ? E.Arte.anima(this.els[id].fig, nome, this.vel) : Promise.resolve(); },
 
@@ -663,15 +671,16 @@
         setTimeout(() => { e.fig.classList.remove('corre'); const f = this.piedi(id); Fx.polvere(f.x, f.y, 6, 1.1); }, d * 1000 + 20);
       }
     },
-    /** L'attaccante scatta verso il bersaglio lungo il terreno e si ferma a distanza di tiro (ravvicinata o no). */
-    async avanza(att, bers) {
+    /** L'attaccante raggiunge il bersaglio lungo il terreno; la distanza dipende dal tipo di animazione. */
+    async avanza(att, bers, A) {
       const fa = this.piedi(att), fb = this.piedi(bers), pa = this.pos(att);
-      const stile = this.stile(att, this.skillDi[att]);
-      const stop = (stile === 'sparo' || stile === 'lancio') ? Math.max(pa.w * 2.8, 100) : Math.max(pa.w * 0.9, 38);
+      const dist = (A && A.dist) || 'vicino';
+      const stop = dist === 'lontano' ? Math.max(pa.w * 2.8, 100) : dist === 'medio' ? Math.max(pa.w * 2.0, 80) : dist === 'carica' ? Math.max(pa.w * 0.7, 30) : Math.max(pa.w * 0.9, 38);
       const lato = Math.sign(fa.x - fb.x) || 1;                       // da che parte del bersaglio si trova
       const tx = fb.x + lato * stop, dx = Math.abs(fa.x - fb.x) < stop ? 0 : tx - fa.x;
-      this.muovi(att, dx, fb.y - fa.y + 2);
-      await this.sleep(300);
+      const dur = dist === 'carica' ? 0.2 : 0.28;
+      this.muovi(att, dx, fb.y - fa.y + 2, dur);
+      await this.sleep(dur * 1000 + 20);
     },
     /** Due combattenti si incontrano a metà strada, sulla stessa linea di terreno. */
     async incontra(ida, idb) {
@@ -876,18 +885,24 @@
     /* ----- Colpo singolo ----- */
     async colpo(e) {
       const att = this.V[e.att], bers = this.V[e.bers];
-      const skillId = this.skillDi[e.att], stile = this.stile(e.att, skillId), s = E.SKILL[skillId] || {};
-      if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers);
+      const skillId = this.skillDi[e.att], stile = this.stile(e.att, skillId), A = E.Arte.ANIM[stile] || E.Arte.ANIM.fendente, s = E.SKILL[skillId] || {};
+      if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers, A);
       await this.miniMoneta(e.att, e.testa);
-      const colore = E.AFFINITA[att.aff].colore;
-      const figA = this.els[e.att].fig;
+      const colore = E.AFFINITA[att.aff].colore, figA = this.els[e.att].fig;
       if (s.costo >= 5 || s.ultima) figA.classList.add('ultima');
-      const dur = E.Arte.DURATA[stile], tImp = dur * E.Arte.IMPATTO[stile];
-      const pAnim = this.anima(e.att, stile);
-      if (stile === 'sparo' || stile === 'lancio') {
-        const a = this.pos(e.att), b = this.pos(e.bers);
-        setTimeout(() => Fx.proiettile({ x: a.x + a.w * 0.5, y: a.y }, b, colore, 0.12), Math.max(0, (tImp - 0.12) * 1000 / this.vel));
-        if (stile === 'sparo') setTimeout(() => Snd.sfx('sparo'), Math.max(0, (tImp - 0.12) * 1000 / this.vel));
+      const tImp = A.dur * A.imp, pAnim = this.anima(e.att, stile);
+      const a0 = this.pos(e.att), b0 = this.pos(e.bers);
+      // proiettili / lanci: partono in anticipo in modo da arrivare nel momento d'impatto
+      if (A.fx && A.fx.indexOf('proiettile') === 0) {
+        const n = A.n || 1, gap = A.gap || 0;
+        for (let k = 0; k < n; k++) {
+          const dt = Math.max(0, (tImp + k * gap - (A.fx === 'proiettile_arco' ? 0.34 : 0.12)) * 1000 / this.vel);
+          setTimeout(() => {
+            Fx.proiettile({ x: a0.x + a0.w * 0.5, y: a0.y }, { x: b0.x, y: b0.y }, colore, A.fx === 'proiettile_arco' ? 0.34 : 0.12, A.fx === 'proiettile_arco' ? 70 : 0, A.fx === 'proiettile_forte' ? 2 : 1);
+            if (stile.indexOf('sparo') === 0) Snd.sfx('sparo');
+          }, dt);
+          if (k > 0) setTimeout(() => { Fx.sparks(b0.x, b0.y, 12, '#ffb04a', 0.9); Snd.sfx('colpo', 10); }, (tImp + k * gap) * 1000 / this.vel);
+        }
       }
       await this.sleep(tImp * 1000);
       // ---- impatto ----
@@ -896,12 +911,8 @@
       const p = this.pos(e.bers), pa = this.pos(e.att), ang = Math.atan2(p.y - pa.y, p.x - pa.x);
       Fx.sparks(p.x, p.y, clamp(10 + Math.round(e.danno * 0.8), 10, 50), colore, 0.7 + Math.min(1, e.danno / 40));
       Fx.ring(p.x, p.y, colore, 60 + e.danno);
-      if (stile === 'fendente') Fx.taglio(p.x, p.y, ang + (Math.random() < 0.5 ? 0.5 : -0.5), clamp(40 + e.danno * 1.6, 50, 110), colore);
-      else if (stile === 'affondo') Fx.raggi(p.x, p.y, ang + Math.PI, colore);
-      else if (stile === 'sparo') { Fx.sparks(p.x, p.y, 10, '#ffb04a', 0.9); Fx.raggi(p.x, p.y, ang + Math.PI, '#fff3a0'); }
-      else if (stile === 'lancio') { Fx.ring(p.x, p.y, '#fff', 40 + e.danno); Fx.sparks(p.x, p.y, 8, '#fff', 0.8); }
-      else Fx.ring(p.x, p.y, colore, 80);
       const fp = this.piedi(e.bers);
+      this.effettoImpatto(A.fx, p, fp, ang, colore, e.danno);
       if (forte) { Fx.flash(colore, 0.2); Fx.urto(fp.x, fp.y, 70 + e.danno, colore); Fx.polvere(fp.x, fp.y, 4, 0.9); }
       // contraccolpo: il bersaglio viene spinto indietro e ritorna con un rimbalzo
       { const kb = clamp(6 + e.danno * 0.6, 8, 30) * (Math.cos(ang) >= 0 ? 1 : -1);
@@ -916,6 +927,29 @@
       await pAnim;
       figA.classList.remove('ultima');
       await this.sleep(120);
+    },
+    /** Effetto grafico all'impatto, specifico di ogni tipo di attacco (vedi Arte.ANIM[x].fx). */
+    effettoImpatto(fx, p, fp, ang, colore, danno) {
+      const len = clamp(46 + danno * 1.5, 56, 120);
+      switch (fx) {
+        case 'taglio': Fx.taglio(p.x, p.y, ang + (Math.random() < 0.5 ? 0.55 : -0.55), len, colore); break;
+        case 'taglio_o':                        // ampio taglio orizzontale: due archi quasi piatti
+          Fx.taglio(p.x, p.y - 8, ang + Math.PI / 2 + 0.12, len * 1.5, colore); Fx.taglio(p.x, p.y + 10, ang - Math.PI / 2 - 0.12, len * 1.2, '#fff'); break;
+        case 'x':                               // due tagli incrociati
+          Fx.taglio(p.x, p.y, ang + 0.75, len, colore); setTimeout(() => Fx.taglio(p.x, p.y, ang - 0.75, len, '#fff'), 90 / this.vel); break;
+        case 'raggi': Fx.raggi(p.x, p.y, ang + Math.PI, colore); break;
+        case 'raggi_forti': Fx.raggi(p.x, p.y, ang + Math.PI, colore); Fx.raggi(p.x, p.y, ang + Math.PI, '#fff'); Fx.ring(p.x, p.y, '#fff', 90); this.shake($('#cam'), 4, 240); break;
+        case 'onda':                            // schianto a terra: onda d'urto, polvere, scossa
+          Fx.urto(fp.x, fp.y, 130 + danno, colore); Fx.urto(fp.x, fp.y, 80, '#fff'); Fx.polvere(fp.x, fp.y, 12, 1.6); Fx.sparks(fp.x, fp.y, 26, colore, 1.2); this.shake($('#cam'), 7, 380); break;
+        case 'turbine':                         // tre tagli in rotazione
+          [0, 2.09, 4.19].forEach((o, i) => setTimeout(() => Fx.taglio(p.x, p.y, ang + o, len, i % 2 ? '#fff' : colore), i * 80 / this.vel)); Fx.ring(p.x, p.y, colore, 150); break;
+        case 'proiettile': Fx.sparks(p.x, p.y, 10, '#ffb04a', 0.9); Fx.raggi(p.x, p.y, ang + Math.PI, '#fff3a0'); break;
+        case 'proiettile_forte': Fx.sparks(p.x, p.y, 24, '#ffb04a', 1.3); Fx.raggi(p.x, p.y, ang + Math.PI, '#fff3a0'); Fx.ring(p.x, p.y, '#ffb04a', 120); this.shake($('#cam'), 5, 280); break;
+        case 'proiettile_arco': Fx.ring(p.x, p.y, '#fff', 60 + danno); Fx.sparks(p.x, p.y, 12, '#fff', 0.9); Fx.polvere(fp.x, fp.y, 6, 1); break;
+        case 'luce': Fx.ring(p.x, p.y, '#ffe9a8', 110); Fx.sparks(p.x, p.y, 20, '#ffe9a8', 0.9); break;
+        case 'luce_forte': Fx.pilastro(p.x, fp.y, colore); Fx.ring(p.x, p.y, '#fff', 150); Fx.sparks(p.x, p.y, 34, '#ffe9a8', 1.2); Fx.flash(colore, 0.25); break;
+        default: Fx.ring(p.x, p.y, colore, 80);
+      }
     },
     /** Piccola moneta 3D che gira sopra l'attaccante: mostra Testa/Croce del colpo. */
     async miniMoneta(att, testa) {
