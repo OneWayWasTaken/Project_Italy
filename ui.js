@@ -103,7 +103,7 @@
     init() {
       this.cv = $('#fx'); this.ctx = this.cv.getContext('2d');
       const res = () => {
-        this.dpr = Math.min(2, root.devicePixelRatio || 1);
+        this.dpr = document.body.classList.contains('lite') ? 1 : Math.min(2, root.devicePixelRatio || 1);
         this.W = root.innerWidth; this.H = root.innerHeight;
         this.cv.width = this.W * this.dpr; this.cv.height = this.H * this.dpr;
       };
@@ -112,7 +112,7 @@
     },
     /** Raffica di scintille. */
     sparks(x, y, n, colore, forza) {
-      forza = forza || 1;
+      forza = forza || 1; if (this.lite) n = Math.ceil(n / 2);
       for (let i = 0; i < n; i++) {
         const a = rnd(0, Math.PI * 2), v = rnd(120, 520) * forza;
         this.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, life: 0, max: rnd(0.3, 0.8), w: rnd(1.2, 3.2), c: Math.random() < 0.35 ? '#fff' : colore });
@@ -152,7 +152,7 @@
       });
     },
     /* ---------- Particelle "a forma": gocce, schegge, fumo, piume, stelle, braci, ingranaggi ---------- */
-    forma(p) { p.life = 0; p.rot = p.rot || rnd(0, 6.28); p.vr = p.vr == null ? rnd(-8, 8) : p.vr; this.forme.push(p); },
+    forma(p) { if (this.lite && Math.random() < 0.5) return; p.life = 0; p.rot = p.rot || rnd(0, 6.28); p.vr = p.vr == null ? rnd(-8, 8) : p.vr; this.forme.push(p); },
     /** Impatto tematico per affinità: ogni affinità ha la sua "materia". */
     impattoAff(aff, x, y, forza, ang) {
       forza = forza || 1; const n = Math.round(8 + 10 * forza), dir = ang == null ? 0 : ang;
@@ -415,6 +415,9 @@
     const rm = el('div', 'opz-riga', '<span>Musica</span>'); const bm = el('button', 'btn piccolo', save.opzioni.musica === false ? 'No' : 'Sì');
     bm.onclick = () => { save.opzioni.musica = save.opzioni.musica === false; bm.textContent = save.opzioni.musica ? 'Sì' : 'No'; persist(); Snd.init(); if (E.Musica) E.Musica.attiva(save.opzioni.musica); };
     rm.appendChild(bm); d.appendChild(rm);
+    const rq = el('div', 'opz-riga', '<span>Qualità grafica</span>'); const gq = el('span');
+    [['alta', 'Alta'], ['bassa', 'Leggera']].forEach(([v, t]) => { const b = el('button', 'btn piccolo' + (UI.qualita() === v ? ' attivo' : ''), t); b.style.marginLeft = '4px'; b.onclick = () => { save.opzioni.qualita = v; persist(); UI.applicaQualita(v); $$('button', gq).forEach(x => x.classList.toggle('attivo', x === b)); }; gq.appendChild(b); });
+    rq.appendChild(gq); d.appendChild(rq);
     const rf = el('div', 'opz-riga', '<span>Schermo intero</span>'); const bf = el('button', 'btn piccolo', 'Attiva');
     bf.onclick = () => { const de = document.documentElement; try { if (document.fullscreenElement) document.exitFullscreen(); else if (de.requestFullscreen) de.requestFullscreen(); } catch (e) { /* non supportato */ } };
     rf.appendChild(bf); d.appendChild(rf);
@@ -425,6 +428,18 @@
     r3.appendChild(b3); d.appendChild(r3);
     d.appendChild(el('p', 'vuoto', `Vittorie: ${save.stats.vittorie} · Sconfitte: ${save.stats.sconfitte}`));
     UI.modale(d);
+  };
+
+  /** Qualità grafica: «bassa» toglie riflessi, ombre sfocate e metà delle particelle (telefoni meno potenti). */
+  UI.qualita = function () {
+    const o = E.Save && E.Save.data && E.Save.data.opzioni.qualita;
+    if (o) return o;
+    const debole = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3;
+    return debole ? 'bassa' : 'alta';
+  };
+  UI.applicaQualita = function (q) {
+    q = q || UI.qualita(); document.body.classList.toggle('lite', q === 'bassa'); Fx.lite = q === 'bassa';
+    root.dispatchEvent(new Event('resize'));
   };
 
   /* ===================================================================== */
@@ -1058,7 +1073,7 @@
 
     async gestisci(e) {
       if (E.Tutorial && E.Tutorial.attivo) await E.Tutorial.evento(e);
-      if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) await this.rientraTutti();
+      if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) { await this.rientraTutti(); if (this.zoomLibero) { this.zoom(0, 0, 1); this.zoomLibero = false; } }
       switch (e.t) {
         case 'turno':
           $('#turno-n').textContent = 'Turno ' + e.n + (this.B.obiettivo && this.B.obiettivo.turni ? ' / ' + this.B.obiettivo.turni : ''); this.ardoreV = e.ardore; this.mostraArdore();
@@ -1215,6 +1230,8 @@
       const att = this.V[e.att], bers = this.V[e.bers];
       const skillId = this.skillDi[e.att], stile = this.stile(e.att, skillId), A = E.Arte.ANIM[stile] || E.Arte.ANIM.fendente, s = E.SKILL[skillId] || {};
       if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers, A);
+      // colpo libero (senza scontro): la camera si avvicina un poco alla coppia
+      if (!this.cl && e.idx === 0 && !this.skip) { const a1 = this.pos(e.att), b1 = this.pos(e.bers); this.zoom((a1.x + b1.x) / 2, (a1.y + b1.y) / 2 + 10, 1.16); this.zoomLibero = true; }
       await this.miniMoneta(e.att, e.testa);
       const colore = E.AFFINITA[att.aff].colore, figA = this.els[e.att].fig;
       if (s.costo >= 5 || s.ultima) figA.classList.add('ultima');
@@ -1257,6 +1274,7 @@
       await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150));
       await pAnim;
       figA.classList.remove('ultima');
+      if (this.zoomLibero && e.idx === e.n - 1) { this.zoom(0, 0, 1); this.zoomLibero = false; }
       await this.sleep(120);
     },
     /** Effetto grafico all'impatto, specifico di ogni tipo di attacco (vedi Arte.ANIM[x].fx). */
@@ -1296,7 +1314,7 @@
 
   /* ----- Collegamento controlli (una sola volta) ----- */
   UI.init = function (ctx) {
-    Fx.init(); UI.iniziaTip();
+    UI.applicaQualita(); Fx.init(); UI.iniziaTip();
     $('#btn-esegui').onclick = () => Bat.conferma();
     $('#btn-menu').onclick = () => Bat.menuPausa();
     $('#btn-affondo').onclick = () => Bat.toggleAffondo();

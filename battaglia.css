@@ -362,3 +362,10 @@
 #risultato.sconfitta .ris-mvp-n { color: var(--testo2); }
 @media (max-height: 520px) { .bi-sub { font-size: 14px; } .bi-pv { font-size: 10px; } .ris-mvp { height: 56%; left: 2%; } .ris-mvp-n { font-size: 11px; } }
 @media (max-width: 900px) { .ris-mvp { opacity: .35; } }
+
+/* ----- Qualità leggera (opzione / telefoni meno potenti) ----- */
+body.lite #luce, body.lite .g-raggi, body.lite .g-rv-raggi, body.lite .bi-strisce { display: none; }
+body.lite .targa, body.lite .g-pedana .fig, body.lite .cut-fig, body.lite .bi-fig, body.lite .g-rv-fig { filter: none !important; }
+body.lite .fig.eco::before { animation: none; }
+body.lite #frecce .fr, body.lite #frecce polygon { filter: none !important; }
+body.lite #modale { backdrop-filter: none; }
