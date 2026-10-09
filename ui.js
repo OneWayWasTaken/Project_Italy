@@ -765,11 +765,11 @@
         [e.tDadi, e.dadi].forEach(box => Array.from(box.children).forEach((dd, i) => { const a = acts[i], s = a && a.skill && E.SKILL[a.skill]; dd.style.setProperty('--ac', s ? E.AFFINITA[s.aff].colore : '#888'); dd.classList.toggle('pianificato', !!s); }));
         if (e.uSk) { const a = acts[0], s = a && a.skill && E.SKILL[a.skill]; e.uSk.style.setProperty('--ac', s ? E.AFFINITA[s.aff].colore : '#555'); e.uSk.querySelector('.sim').textContent = s ? E.AFFINITA[s.aff].simbolo : '–'; e.uSk.dataset.tip = s ? `<b>${s.nome}</b> → ${this.V[a.bers] ? this.V[a.bers].breve : '?'}` : 'Non agisce'; e.uSk.classList.toggle('vuota', !s); }
       });
-      { const r = Combat().risonanza(B), col = $('#ris-col'); col.innerHTML = E.AFFINITA_ORDINE.map(k => `<div class="rc${(r[k] || 0) >= 3 ? ' attiva' : ''}" style="--ac:${E.AFFINITA[k].colore}" data-tip="<b>${E.AFFINITA[k].nome}</b>: ${r[k] || 0} skill pianificate${(r[k] || 0) >= 3 ? ' · Risonanza attiva!' : ' (3 = Risonanza)'}"><i>${E.AFFINITA[k].simbolo}</i><b>${r[k] || 0}</b></div>`).join(''); }
+      { const r = Combat().risonanza(B), col = $('#ris-col'); col.innerHTML = E.AFFINITA_ORDINE.filter(k => r[k]).map(k => `<div class="rc${(r[k] || 0) >= 3 ? ' attiva' : ''}" style="--ac:${E.AFFINITA[k].colore}" data-tip="<b>${E.AFFINITA[k].nome}</b>: ${r[k] || 0} skill pianificate${(r[k] || 0) >= 3 ? ' · Risonanza attiva!' : ' (3 = Risonanza)'}"><i>${E.AFFINITA[k].simbolo}</i><b>${r[k] || 0}</b></div>`).join(''); col.classList.toggle('vuota', !col.children.length); }
       this.disegnaSkills(); this.mostraArdore(); this.disegnaFrecce();
       $('#btn-esegui').disabled = this.fase !== 'pianifica' || !Combat().pianoValido(B);
     },
-    etichette: 'win',
+    etichette: null,
     /** Battuta di un personaggio nel riquadro in alto (si chiude da sola). */
     battuta(id, tipo, testo) {
       const u = this.V[id]; if (!u || this.skip) return;
@@ -807,7 +807,7 @@
       d.querySelector('.emb-ritr').appendChild(UI.ritratto(def));
       const coins = []; for (let i = 0; i < monete; i++) { const m = creaMoneta(true); d.querySelector('.emb-monete').appendChild(m); coins.push(m); }
       $('#clash').appendChild(d);
-      const p = this.pos(id), st = $('#stage').getBoundingClientRect(), y = clamp(p.y - st.top - p.h * 0.62, 50, st.height - 220);
+      const p = this.pos(id), st = $('#stage').getBoundingClientRect(), cine = ($('#cinema .cb.su') || {}).offsetHeight || 50, y = clamp(p.y - st.top - p.h * 0.62, cine + 12, st.height - 220);
       if (sx) d.style.right = clamp(st.width - (p.x - st.left - p.w * 0.38), 10, st.width - 200) + 'px'; else d.style.left = clamp(p.x - st.left + p.w * 0.38, 10, st.width - 200) + 'px';
       d.style.top = y + 'px';
       $('#clash').className = 'on';
@@ -942,6 +942,7 @@
       if (!this.els[id]) return;
       const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), String(testo));
       n.style.left = clamp(p.x + rnd(-18, 18), cls === 'testo' ? 90 : 20, root.innerWidth - (cls === 'testo' ? 90 : 20)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px'; n.style.setProperty('--dx', rnd(-46, 46) + 'px');
+      if (typeof testo === 'number') n.style.setProperty('--k', clamp(0.85 + testo / 45, 0.85, 1.9).toFixed(2));
       $('#app').appendChild(n); setTimeout(() => n.remove(), 1200);
       return n;
     },
@@ -995,7 +996,18 @@
         const passo = () => { if (!e.fig.classList.contains('corre')) return; const f = this.piedi(id); Fx.polvere(f.x, f.y, 1, 0.5); setTimeout(passo, 70); };
         setTimeout(passo, 70);
         setTimeout(() => { e.fig.classList.remove('corre'); const f = this.piedi(id); Fx.polvere(f.x, f.y, 6, 1.1); }, d * 1000 + 20);
+        if (Math.hypot(dx, dy) > 70 && !document.body.classList.contains('lite')) [0.3, 0.55, 0.8].forEach(k => setTimeout(() => this.fantasma(id), d * 1000 * k));
       }
+    },
+    /** Immagine residua: copia ferma e sbiadita della figura nel punto in cui si trova adesso (scie degli scatti). */
+    fantasma(id) {
+      const e = this.els[id]; if (!e || this.skip) return;
+      const g = e.pg.cloneNode(true); g.classList.add('fantasma'); g.removeAttribute('data-id'); g.onclick = null;
+      g.querySelectorAll('.targa,.pg-dadi,.pg-base,.pg-ombra,.pg-aure').forEach(x => x.remove());
+      const m = g.querySelector('.pg-mov'); m.style.transition = 'none'; m.style.transform = getComputedStyle(e.mov).transform;
+      g.style.zIndex = (parseInt(e.pg.style.zIndex, 10) || 1000) - 1; g.style.setProperty('--gc', (E.AFFINITA[this.V[id].aff] || {}).colore || '#fff');
+      $('#cam').appendChild(g);
+      g.animate([{ opacity: 0.5 }, { opacity: 0 }], { duration: 320 / this.vel, easing: 'ease-out' }).onfinish = () => g.remove();
     },
     /** L'attaccante raggiunge il bersaglio lungo il terreno; la distanza dipende dal tipo di animazione. */
     async avanza(att, bers, A) {
@@ -1012,7 +1024,9 @@
     /** Due combattenti si incontrano a metà strada, sulla stessa linea di terreno. */
     async incontra(ida, idb) {
       const fa = this.piedi(ida), fb = this.piedi(idb), pa = this.pos(ida);
-      const mx = (fa.x + fb.x) / 2, my = (fa.y + fb.y) / 2, gap = Math.max(pa.w * 0.95, 46), la = Math.sign(fb.x - fa.x) || 1;
+      // distanza di guardia: abbastanza spazio fra i due perché sagome e targhette non si sovrappongano
+      const pb = this.pos(idb), sw = $('#stage').getBoundingClientRect().width;
+      const mx = (fa.x + fb.x) / 2, my = (fa.y + fb.y) / 2, tw = (this.els[ida].targa.offsetWidth + this.els[idb].targa.offsetWidth) / 2 + 12, gap = Math.max((pa.w + pb.w) * 0.62, sw * 0.14, tw, 60), la = Math.sign(fb.x - fa.x) || 1;
       this.muovi(ida, mx - la * gap / 2 - fa.x, my - fa.y);
       this.muovi(idb, mx + la * gap / 2 - fb.x, my - fb.y + 1);
       await this.sleep(320);
@@ -1062,7 +1076,7 @@
     async gestisci(e) {
       if (E.Tutorial && E.Tutorial.attivo) await E.Tutorial.evento(e);
       if (['turno', 'dot', 'regola'].includes(e.t)) this.togliEmblemi();
-      if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) { await this.rientraTutti(); if (this.zoomLibero) { this.zoom(0, 0, 1); this.zoomLibero = false; } }
+      if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) { await this.rientraTutti(); if (this.zoomLibero) { this.zoom(0, 0, 1); this.zoomLibero = false; } this.messaAFuoco(null); }
       switch (e.t) {
         case 'turno':
           $('#turno-n').textContent = e.n + (this.B.obiettivo && this.B.obiettivo.turni ? '/' + this.B.obiettivo.turni : ''); this.ardoreV = e.ardore; this.mostraArdore();
@@ -1213,7 +1227,7 @@
       L.lato.classList.add('via'); setTimeout(() => L.lato.remove(), 300);
       this.embColpi = { id: W.id, coins: W.coins.filter((_, i) => !W.perse.includes(i)), pot: W.pot, el: W.lato };
       Fx.pulisciLinee(); this.linea = null; this.cl = null;
-      this.zoom(0, 0, 1); this.messaAFuoco(null);
+      this.zoomLibero = true;   // camera e luce restano sulla coppia per i colpi del vincitore
       await this.sleep(300);
     },
 
@@ -1223,7 +1237,8 @@
       const skillId = this.skillDi[e.att], stile = this.stile(e.att, skillId), A = E.Arte.ANIM[stile] || E.Arte.ANIM.fendente, s = E.SKILL[skillId] || {};
       if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers, A);
       // colpo libero (senza scontro): la camera si avvicina un poco alla coppia
-      if (!this.cl && e.idx === 0 && !this.skip) { const a1 = this.pos(e.att), b1 = this.pos(e.bers); this.zoom((a1.x + b1.x) / 2, (a1.y + b1.y) / 2 + 10, 1.16); this.zoomLibero = true; }
+      if (e.idx === 0 && !this.skip) this.messaAFuoco([e.att, e.bers]);
+      if (!this.cl && !this.zoomLibero && e.idx === 0 && !this.skip) { const a1 = this.pos(e.att), b1 = this.pos(e.bers); this.zoom((a1.x + b1.x) / 2, (a1.y + b1.y) / 2 + 10, 1.16); this.zoomLibero = true; }
       this.ultimoAtt = e.att; $$('.pg.attivo').forEach(x => x.classList.remove('attivo')); this.els[e.att].pg.classList.add('attivo');
       // stemma del colpo: per i colpi liberi ne nasce uno nuovo, dopo uno scontro resta quello del vincitore
       let em = this.embColpi && this.embColpi.id === e.att ? this.embColpi : null;
@@ -1252,12 +1267,12 @@
       bers.pv = e.pvDopo; this.render(e.bers);
       { const st = this.stat[e.att], sb = this.stat[e.bers]; if (st) { st.danno += e.danno; st.colpi++; st.max = Math.max(st.max, e.danno); } if (sb) sb.subito += e.danno; }
       const p = this.pos(e.bers), pa = this.pos(e.att), ang = Math.atan2(p.y - pa.y, p.x - pa.x);
-      Fx.sparks(p.x, p.y, clamp(10 + Math.round(e.danno * 0.8), 10, 50), colore, 0.7 + Math.min(1, e.danno / 40));
-      Fx.ring(p.x, p.y, colore, 60 + e.danno);
+      Fx.sparks(p.x, p.y, clamp(6 + Math.round(e.danno * 0.5), 6, 30), colore, 0.7 + Math.min(1, e.danno / 40));
+      if (forte) Fx.ring(p.x, p.y, colore, 60 + e.danno);
       const fp = this.piedi(e.bers);
       this.effettoImpatto(A.fx, p, fp, ang, colore, e.danno);
       Fx.impattoAff(s.aff || att.aff, p.x, p.y, clamp(e.danno / 18, 0.6, 2.2), ang);
-      if (forte) { Fx.flash(colore, 0.2); Fx.urto(fp.x, fp.y, 70 + e.danno, colore); Fx.polvere(fp.x, fp.y, 4, 0.9); }
+      if (forte) { Fx.flash(colore, 0.1); Fx.urto(fp.x, fp.y, 70 + e.danno, colore); Fx.polvere(fp.x, fp.y, 4, 0.9); }
       if (e.danno >= 30 || (e.rel === 1 && e.danno >= 20)) Fx.velocita(p.x, p.y, '#fff');
       // contraccolpo: il bersaglio viene spinto indietro e ritorna con un rimbalzo
       { const kb = clamp(6 + e.danno * 0.6, 8, 30) * (Math.cos(ang) >= 0 ? 1 : -1);
@@ -1271,7 +1286,7 @@
       await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150));
       await pAnim;
       figA.classList.remove('ultima');
-      if (this.zoomLibero && e.idx === e.n - 1) { this.zoom(0, 0, 1); this.zoomLibero = false; }
+      if (this.zoomLibero && e.idx === e.n - 1) { this.zoom(0, 0, 1); this.zoomLibero = false; this.messaAFuoco(null); }
       await this.sleep(120);
     },
     /** Effetto grafico all'impatto, specifico di ogni tipo di attacco (vedi Arte.ANIM[x].fx). */

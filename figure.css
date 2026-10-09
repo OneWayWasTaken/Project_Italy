@@ -114,9 +114,9 @@
 .fig.a-sweep .f-stinco-a { animation: sw-sa var(--t) ease-in-out both; }
 .fig.a-sweep .f-gamba-b { animation: sw-gb var(--t) ease-in-out both; }
 .fig.a-sweep .f-mantello { animation: sw-m var(--t) ease-in-out both; }
-@keyframes sw-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(112deg); } 40% { transform: rotate(116deg); } 58% { transform: rotate(-108deg); } 78% { transform: rotate(-84deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes sw-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(62deg); } 40% { transform: rotate(66deg); } 58% { transform: rotate(-108deg); } 78% { transform: rotate(-84deg); } 100% { transform: rotate(var(--aA)); } }
 @keyframes sw-e { 0% { transform: rotate(var(--eA)); } 30%, 40% { transform: rotate(-8deg); } 58% { transform: rotate(0); } 78% { transform: rotate(-10deg); } 100% { transform: rotate(var(--eA)); } }
-@keyframes sw-t { 0%, 100% { transform: rotate(0) scaleX(1); } 34% { transform: rotate(-14deg) scaleX(.9); } 58% { transform: rotate(14deg) scaleX(1.07); } }
+@keyframes sw-t { 0%, 100% { transform: rotate(0); } 34% { transform: rotate(-14deg); } 58% { transform: rotate(14deg); } }
 @keyframes sw-c { 0%, 100% { transform: translate(0, 0); } 34% { transform: translate(-6%, 2%) scale(1.02, .97); } 58% { transform: translate(12%, 2%); } 78% { transform: translate(11%, 1%); } }
 @keyframes sw-h { 34% { transform: rotate(10deg); } 58% { transform: rotate(-8deg); } }
 @keyframes sw-ga { 0%, 100% { transform: rotate(0); } 34% { transform: rotate(10deg); } 58%, 78% { transform: rotate(-38deg); } }
@@ -155,7 +155,7 @@
 @keyframes af-ga { 0%, 100% { transform: rotate(0); } 34% { transform: rotate(6deg); } 54%, 76% { transform: rotate(-44deg); } }
 @keyframes af-sa { 0%, 100% { transform: rotate(0); } 34% { transform: rotate(18deg); } 54%, 76% { transform: rotate(40deg); } }
 @keyframes af-gb { 0%, 100% { transform: rotate(0); } 54%, 76% { transform: rotate(30deg); } }
-@keyframes af-b { 0%, 100% { transform: rotate(var(--aB)); } 34% { transform: rotate(-30deg); } 54%, 76% { transform: rotate(60deg); } }
+@keyframes af-b { 0%, 100% { transform: rotate(var(--aB)); } 34% { transform: rotate(-30deg); } 54%, 76% { transform: rotate(42deg); } }
 
 /* --- lungo: falcata profondissima, arma a due mani portata in linea --- */
 .fig.a-lungo .f-braccio-a { animation: lu-a var(--t) ease-in-out both; }
@@ -174,7 +174,7 @@
 @keyframes lu-ga { 0%, 100% { transform: rotate(0); } 52%, 80% { transform: rotate(-56deg); } }
 @keyframes lu-sa { 0%, 100% { transform: rotate(0); } 28% { transform: rotate(20deg); } 52%, 80% { transform: rotate(54deg); } }
 @keyframes lu-gb { 0%, 100% { transform: rotate(0); } 52%, 80% { transform: rotate(42deg); } }
-@keyframes lu-sb { 0%, 100% { transform: rotate(0); } 52%, 80% { transform: rotate(-6deg); } }
+@keyframes lu-sb { 0%, 100% { transform: rotate(0); } 52%, 80% { transform: rotate(0deg); } }
 @keyframes lu-t { 28% { transform: rotate(-6deg); } 52%, 80% { transform: rotate(10deg); } }
 
 /* --- salto: accovacciata, balzo con ginocchia raccolte, colpo dall'alto e atterraggio pesante --- */
@@ -192,7 +192,7 @@
   62% { transform: translateY(3%) scale(1.14, .84) rotate(4deg); } 76% { transform: translateY(0) scale(1); } }
 @keyframes sa-a { 0% { transform: rotate(var(--aA)); } 14% { transform: rotate(-40deg); } 32%, 48% { transform: rotate(-176deg); } 62% { transform: rotate(-20deg); } 100% { transform: rotate(var(--aA)); } }
 @keyframes sa-e { 0% { transform: rotate(var(--eA)); } 32%, 48% { transform: rotate(-70deg); } 62% { transform: rotate(0); } 100% { transform: rotate(var(--eA)); } }
-@keyframes sa-b { 0%, 100% { transform: rotate(var(--aB)); } 14% { transform: rotate(40deg); } 32%, 48% { transform: rotate(150deg); } 62% { transform: rotate(40deg); } }
+@keyframes sa-b { 0%, 100% { transform: rotate(var(--aB)); } 14% { transform: rotate(40deg); } 32%, 48% { transform: rotate(-150deg); } 62% { transform: rotate(40deg); } }
 @keyframes sa-ga { 0%, 100% { transform: rotate(0); } 14% { transform: rotate(-20deg); } 32%, 48% { transform: rotate(-60deg); } 62% { transform: rotate(-24deg); } }
 @keyframes sa-sa { 0%, 100% { transform: rotate(0); } 14% { transform: rotate(36deg); } 32%, 48% { transform: rotate(80deg); } 62% { transform: rotate(40deg); } }
 @keyframes sa-gb { 0%, 100% { transform: rotate(0); } 14% { transform: rotate(10deg); } 32%, 48% { transform: rotate(-20deg); } 62% { transform: rotate(16deg); } }
@@ -212,7 +212,7 @@
   50% { transform: scaleX(1) translateY(-4%) translateX(8%); } 60% { transform: scaleX(.2) translateY(-6%) translateX(8%); } 70% { transform: scaleX(-1) translateY(-6%) translateX(6%); } 82% { transform: scaleX(.2) translateY(-2%) translateX(3%); } 92% { transform: scaleX(1) translateY(2%) scaleY(.95); } 100% { transform: scaleX(1) translateY(0); } }
 @keyframes tu-a { 0%, 100% { transform: rotate(var(--aA)); } 14%, 86% { transform: rotate(-98deg); } }
 @keyframes tu-e { 0%, 100% { transform: rotate(var(--eA)); } 14%, 86% { transform: rotate(-4deg); } }
-@keyframes tu-b { 0%, 100% { transform: rotate(var(--aB)); } 14%, 86% { transform: rotate(98deg); } }
+@keyframes tu-b { 0%, 100% { transform: rotate(var(--aB)); } 14%, 86% { transform: rotate(64deg); } }
 @keyframes tu-ga { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(-26deg); } }
 @keyframes tu-sa { 0%, 100% { transform: rotate(0); } 18%, 82% { transform: rotate(40deg); } }
 
@@ -241,7 +241,7 @@
 @keyframes sc-b { 0% { transform: rotate(var(--aB)); } 30% { transform: translateX(-3%) rotate(30deg); } 52%, 78% { transform: translateX(15%) rotate(-82deg); } 100% { transform: rotate(var(--aB)); } }
 @keyframes sc-eb { 0% { transform: rotate(var(--eB)); } 30% { transform: rotate(-60deg); } 52%, 78% { transform: rotate(-20deg); } 100% { transform: rotate(var(--eB)); } }
 @keyframes sc-c { 0%, 100% { transform: translateX(0); } 30% { transform: translate(-6%, 2%) rotate(-5deg) scale(.97, 1.02); } 52%, 78% { transform: translate(14%, 2%) rotate(7deg); } }
-@keyframes sc-t { 30% { transform: scaleX(.94); } 52%, 78% { transform: rotate(10deg) scaleX(1.06); } }
+@keyframes sc-t { 30% { transform: rotate(-4deg); } 52%, 78% { transform: rotate(10deg); } }
 @keyframes sc-a { 0%, 100% { transform: rotate(var(--aA)); } 30%, 78% { transform: rotate(10deg); } }
 @keyframes sc-ga { 0%, 100% { transform: rotate(0); } 52%, 78% { transform: rotate(-30deg); } }
 @keyframes sc-sa { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(14deg); } 52%, 78% { transform: rotate(26deg); } }
@@ -301,7 +301,7 @@
 .fig.a-lancio .f-gamba-a { animation: fe-ga var(--t) ease-in-out both; }
 .fig.a-lancio .f-stinco-a { animation: fe-sa var(--t) ease-in-out both; }
 .fig.a-lancio .f-braccio-b { animation: la-b var(--t) ease-in-out both; }
-@keyframes la-a { 0% { transform: rotate(var(--aA)); } 36% { transform: rotate(120deg); } 54% { transform: rotate(-110deg); } 70% { transform: rotate(-70deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes la-a { 0% { transform: rotate(var(--aA)); } 36% { transform: rotate(58deg); } 54% { transform: rotate(-110deg); } 70% { transform: rotate(-70deg); } 100% { transform: rotate(var(--aA)); } }
 @keyframes la-e { 0% { transform: rotate(var(--eA)); } 36% { transform: rotate(-100deg); } 54% { transform: rotate(-6deg); } 100% { transform: rotate(var(--eA)); } }
 @keyframes la-b { 0%, 100% { transform: rotate(var(--aB)); } 36% { transform: rotate(-60deg); } 54% { transform: rotate(40deg); } }
 @keyframes la-c { 0%, 100% { transform: translateX(0); } 36% { transform: translate(-5%, 1%); } 54% { transform: translate(7%, 2%); } }
@@ -315,7 +315,7 @@
 .fig.a-lancio_alto .f-testa { animation: lh-h var(--t) ease-in-out both; }
 .fig.a-lancio_alto .f-gamba-a { animation: lh-ga var(--t) ease-in-out both; }
 .fig.a-lancio_alto .f-stinco-a { animation: lh-sa var(--t) ease-in-out both; }
-@keyframes lh-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(130deg); } 52% { transform: rotate(-150deg); } 70% { transform: rotate(-130deg); } 100% { transform: rotate(var(--aA)); } }
+@keyframes lh-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(48deg); } 52% { transform: rotate(-150deg); } 70% { transform: rotate(-48deg); } 100% { transform: rotate(var(--aA)); } }
 @keyframes lh-e { 0% { transform: rotate(var(--eA)); } 30% { transform: rotate(-10deg); } 52% { transform: rotate(-20deg); } 100% { transform: rotate(var(--eA)); } }
 @keyframes lh-c { 0%, 100% { transform: translateX(0) rotate(0); } 30% { transform: translate(-4%, 4%) rotate(-6deg) scale(1.03, .95); } 52% { transform: translate(5%, -4%) rotate(6deg); } }
 @keyframes lh-h { 30% { transform: rotate(8deg); } 52%, 70% { transform: rotate(-16deg); } }
@@ -332,8 +332,8 @@
 .fig.a-preghiera .f-aura circle { animation: pr-au var(--t) ease-out both; }
 @keyframes pr-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(-40deg); } 58%, 74% { transform: rotate(-156deg); } 100% { transform: rotate(var(--aA)); } }
 @keyframes pr-e { 0% { transform: rotate(var(--eA)); } 30% { transform: rotate(-110deg); } 58%, 74% { transform: rotate(-12deg); } 100% { transform: rotate(var(--eA)); } }
-@keyframes pr-b { 0% { transform: rotate(var(--aB)); } 30% { transform: rotate(-30deg); } 58%, 74% { transform: rotate(156deg); } 100% { transform: rotate(var(--aB)); } }
-@keyframes pr-eb { 0% { transform: rotate(var(--eB)); } 30% { transform: rotate(-110deg); } 58%, 74% { transform: rotate(10deg); } 100% { transform: rotate(var(--eB)); } }
+@keyframes pr-b { 0% { transform: rotate(var(--aB)); } 30% { transform: rotate(-30deg); } 58%, 74% { transform: rotate(-150deg); } 100% { transform: rotate(var(--aB)); } }
+@keyframes pr-eb { 0% { transform: rotate(var(--eB)); } 30% { transform: rotate(-110deg); } 58%, 74% { transform: rotate(-8deg); } 100% { transform: rotate(var(--eB)); } }
 @keyframes pr-t { 30% { transform: rotate(12deg); } 58%, 74% { transform: rotate(-12deg); } }
 @keyframes pr-c { 30% { transform: translateY(1%); } 58%, 74% { transform: translateY(-5%); } }
 @keyframes pr-au { 0% { opacity: 0; r: 20; } 50% { opacity: .9; r: 44; } 100% { opacity: 0; r: 62; } }
@@ -366,8 +366,8 @@
 .fig.a-invocazione .f-stinco-a, .fig.a-invocazione .f-stinco-b { animation: iv-s var(--t) ease-in-out both; }
 .fig.a-invocazione .f-aura circle { animation: pr-au var(--t) ease-out both; }
 @keyframes iv-a { 0% { transform: rotate(var(--aA)); } 26% { transform: rotate(10deg); } 50%, 76% { transform: rotate(-166deg); } 100% { transform: rotate(var(--aA)); } }
-@keyframes iv-e { 0% { transform: rotate(var(--eA)); } 26% { transform: rotate(-90deg); } 50%, 76% { transform: rotate(10deg); } 100% { transform: rotate(var(--eA)); } }
-@keyframes iv-b { 0% { transform: rotate(var(--aB)); } 26% { transform: rotate(-10deg); } 50%, 76% { transform: rotate(166deg); } 100% { transform: rotate(var(--aB)); } }
+@keyframes iv-e { 0% { transform: rotate(var(--eA)); } 26% { transform: rotate(-90deg); } 50%, 76% { transform: rotate(-6deg); } 100% { transform: rotate(var(--eA)); } }
+@keyframes iv-b { 0% { transform: rotate(var(--aB)); } 26% { transform: rotate(-10deg); } 50%, 76% { transform: rotate(-160deg); } 100% { transform: rotate(var(--aB)); } }
 @keyframes iv-eb { 0% { transform: rotate(var(--eB)); } 26% { transform: rotate(-90deg); } 50%, 76% { transform: rotate(-10deg); } 100% { transform: rotate(var(--eB)); } }
 @keyframes iv-c { 0%, 100% { transform: translateY(0) scale(1); } 26% { transform: translateY(3%) scale(1.04, .94); } 50%, 76% { transform: translateY(-12%) scale(1.04); } }
 @keyframes iv-h { 26% { transform: rotate(14deg); } 50%, 76% { transform: rotate(-16deg); } }
@@ -402,7 +402,7 @@
 @keyframes ct-e { 0% { transform: rotate(var(--eA)); } 24%, 40% { transform: rotate(-30deg); } 54% { transform: rotate(-120deg); } 70% { transform: rotate(0); } 100% { transform: rotate(var(--eA)); } }
 @keyframes ct-b { 0%, 100% { transform: rotate(var(--aB)); } 24%, 40% { transform: rotate(-50deg); } 70% { transform: rotate(40deg); } }
 @keyframes ct-c { 0%, 100% { transform: translateX(0); } 24%, 40% { transform: translate(-5%, 2%) rotate(-5deg); } 54% { transform: translate(-2%, 1%) scaleX(.9); } 70%, 84% { transform: translate(12%, 2%) rotate(6deg); } }
-@keyframes ct-t { 24%, 40% { transform: rotate(-10deg); } 54% { transform: rotate(-16deg) scaleX(.9); } 70% { transform: rotate(14deg); } }
+@keyframes ct-t { 24%, 40% { transform: rotate(-10deg); } 54% { transform: rotate(-16deg); } 70% { transform: rotate(14deg); } }
 @keyframes ct-gb { 0%, 100% { transform: rotate(0); } 24%, 40% { transform: rotate(16deg); } 70%, 84% { transform: rotate(30deg); } }
 @keyframes ct-sb { 0%, 100% { transform: rotate(0); } 24%, 40% { transform: rotate(30deg); } }
 @keyframes ct-ga { 0%, 100% { transform: rotate(0); } 70%, 84% { transform: rotate(-36deg); } }
@@ -418,10 +418,10 @@
 .fig.a-grido .f-aura circle { animation: pr-au var(--t) ease-out both; }
 @keyframes gr-a { 0% { transform: rotate(var(--aA)); } 30% { transform: rotate(-20deg); } 50%, 80% { transform: rotate(-160deg); } 100% { transform: rotate(var(--aA)); } }
 @keyframes gr-e { 0% { transform: rotate(var(--eA)); } 30% { transform: rotate(-90deg); } 50%, 80% { transform: rotate(-20deg); } 100% { transform: rotate(var(--eA)); } }
-@keyframes gr-b { 0%, 100% { transform: rotate(var(--aB)); } 30% { transform: rotate(20deg); } 50%, 80% { transform: rotate(60deg); } }
+@keyframes gr-b { 0%, 100% { transform: rotate(var(--aB)); } 30% { transform: rotate(20deg); } 50%, 80% { transform: rotate(38deg); } }
 @keyframes gr-eb { 0%, 100% { transform: rotate(var(--eB)); } 50%, 80% { transform: rotate(-110deg); } }
 @keyframes gr-c { 0%, 100% { transform: translateY(0) scale(1); } 30% { transform: translateY(3%) scale(1.04, .94); } 50% { transform: translateY(-3%) scale(.98, 1.05); } 56%, 60%, 64%, 68%, 72% { transform: translate(.8%, -2%) scale(1.02); } 58%, 62%, 66%, 70%, 74% { transform: translate(-.8%, -2%) scale(1.02); } }
-@keyframes gr-t { 30% { transform: rotate(8deg); } 50%, 80% { transform: rotate(-8deg) scale(1.05); } }
+@keyframes gr-t { 30% { transform: rotate(8deg); } 50%, 80% { transform: rotate(-8deg); } }
 @keyframes gr-h { 30% { transform: rotate(14deg); } 50%, 80% { transform: rotate(-22deg); } }
 
 /* --- elefante: carica a testa bassa / barrito / pestone --- */
@@ -456,9 +456,9 @@
 .fig.a-hit .fig-in { animation: hit-f var(--t) ease-out both; }
 @keyframes hit { 0% { transform: translateX(0); } 16% { transform: translate(-10%, 1%) rotate(-7deg) scale(1.02, .95); } 40% { transform: translate(-6%, 0) rotate(-3deg); } 100% { transform: translateX(0); } }
 @keyframes hit-t { 16% { transform: rotate(-20deg); } 40% { transform: rotate(-8deg); } }
-@keyframes hit-to { 16% { transform: rotate(-8deg) scaleX(.95); } }
+@keyframes hit-to { 16% { transform: rotate(-8deg); } }
 @keyframes hit-a { 0%, 100% { transform: rotate(var(--aA)); } 16% { transform: rotate(40deg); } }
-@keyframes hit-b { 0%, 100% { transform: rotate(var(--aB)); } 16% { transform: rotate(50deg); } }
+@keyframes hit-b { 0%, 100% { transform: rotate(var(--aB)); } 16% { transform: rotate(34deg); } }
 @keyframes hit-s { 16% { transform: rotate(18deg); } }
 @keyframes hit-f { 0% { filter: brightness(3.2) saturate(0); } 30% { filter: brightness(1.7) saturate(.6); } 100% { filter: none; } }
 
@@ -496,7 +496,7 @@
 .fig.ced .f-urlo { opacity: 1; } .fig.ced .f-bocca { opacity: 0; }
 @keyframes ced { 0% { transform: translateY(13%) rotate(10deg); } 100% { transform: translateY(14%) rotate(13deg); } }
 @keyframes ced-t { 0% { transform: rotate(-12deg); } 100% { transform: rotate(-20deg); } }
-@keyframes ced-to { 0% { transform: scale(1, 1); } 100% { transform: scale(1.03, .97); } }
+@keyframes ced-to { 0% { transform: rotate(0); } 100% { transform: rotate(3deg); } }
 .fig.eco.ced .f-tutto, .fig.quadrupede.ced .f-tutto, .fig.veste.ced .f-tutto { animation: ced-eco 1.1s ease-in-out infinite alternate; }
 @keyframes ced-eco { 0% { transform: translateY(5%) rotate(10deg); } 100% { transform: translateY(6%) rotate(14deg); } }
 

@@ -109,14 +109,17 @@
     return `M${p(x1 + nx * a, y1 + ny * a)} L${p(x2 + nx * b, y2 + ny * b)} A${f1(b)} ${f1(b)} 0 0 0 ${p(x2 - nx * b, y2 - ny * b)} L${p(x1 - nx * a, y1 - ny * a)} A${f1(a)} ${f1(a)} 0 0 0 ${p(x1 + nx * a, y1 + ny * a)} Z`;
   }
 
+  /** Giuntura morbida: copre la cucitura del contorno dove due segmenti d'arto si sovrappongono (gomito, ginocchio). */
+  const giunto = (x, y, w, col) => `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(w / 2 - 0.75)}" fill="${col}"/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(w / 2 - 0.75)}" fill="url(#gCel)"/>`;
+
   /* ---------- Proporzioni (testa grande, stile "gacha") ----------
    * Testa: cranio 44→77 in x, 13→50 in y; occhi a y≈35.5; collo 46→57; spalle y=58; vita y=95; anche y=106;
    * gomito y=80, polso y=99, mano y=102; ginocchio y=142, caviglia y=178, suola y=187.
    * sw/ww/hw = mezze larghezze di spalle/vita/anche · ga/gl = spessore di braccia/gambe. */
   const DIM = {
-    m: { sw: 14, ww: 10.5, hw: 11.5, ga: 7.6, gl: 10 },
-    f: { sw: 11.5, ww: 8.4, hw: 11.6, ga: 6.6, gl: 9 },
-    g: { sw: 17.5, ww: 14, hw: 14.5, ga: 9.6, gl: 12.2 }
+    m: { sw: 14.5, ww: 10.5, hw: 11.5, ga: 9, gl: 11.4 },
+    f: { sw: 12, ww: 8.6, hw: 11.6, ga: 7.8, gl: 10.2 },
+    g: { sw: 18, ww: 14, hw: 14.5, ga: 11, gl: 13.6 }
   };
   const Y = { spalla: 59, gomito: 80, polso: 99, mano: 102, anca: 104, ginocchio: 142, caviglia: 178 };
 
@@ -413,11 +416,11 @@
     const manica = A.manica === 'nuda' ? pelle : (A.manica || ab.c1);
     const avamb = A.corta || A.manica === 'nuda' ? pelle : manica;
     const pant = A.pant === 'nuda' ? pelle : (A.pant || ab.c2);
-    const xR = 60 + d.sw - 1.5, xL = 60 - d.sw + 1.5;
+    const xR = 60 + d.sw - d.ga * 0.4, xL = 60 - d.sw + d.ga * 0.4;
 
     // --- braccia: omero e avambraccio affusolati, polsino, mano a pugno
-    const omero = (x, col) => `${forma(seg(x, Y.spalla, x, Y.gomito, d.ga * 1.08, d.ga * 0.86), col)}${A.sbuffi ? `<ellipse cx="${x}" cy="${Y.spalla + 4}" rx="${f1(d.ga * 0.95)}" ry="6.4" fill="${col}" ${OUT}/><path d="M${f1(x - 2)} ${Y.spalla} L${f1(x - 2)} ${Y.spalla + 9} M${f1(x + 2)} ${Y.spalla} L${f1(x + 2)} ${Y.spalla + 9}" stroke="${A.sbuffi}" stroke-width="1.4"/>` : ''}${A.metalloBraccia ? metallo(seg(x, Y.spalla - 1, x, Y.spalla + 9, d.ga * 1.35, d.ga * 1.1), col) : ''}`;
-    const avambraccio = (x, col) => `${forma(seg(x, Y.gomito, x, Y.polso, d.ga * 0.86, d.ga * 0.68), col)}
+    const omero = (x, col) => `${forma(seg(x, Y.spalla - 1.5, x, Y.gomito, d.ga * 1.12, d.ga * 0.86), col)}${A.sbuffi ? `<ellipse cx="${x}" cy="${Y.spalla + 4}" rx="${f1(d.ga * 0.95)}" ry="6.4" fill="${col}" ${OUT}/><path d="M${f1(x - 2)} ${Y.spalla} L${f1(x - 2)} ${Y.spalla + 9} M${f1(x + 2)} ${Y.spalla} L${f1(x + 2)} ${Y.spalla + 9}" stroke="${A.sbuffi}" stroke-width="1.4"/>` : ''}${A.metalloBraccia ? metallo(seg(x, Y.spalla - 1, x, Y.spalla + 9, d.ga * 1.35, d.ga * 1.1), col) : ''}`;
+    const avambraccio = (x, col) => `${forma(seg(x, Y.gomito, x, Y.polso, d.ga * 0.86, d.ga * 0.68), col)}${giunto(x, Y.gomito, d.ga * 0.86, col)}
       ${A.polsini ? `<rect x="${f1(x - d.ga * 0.42)}" y="${Y.polso - 3}" width="${f1(d.ga * 0.84)}" height="3" fill="${A.polsini}" ${OUT}/>` : ''}
       ${A.metalloBraccia ? metallo(seg(x, Y.gomito + 3, x, Y.polso - 2, d.ga * 1.0, d.ga * 0.86), manica) : ''}
       ${!A.corta && A.manica !== 'nuda' && !A.polsini ? `<rect x="${f1(x - d.ga * 0.46)}" y="${Y.polso - 3.4}" width="${f1(d.ga * 0.92)}" height="3.4" rx="1" fill="${scuro(col, 0.25)}" ${OUT}/>` : ''}`;
@@ -431,7 +434,8 @@
     };
     const stinco = (xg, xc, lato) => {
       const c = A.alti ? (A.stivale || '#222') : (A.calze && A.calzeAlte ? A.calze : pant);
-      let s = forma(seg(xg, Y.ginocchio, xc, Y.caviglia, d.gl * 0.8, d.gl * 0.6), pant === pelle && A.calzeAlte ? pelle : pant);
+      const cs = pant === pelle && A.calzeAlte ? pelle : pant;
+      let s = forma(seg(xg, Y.ginocchio, xc, Y.caviglia, d.gl * 0.8, d.gl * 0.6), cs) + giunto(xg, Y.ginocchio, d.gl * 0.8, cs);
       if (A.alti) s += forma(seg(xg + (xc - xg) * 0.45, Y.ginocchio + 16, xc, Y.caviglia + 2, d.gl * 0.86, d.gl * 0.7), A.stivale);
       else if (A.calze) s += forma(seg(xg + (xc - xg) * (A.calzeAlte ? 0.35 : 0.7), Y.ginocchio + (A.calzeAlte ? 12 : 26), xc, Y.caviglia + 1, d.gl * 0.74, d.gl * 0.62), A.calze);
       if (A.fasce) s += `<path d="M${xc - 4} 152 L${xc + 4} 156 M${xc - 4} 160 L${xc + 4} 164" stroke="${scuro(A.stivale || '#222')}" stroke-width="1.2"/>`;
@@ -500,7 +504,7 @@
     const armaPezzo = arma ? pezzo(vb, 'f-arma', xR, Y.mano, `<g transform="translate(${xR},${Y.mano})">${arma.svg}${fx}</g>`) : '';
     const braccioA = pezzo(vb, 'f-braccio-a', xR, Y.spalla, omero(xR, manica),
       pezzo(vb, 'f-avambraccio f-avambraccio-a', xR, Y.gomito, avambraccio(xR, avamb) + mano(xR), armaPezzo));
-    const braccioB = pezzo(vb, 'f-braccio-b', xL, Y.spalla, omero(xL, manica) + `<path d="${seg(xL, Y.spalla, xL, Y.gomito, d.ga * 1.08, d.ga * 0.86)}" fill="#140a1e" opacity=".2"/>`,
+    const braccioB = pezzo(vb, 'f-braccio-b', xL, Y.spalla, omero(xL, manica) + `<path d="${seg(xL, Y.spalla - 1.5, xL, Y.gomito, d.ga * 1.12, d.ga * 0.86)}" fill="#140a1e" opacity=".2"/>`,
       pezzo(vb, 'f-avambraccio f-avambraccio-b', xL, Y.gomito, avambraccio(xL, avamb) + mano(xL) + `<path d="${seg(xL, Y.gomito, xL, Y.polso, d.ga * 0.86, d.ga * 0.68)}" fill="#140a1e" opacity=".2"/>` + scudo));
     const occhiCappuccio = cappuccio && spec.eco ? pezzo(vb, 'f-occhi', 67, 36, `<ellipse cx="63.6" cy="36" rx="5.4" ry="5" fill="${glow}" opacity=".25"/><ellipse cx="63.6" cy="36" rx="2.6" ry="3" fill="${glow}"/><ellipse cx="72.6" cy="36" rx="1.9" ry="2.9" fill="${glow}"/>`) : '';
     const testaPezzo = pezzo(vb, 'f-testa', 60, 50, testa,
@@ -509,16 +513,18 @@
       (spec.viso ? pezzo(vb, 'f-viso', 67, 36, sulViso(spec.viso)) : '') + occhiCappuccio);
     const dietroTesta = (coperto ? '' : hair.dietro) + thDietro;
     // Lo scudo resta davanti al busto (si legge meglio); senza scudo il braccio lontano va dietro al corpo (profondità).
-    return pezzo(vb, 'f-tutto', 60, 188,
-      '', pezzo(vb, 'f-aura', 60, 100, `<circle cx="60" cy="100" r="46" fill="none" stroke="${glow}" stroke-width="3" opacity="0"/>`) +
-      (spec.mantello ? pezzo(vb, 'f-mantello', 60 - d.sw + 3, 57, mantello(spec.mantello, d)) : '') +
+    // Scheletro: il busto è un gruppo che ruota sull'anca e porta con sé testa e braccia (niente colli o spalle che si staccano).
+    // Le parti dietro al corpo (mantello, capelli lunghi, braccio lontano) stanno in un secondo gruppo identico, disegnato prima delle gambe.
+    const dietro = (spec.mantello ? pezzo(vb, 'f-mantello', 60 - d.sw + 3, 57, mantello(spec.mantello, d)) : '') +
       (spec.dorso === 'gerla' ? pezzo(vb, 'f-mantello f-gerla', 46, 62, GERLA) : '') +
       (dietroTesta ? pezzo(vb, 'f-testa f-capelli-d', 60, 50, dietroTesta) : '') +
-      (spec.scudo ? '' : braccioB) +
+      (spec.scudo ? '' : braccioB);
+    const davanti = pezzo(vb, 'f-busto', 60, 106, torsoSvg) + (spec.scudo ? braccioB : '') + testaPezzo + braccioA;
+    return pezzo(vb, 'f-tutto', 60, 188,
+      '', pezzo(vb, 'f-aura', 60, 100, `<circle cx="60" cy="100" r="46" fill="none" stroke="${glow}" stroke-width="3" opacity="0"/>`) +
+      pezzo(vb, 'f-torso f-torso-d', 60, 106, '', dietro) +
       gambe + coda + piedi +
-      pezzo(vb, 'f-torso', 60, 106, torsoSvg) +
-      (spec.scudo ? braccioB : '') +
-      testaPezzo + braccioA);
+      pezzo(vb, 'f-torso', 60, 106, '', davanti));
   }
 
   /* ---------- Elefante (nemico quadrupede) ---------- */

@@ -1,0 +1,121 @@
+/* ============================================================================
+ * rifinitura.css — passata «minimal» sulla battaglia (caricato per ultimo)
+ *   Regola: pannelli scuri e sottili, un filo chiaro come bordo, il colore solo dove serve
+ *   (affinità, selezione, pericolo). Meno ottone, meno bagliori, testo più leggibile.
+ * ========================================================================== */
+#scr-battaglia { --linea: rgba(255, 228, 176, .16); --pann: rgba(11, 9, 13, .80); --oro-t: #e9c77a; }
+
+/* ----- Bande da cinema: nere, con un solo filo luminoso ----- */
+#cinema .cb::after { height: 1px; background: linear-gradient(90deg, transparent, #f5d58e99 18%, #f5d58e99 82%, transparent); filter: none; }
+#cinema .cb.su::after { bottom: 0; } #cinema .cb.giu::after { top: 0; }
+
+/* ----- In alto a sinistra: turno e Ardore come etichette pulite ----- */
+.plq { height: 24px; box-shadow: none; background: var(--pann); border: 1px solid var(--linea); border-radius: 3px; overflow: hidden; }
+.plq span { background: none; color: #b9a47c; font-weight: 500; font-size: 10px; letter-spacing: .18em; padding: 0 4px 0 9px; }
+.plq b, .plq #ardore { background: none; box-shadow: none; min-width: 0; padding: 0 10px 0 4px; font-size: 15px; }
+.plq #ardore .gem { width: 7px; height: 7px; border: 0; border-radius: 1px; background: #2e2834; margin: 0 1px; box-shadow: none; }
+.plq #ardore .gem.on { background: var(--oro-t); box-shadow: 0 0 4px #ffd84a66; }
+.plq #ardore .gem.pend { background: var(--oro-t); opacity: .35; }
+
+/* ----- Battuta: una riga, ritratto piccolo, filo colorato a sinistra ----- */
+.battuta { width: auto; max-width: min(460px, 46vw); padding: 5px 16px 5px 5px; gap: 10px; border-radius: 3px;
+  background: var(--pann); border: 1px solid var(--linea); border-left: 3px solid var(--ac, var(--giallo)); box-shadow: 0 8px 22px #0009; backdrop-filter: blur(3px); }
+.battuta .ritratto { width: 38px; height: 38px; border: 0; border-radius: 2px; }
+.battuta .bt-t b { font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+.battuta .bt-t span { font-size: 14px; font-style: italic; line-height: 1.25; }
+
+/* ----- In alto a destra ----- */
+.b-top-dx .vel, .b-top-dx .btn.icona { background: var(--pann); border: 1px solid var(--linea); box-shadow: none; }
+.b-top-dx .btn.icona { color: #e8dcc4; }
+.b-top-dx .vel .btn { color: #b9a47c; } .b-top-dx .vel .btn.attivo { background: var(--oro-t); color: #1a1004; }
+
+/* ----- Risonanza: solo le affinità usate, con un titolo ----- */
+#ris-col { background: var(--pann); box-shadow: none; border: 1px solid var(--linea); border-radius: 3px; padding: 5px 7px; gap: 2px; align-items: stretch; }
+#ris-col::before { content: "RISONANZA"; font: 500 8px var(--font-hud); letter-spacing: .16em; color: #b9a47c; text-align: center; padding-bottom: 2px; border-bottom: 1px solid var(--linea); margin-bottom: 2px; }
+#ris-col.vuota { opacity: 0; pointer-events: none; }
+#ris-col .rc { grid-template-columns: 18px 16px; justify-content: center; }
+#ris-col .rc i { font-size: 13px; } #ris-col .rc b { font-size: 15px; }
+
+/* ----- Frecce: una sola in risalto (la Voce selezionata), le altre in sottofondo ----- */
+#frecce .fr { filter: none; }
+#frecce .fr.all { opacity: .38; stroke-width: 2; }
+#frecce .fr.all.sel { opacity: 1; stroke-width: 3.2; filter: drop-shadow(0 0 3px var(--c)); }
+#frecce .fr.nem { opacity: .42; stroke-width: 1.6; stroke-dasharray: 3 6; }
+#frecce .fr-et rect { fill: #0b090df0; stroke-width: 1; }
+#frecce .fr-et text { font: 600 11px var(--font-hud); letter-spacing: .04em; }
+
+/* ----- Targhette sotto i piedi: più piccole e ordinate ----- */
+.targa .t-hp { font-size: 16px; -webkit-text-stroke-width: 1.6px; }
+.targa .t-pv { height: 4px; }
+.targa .t-sanc { width: 20px; height: 20px; font-size: 10px; box-shadow: 0 0 0 1.5px #0a1430, 0 0 0 2.5px #8ab4f0aa; }
+.targa .t-nome { font-size: 9px; letter-spacing: .12em; color: #e6dac2; }
+.pg.boss .targa .t-hp { font-size: 20px; }
+/* durante l'azione restano visibili solo le targhette dei due combattenti */
+#scr-battaglia.cinema .pg:not(.in-clash):not(.attivo) .targa { opacity: 0; transition: opacity .25s; }
+#scr-battaglia.cinema .targa .t-chips { display: none; }
+
+/* ----- Dock: niente bracci d'ottone, un ripiano scuro con un filo ----- */
+#b-dock { grid-template-columns: 0 auto minmax(0, 1fr) 210px 0; background: linear-gradient(180deg, #0a080c00 0%, #0a080cd8 26%, #0a080c 64%); }
+.dk-braccio { visibility: hidden; width: 0; }
+#b-dock::before { left: 0; right: 0; bottom: auto; top: 18%; height: 1px; border-radius: 0; background: linear-gradient(90deg, transparent, var(--linea) 15%, var(--linea) 85%, transparent); box-shadow: none; }
+.unit::after { background: linear-gradient(180deg, #4a3e36, #241c18); }
+.unit.sel::after { background: linear-gradient(180deg, #fff2b0, #e9c77a 55%, #a07a2a); filter: drop-shadow(0 0 8px #ffd84a88); }
+
+/* ----- Carte skill: nome, monete, potenza; la descrizione in una riga discreta ----- */
+.skill-btn { border-radius: 3px; background: #141016; box-shadow: 0 0 0 1px var(--linea), 0 4px 12px #0008; }
+.skill-btn:hover:not(:disabled) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--ac) 60%, transparent), 0 4px 12px #0008; }
+.skill-btn::before { filter: none; }
+.skill-btn .t { font-weight: 600; }
+.skill-btn .d { font-size: 10px; color: #a8998a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.skill-btn .costo { background: none; border: 1px solid var(--linea); color: #b9a47c; }
+.skill-btn .prev.libero { color: #8a7f74; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.skill-btn.sel { background: linear-gradient(180deg, color-mix(in srgb, var(--ac) 16%, #141016), #141016 70%); box-shadow: 0 0 0 1.5px var(--oro-t), 0 6px 16px #000a; }
+
+/* ----- Comandi ----- */
+.dk-tog .btn { background: var(--pann); border: 1px solid var(--linea); color: #d8ccb4; }
+.dk-tog .btn.attivo { background: var(--oro-t); color: #1a1004; border-color: var(--oro-t); }
+#btn-esegui:not(:disabled) .ingr { filter: drop-shadow(0 0 8px #ff8a1a88) drop-shadow(0 4px 10px #000c); }
+
+/* ----- Stemmi dello scontro: meno cornici, numeri grandi e netti ----- */
+.emb-banda { box-shadow: none; }
+.emb-desc { background: #000a; border-left: 2px solid var(--ac); font-size: 12px; }
+.emb-hex { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ac) 70%, transparent)); }
+.emb.vince .emb-hex { filter: drop-shadow(0 0 14px var(--ac)) brightness(1.12); }
+.emb.perde { filter: grayscale(.8) brightness(.6); }
+
+/* ----- Sequenza delle azioni ----- */
+.sq-ban { box-shadow: none; }
+
+@media (max-height: 520px) {
+  .plq { height: 17px; } .plq span { font-size: 7px; padding: 0 2px 0 5px; } .plq b, .plq #ardore { font-size: 11px; padding: 0 6px 0 2px; } .plq #ardore .gem { width: 4px; height: 4px; }
+  .battuta { max-width: min(320px, 40vw); padding: 3px 8px 3px 3px; gap: 6px; } .battuta .ritratto { width: 26px; height: 26px; } .battuta .bt-t b { font-size: 7px; } .battuta .bt-t span { font-size: 10px; }
+  #ris-col { padding: 3px 4px; } #ris-col::before { font-size: 6px; } #ris-col .rc { grid-template-columns: 12px 12px; } #ris-col .rc i { font-size: 9px; } #ris-col .rc b { font-size: 10px; }
+  .targa .t-hp { font-size: 12px; } .targa .t-sanc { width: 14px; height: 14px; font-size: 7px; } .targa .t-nome { font-size: 6.5px; }
+  #b-dock { grid-template-columns: 0 auto minmax(0, 1fr) 128px 0; }
+  .skill-btn .d { display: none; }
+  .emb-desc { font-size: 9px; max-width: 170px; }
+  .pg.boss .targa { width: max(110px, 80%); } .pg.boss .targa .t-hp { font-size: 14px; }
+  #frecce .fr-et text { font-size: 9px; }
+}
+.b-top-sx { align-items: flex-start; }
+
+/* ----- Scie degli scatti (immagini residue) ----- */
+.pg.fantasma { pointer-events: none; }
+.pg.fantasma * { animation-play-state: paused !important; }
+.pg.fantasma .fig { filter: brightness(1.8) saturate(.2) drop-shadow(0 0 6px var(--gc)); }
+
+/* ----- Numeri di danno: grandi, netti, proporzionati al colpo ----- */
+.num-fly { --nb: 34px; font: italic 700 calc(var(--nb) * var(--k, 1))/1 var(--font-hud); letter-spacing: -.01em; -webkit-text-stroke: 4px #0a0608;
+  text-shadow: 0 3px 0 #0009; animation: num-pop 1.1s cubic-bezier(.2, .8, .3, 1) forwards; }
+.num-fly.vant { color: #ffe27a; font-size: calc(var(--nb) * var(--k, 1) * 1.15); text-shadow: 0 3px 0 #0009, 0 0 18px #ffb04a88; }
+.num-fly.svant { color: #c8c0b8; font-size: calc(var(--nb) * var(--k, 1) * .8); }
+.num-fly.stato, .num-fly.sanita, .num-fly.assorbi, .num-fly.testo { font-style: normal; font-family: var(--font-hud); font-weight: 600; letter-spacing: .03em; }
+.num-fly.stato { font-size: 17px; } .num-fly.testo { font-size: 21px; } .num-fly.sanita { font-size: 16px; } .num-fly.assorbi { font-size: 16px; }
+@keyframes num-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); }
+  9% { opacity: 1; transform: translate(-50%, -50%) scale(.94); }
+  16% { transform: translate(-50%, -50%) scale(1); }
+  70% { opacity: 1; transform: translate(calc(-50% + var(--dx, 0px) * .3), -95%); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px) * .45), -135%); }
+}
+@media (max-height: 520px) { .num-fly { --nb: 21px; -webkit-text-stroke-width: 3px; } .num-fly.stato, .num-fly.testo { font-size: 12px; } .num-fly.sanita, .num-fly.assorbi { font-size: 11px; } }
