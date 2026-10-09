@@ -3,6 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<script>
+/* Telefoni: il gioco ha bisogno di almeno 820×380 px di spazio. Se lo schermo (tolte tacca e barre) è più
+ * piccolo, si allarga il viewport e il browser rimpicciolisce tutto in proporzione: niente più parti tagliate. */
+(function () {
+  var MW = 820, MH = 380, meta = document.querySelector('meta[name=viewport]'), sonda = null, ultimo = '';
+  function adatta() {
+    if (!window.matchMedia || !matchMedia('(pointer: coarse)').matches) return;   // solo touch
+    var land = innerWidth > innerHeight, lungo = Math.max(screen.width, screen.height), corto = Math.min(screen.width, screen.height);
+    var devW = land ? lungo : corto, k = innerWidth / devW, il = 0, ir = 0, it = 0, ib = 0;
+    if (sonda) { var cs = getComputedStyle(sonda); il = parseFloat(cs.paddingLeft) || 0; ir = parseFloat(cs.paddingRight) || 0; it = parseFloat(cs.paddingTop) || 0; ib = parseFloat(cs.paddingBottom) || 0; }
+    var aw = devW - (il + ir) / k, ah = innerHeight / k - (it + ib) / k;
+    var s = land ? Math.min(1, aw / MW, ah / MH) : 1;
+    var c = (s > 0.995 ? 'width=device-width, initial-scale=1' : 'width=' + Math.round(devW / s)) + ', viewport-fit=cover, user-scalable=no';
+    if (c !== ultimo) { ultimo = c; meta.setAttribute('content', c); }
+  }
+  var t = 0; function presto() { clearTimeout(t); t = setTimeout(adatta, 120); }
+  document.addEventListener('DOMContentLoaded', function () {
+    sonda = document.createElement('div');
+    sonda.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(sonda); adatta();
+  });
+  adatta(); addEventListener('resize', presto); addEventListener('orientationchange', function () { ultimo = ''; meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no'); setTimeout(adatta, 250); });
+})();
+</script>
 <meta name="theme-color" content="#0e0c12">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
