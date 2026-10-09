@@ -30,6 +30,7 @@
     init() {
       if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
       try { const AC = root.AudioContext || root.webkitAudioContext; if (AC) this.ctx = new AC(); } catch (e) { this.ctx = null; }
+      if (this.ctx && E.Musica) { E.Musica.on = !(E.Save && E.Save.data && E.Save.data.opzioni.musica === false); E.Musica.init(this.ctx); }
     },
     tono(f, d, tipo, vol, slide) {
       if (!this.on || !this.ctx) return;
@@ -313,6 +314,10 @@
   };
   UI.mostra = function (nome) {
     $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + nome));
+    // musica di sottofondo per schermata (la battaglia sceglie da sé battaglia/boss)
+    const temi = { menu: 'menu', squadra: 'menu', archivio: 'menu', campagna: 'mappa', mappa: 'mappa', storia: 'storia', gacha: 'gacha' };
+    const run = E.Save && E.Save.data && E.Save.data.run;
+    if (E.Musica && temi[nome]) E.Musica.tema(temi[nome], (nome === 'mappa' || nome === 'storia') && run ? run.cap - 1 : nome === 'menu' && E.Save && E.Save.data ? Math.max(0, (E.Save.data.progresso.sbloccato || 1) - 1) : 0);
   };
   UI.tabellaAffinita = function () {
     const d = el('div');
@@ -379,6 +384,9 @@
     const r2 = el('div', 'opz-riga', '<span>Suono</span>'); const b2 = el('button', 'btn piccolo', save.opzioni.audio ? 'Sì' : 'No');
     b2.onclick = () => { save.opzioni.audio = !save.opzioni.audio; Snd.on = save.opzioni.audio; b2.textContent = save.opzioni.audio ? 'Sì' : 'No'; persist(); };
     r2.appendChild(b2); d.appendChild(r2);
+    const rm = el('div', 'opz-riga', '<span>Musica</span>'); const bm = el('button', 'btn piccolo', save.opzioni.musica === false ? 'No' : 'Sì');
+    bm.onclick = () => { save.opzioni.musica = save.opzioni.musica === false; bm.textContent = save.opzioni.musica ? 'Sì' : 'No'; persist(); Snd.init(); if (E.Musica) E.Musica.attiva(save.opzioni.musica); };
+    rm.appendChild(bm); d.appendChild(rm);
     const rf = el('div', 'opz-riga', '<span>Schermo intero</span>'); const bf = el('button', 'btn piccolo', 'Attiva');
     bf.onclick = () => { const de = document.documentElement; try { if (document.fullscreenElement) document.exitFullscreen(); else if (de.requestFullscreen) de.requestFullscreen(); } catch (e) { /* non supportato */ } };
     rf.appendChild(bf); d.appendChild(rf);
@@ -534,6 +542,7 @@
       Fx.ambiente = pal ? pal.polvere : null; Fx.motes = []; Fx.emettitori = {};
       $('#cam').style.transform = ''; $('#stage').classList.remove('clashing');
       UI.mostra('battaglia');
+      if (E.Musica) E.Musica.tema(B.unita.some(x => x.boss) ? 'boss' : 'battaglia', ctx.capitolo || 0);
       Combat().snapshot(B).forEach(u => this.aggiungiCarta(u));
       this.layout();
       this.ardoreV = B.ardore; this.mostraArdore();
@@ -831,7 +840,7 @@
       if (B.esito === 'vittoria') Object.keys(this.els).forEach(id => { if (this.V[id].lato === 'a' && this.V[id].vivo) this.els[id].fig.classList.add('a-vittoria'); });
       await this.sleep(900);
       const r = $('#risultato'); r.className = 'overlay on ' + B.esito;
-      Snd.sfx(B.esito);
+      Snd.sfx(B.esito); if (E.Musica) E.Musica.fanfara(B.esito);
       const alleati = B.unita.filter(x => x.lato === 'a' && !x.npc), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
       let righe = '';
       alleati.forEach(x => { const st = this.stat[x.id], v = this.V[x.id]; righe += `<tr class="${v.vivo ? '' : 'caduto'}${x === mvp && st.danno ? ' mvp' : ''}"><td>${x === mvp && st.danno ? '★ ' : ''}${x.breve}${v.vivo ? '' : ' ✝'}</td><td>${st.danno}</td><td>${st.colpi}</td><td>${st.max}</td><td>${st.subito}</td></tr>`; });
@@ -1247,7 +1256,8 @@
     $('#btn-affondo').onclick = () => Bat.toggleAffondo();
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
     $('#btn-audio').onclick = () => {
-      Snd.init(); Snd.on = !Snd.on; ctx.save.opzioni.audio = Snd.on; ctx.persist();
+      Snd.init(); Snd.on = !Snd.on; ctx.save.opzioni.audio = Snd.on; ctx.save.opzioni.musica = Snd.on; ctx.persist();
+      if (E.Musica) E.Musica.attiva(Snd.on);
       $('#btn-audio').textContent = Snd.on ? '♪' : '✕';
     };
     $('#btn-log').onclick = () => { $('#log').classList.toggle('on'); };

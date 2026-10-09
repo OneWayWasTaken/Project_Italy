@@ -88,6 +88,7 @@
     E.Story.init(ctx); E.Campagna.init(ctx);
     document.getElementById('m-esci').onclick = () => E.Campagna.hub();
     E.UI.menuScena(save);
+    if (E.Musica) E.Musica.tema('menu', Math.max(0, (save.progresso.sbloccato || 1) - 1));
     // Primo avvio: propone il tutorial (con possibilità di saltarlo del tutto)
     if (save.tutorial === undefined) {
       const d = document.createElement('div');
