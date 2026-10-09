@@ -112,6 +112,53 @@
   /** Giuntura morbida: copre la cucitura del contorno dove due segmenti d'arto si sovrappongono (gomito, ginocchio). */
   const giunto = (x, y, w, col) => `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(w / 2 - 0.75)}" fill="${col}"/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(w / 2 - 0.75)}" fill="url(#gCel)"/>`;
 
+  /* ---------- Vista di tre quarti ----------
+   * Le figure guardano a destra girate di tre quarti verso chi guarda (come il viso: occhio vicino a sinistra,
+   * occhio lontano a destra e più stretto). Il busto e i vestiti vengono quindi "girati": la metà destra (lontana)
+   * si accorcia in prospettiva, la linea centrale (bottoni, cravatta, fibbia) si sposta verso destra.
+   * Di conseguenza il braccio e la gamba di SINISTRA sono quelli vicini (davanti al corpo), quelli di destra lontani. */
+  const V34 = { c: 60.5, k: 0.78 };
+  const fx = x => x > V34.c ? V34.c + (x - V34.c) * V34.k : x;
+  const kx = x => x > V34.c ? V34.k : 1;
+  const ARGN = { M: 2, L: 2, T: 2, Q: 4, S: 4, C: 6, A: 7, H: 1, V: 1, Z: 0 };
+  /** Riscrive le coordinate x di un attributo d di un path con fx (gestisce comandi assoluti e relativi). */
+  function giraPath(d) {
+    const t = d.match(/[a-zA-Z]|-?(?:\d+\.?\d*|\.\d+)(?:e-?\d+)?/g); if (!t) return d;
+    const out = []; let cmd = '', i = 0, cx = 0, cy = 0, sx = 0, sy = 0;
+    while (i < t.length) {
+      if (/[a-zA-Z]/.test(t[i])) { cmd = t[i++]; out.push(cmd); if (cmd === 'Z' || cmd === 'z') { cx = sx; cy = sy; } continue; }
+      const U = cmd.toUpperCase(), rel = cmd !== U, n = ARGN[U];
+      if (!n) { i++; continue; }
+      const a = t.slice(i, i + n).map(Number); i += n; if (a.length < n) break;
+      let r;
+      if (U === 'H') { const x = rel ? cx + a[0] : a[0]; r = [rel ? fx(x) - fx(cx) : fx(x)]; cx = x; }
+      else if (U === 'V') { r = a; cy = rel ? cy + a[0] : a[0]; }
+      else if (U === 'A') { const x = rel ? cx + a[5] : a[5], y = rel ? cy + a[6] : a[6], k = kx((cx + x) / 2); r = [a[0] * k, a[1], a[2], a[3], a[4], rel ? fx(x) - fx(cx) : fx(x), a[6]]; cx = x; cy = y; }
+      else {
+        r = [];
+        for (let j = 0; j < n; j += 2) { const x = rel ? cx + a[j] : a[j]; r.push(rel ? fx(x) - fx(cx) : fx(x), a[j + 1]); }
+        cx = rel ? cx + a[n - 2] : a[n - 2]; cy = rel ? cy + a[n - 1] : a[n - 1];
+      }
+      if (U === 'M') { sx = cx; sy = cy; cmd = rel ? 'l' : 'L'; }
+      out.push(r.map(f1).join(' '));
+    }
+    return out.join(' ');
+  }
+  const num = (tag, n) => { const m = tag.match(new RegExp('\\s' + n + '="(-?[\\d.]+)"')); return m ? +m[1] : null; };
+  const metti = (tag, n, v) => tag.replace(new RegExp('(\\s' + n + '=")(-?[\\d.]+)(")'), '$1' + f1(v) + '$3');
+  /** Applica la vista di tre quarti a un frammento SVG (path, cerchi, ellissi, rettangoli, testi, linee, poligoni). */
+  function treQuarti(svg) {
+    return svg.replace(/<(path|circle|ellipse|rect|text|line|polygon)\b[^>]*>/g, (tag, tipo) => {
+      tag = tag.replace(/\sd="([^"]*)"/, (m, d) => ' d="' + giraPath(d) + '"');
+      if (tipo === 'circle' || tipo === 'ellipse') { const c = num(tag, 'cx'); if (c != null) { tag = metti(tag, 'cx', fx(c)); if (tipo === 'ellipse') { const r = num(tag, 'rx'); if (r != null) tag = metti(tag, 'rx', r * kx(c)); } } }
+      else if (tipo === 'rect') { const x = num(tag, 'x'), w = num(tag, 'width'); if (x != null && w != null) { tag = metti(tag, 'width', fx(x + w) - fx(x)); tag = metti(tag, 'x', fx(x)); } }
+      else if (tipo === 'text') { const x = num(tag, 'x'); if (x != null) tag = metti(tag, 'x', fx(x)); }
+      else if (tipo === 'line') { ['x1', 'x2'].forEach(n => { const x = num(tag, n); if (x != null) tag = metti(tag, n, fx(x)); }); }
+      else if (tipo === 'polygon') tag = tag.replace(/\spoints="([^"]*)"/, (m, p) => ' points="' + p.trim().split(/[\s,]+/).map((v, i) => i % 2 ? v : f1(fx(+v))).join(' ') + '"');
+      return tag;
+    });
+  }
+
   /* ---------- Proporzioni (testa grande, stile "gacha") ----------
    * Testa: cranio 44→77 in x, 13→50 in y; occhi a y≈35.5; collo 46→57; spalle y=58; vita y=95; anche y=106;
    * gomito y=80, polso y=99, mano y=102; ginocchio y=142, caviglia y=178, suola y=187.
@@ -416,7 +463,7 @@
     const manica = A.manica === 'nuda' ? pelle : (A.manica || ab.c1);
     const avamb = A.corta || A.manica === 'nuda' ? pelle : manica;
     const pant = A.pant === 'nuda' ? pelle : (A.pant || ab.c2);
-    const xR = 60 + d.sw - d.ga * 0.4, xL = 60 - d.sw + d.ga * 0.4;
+    const xR = fx(60 + d.sw) - d.ga * 0.45, xL = 60 - d.sw + d.ga * 0.4;   // spalla lontana (dx) un po' dietro il busto girato
 
     // --- braccia: omero e avambraccio affusolati, polsino, mano a pugno
     const omero = (x, col) => `${forma(seg(x, Y.spalla - 1.5, x, Y.gomito, d.ga * 1.12, d.ga * 0.86), col)}${A.sbuffi ? `<ellipse cx="${x}" cy="${Y.spalla + 4}" rx="${f1(d.ga * 0.95)}" ry="6.4" fill="${col}" ${OUT}/><path d="M${f1(x - 2)} ${Y.spalla} L${f1(x - 2)} ${Y.spalla + 9} M${f1(x + 2)} ${Y.spalla} L${f1(x + 2)} ${Y.spalla + 9}" stroke="${A.sbuffi}" stroke-width="1.4"/>` : ''}${A.metalloBraccia ? metallo(seg(x, Y.spalla - 1, x, Y.spalla + 9, d.ga * 1.35, d.ga * 1.1), col) : ''}`;
@@ -440,7 +487,7 @@
       else if (A.calze) s += forma(seg(xg + (xc - xg) * (A.calzeAlte ? 0.35 : 0.7), Y.ginocchio + (A.calzeAlte ? 12 : 26), xc, Y.caviglia + 1, d.gl * 0.74, d.gl * 0.62), A.calze);
       if (A.fasce) s += `<path d="M${xc - 4} 152 L${xc + 4} 156 M${xc - 4} 160 L${xc + 4} 164" stroke="${scuro(A.stivale || '#222')}" stroke-width="1.2"/>`;
       if (A.sandali) s += `<path d="M${xc - 4} 172 L${xc + 4} 168 M${xc - 4} 176 L${xc + 4} 172" stroke="#6a4a2a" stroke-width="1.4"/>`;
-      return s + scarpa(xc) + (lato === 'b' ? `<path d="${seg(xg, Y.ginocchio, xc, Y.caviglia, d.gl * 0.8, d.gl * 0.6)}" fill="#140a1e" opacity=".18"/>` : '');
+      return s + scarpa(xc) + (lato === 'lontano' ? `<path d="${seg(xg, Y.ginocchio, xc, Y.caviglia, d.gl * 0.8, d.gl * 0.6)}" fill="#140a1e" opacity=".18"/>` : '');
     };
 
     const arma = spec.arma && ARMI[spec.arma] ? ARMI[spec.arma](spec.armaC1, spec.armaC2) : null;
@@ -488,42 +535,46 @@
     const sp = SOPR[espr] || SOPR.serio;
     const sopracciglia = spec.eco ? '' : `<path d="${sp[0]}" stroke="${scuro(hc, 0.15)}" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="${sp[1]}" stroke="${scuro(hc, 0.15)}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
 
+    // gamba lontana (a, destra) dietro e in ombra, gamba vicina (b, sinistra) davanti
+    const xGa = fx(60 + d.hw * 0.5), xKa = fx(67), xCa = fx(69);
     const gambe = A.nascondiGambe || spec.eco ? '' :
-      pezzo(vb, 'f-gamba f-gamba-b', 60 - d.hw * 0.5, Y.anca, coscia(60 - d.hw * 0.5, 55) + `<path d="${seg(60 - d.hw * 0.5, Y.anca, 55, Y.ginocchio, d.gl, d.gl * 0.8)}" fill="#140a1e" opacity=".18"/>`,
-        pezzo(vb, 'f-stinco f-stinco-b', 55, Y.ginocchio, stinco(55, 53, 'b'))) +
-      pezzo(vb, 'f-gamba f-gamba-a', 60 + d.hw * 0.5, Y.anca, coscia(60 + d.hw * 0.5, 67),
-        pezzo(vb, 'f-stinco f-stinco-a', 67, Y.ginocchio, stinco(67, 69, 'a')));
-    const piedi = A.nascondiGambe && !spec.eco ? pezzo(vb, 'f-piedi', 60, 180, scarpa(52) + scarpa(66)) : '';
+      pezzo(vb, 'f-gamba f-gamba-a', xGa, Y.anca, coscia(xGa, xKa) + `<path d="${seg(xGa, Y.anca, xKa, Y.ginocchio, d.gl, d.gl * 0.8)}" fill="#140a1e" opacity=".18"/>`,
+        pezzo(vb, 'f-stinco f-stinco-a', xKa, Y.ginocchio, stinco(xKa, xCa, 'lontano'))) +
+      pezzo(vb, 'f-gamba f-gamba-b', 60 - d.hw * 0.5, Y.anca, coscia(60 - d.hw * 0.5, 55),
+        pezzo(vb, 'f-stinco f-stinco-b', 55, Y.ginocchio, stinco(55, 53, 'vicino')));
+    const piedi = A.nascondiGambe && !spec.eco ? pezzo(vb, 'f-piedi', 60, 180, scarpa(fx(66)) + scarpa(52)) : '';
     const coda = spec.eco ? pezzo(vb, 'f-coda', 60, 100, `<g mask="url(#mCoda)"><path d="M${60 - d.hw - 4} 100 Q${60 - d.hw - 10} 138 50 158 Q57 170 47 188 Q67 172 65 158 Q82 148 ${60 + d.hw + 4} 100 Z" fill="${mix(ab.c1, '#000', 0.2)}"/>
         <path d="M${60 - d.hw} 104 Q${60 - d.hw - 4} 132 54 150 Q60 160 55 176" stroke="${glow}" stroke-width="1.4" fill="none" opacity=".7"/></g>`) : '';
-    const fx = arma && arma.lampo ? `<g class="f-lampo" transform="translate(0,${arma.lampo})"><circle r="9" fill="url(#gLuce)"/><path d="M0 -9 L3 -2.4 L10 0 L3 2.4 L0 12 L-3 2.4 L-10 0 L-3 -2.4 Z" fill="#fff3a0"/><circle r="4" fill="#ff9a2a"/></g>` : '';
+    const lampo = arma && arma.lampo ? `<g class="f-lampo" transform="translate(0,${arma.lampo})"><circle r="9" fill="url(#gLuce)"/><path d="M0 -9 L3 -2.4 L10 0 L3 2.4 L0 12 L-3 2.4 L-10 0 L-3 -2.4 Z" fill="#fff3a0"/><circle r="4" fill="#ff9a2a"/></g>` : '';
     const scudo = spec.scudo ? SCUDI[spec.scudo.tipo](spec.scudo.c1, spec.scudo.c2, xL) : '';
     const collo = `${forma(`M56 44 L65 44 L65.4 57 L55.6 57 Z`, pelle)}<path d="M55.8 47 Q60.5 52.6 65.2 47 L65.3 51.6 Q60.5 54.6 55.7 51.6 Z" fill="${pelleOmbra}" opacity=".55"/>`;
-    const torsoSvg = `${collo}${A.svg}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}`;
+    const torsoSvg = treQuarti(`${collo}${A.svg}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}`);
 
-    const armaPezzo = arma ? pezzo(vb, 'f-arma', xR, Y.mano, `<g transform="translate(${xR},${Y.mano})">${arma.svg}${fx}</g>`) : '';
-    const braccioA = pezzo(vb, 'f-braccio-a', xR, Y.spalla, omero(xR, manica),
-      pezzo(vb, 'f-avambraccio f-avambraccio-a', xR, Y.gomito, avambraccio(xR, avamb) + mano(xR), armaPezzo));
-    const braccioB = pezzo(vb, 'f-braccio-b', xL, Y.spalla, omero(xL, manica) + `<path d="${seg(xL, Y.spalla - 1.5, xL, Y.gomito, d.ga * 1.12, d.ga * 0.86)}" fill="#140a1e" opacity=".2"/>`,
-      pezzo(vb, 'f-avambraccio f-avambraccio-b', xL, Y.gomito, avambraccio(xL, avamb) + mano(xL) + `<path d="${seg(xL, Y.gomito, xL, Y.polso, d.ga * 0.86, d.ga * 0.68)}" fill="#140a1e" opacity=".2"/>` + scudo));
+    const armaPezzo = arma ? pezzo(vb, 'f-arma', xR, Y.mano, `<g transform="translate(${xR},${Y.mano})">${arma.svg}${lampo}</g>`) : '';
+    const ombraA = (x1, y1, y2, w1, w2) => `<path d="${seg(x1, y1, x1, y2, w1, w2)}" fill="#140a1e" opacity=".2"/>`;
+    // braccio lontano (a, destra, con l'arma): dietro al busto, in ombra
+    const braccioA = pezzo(vb, 'f-braccio-a', xR, Y.spalla, omero(xR, manica) + ombraA(xR, Y.spalla - 1.5, Y.gomito, d.ga * 1.12, d.ga * 0.86),
+      pezzo(vb, 'f-avambraccio f-avambraccio-a', xR, Y.gomito, avambraccio(xR, avamb) + mano(xR) + ombraA(xR, Y.gomito, Y.polso, d.ga * 0.86, d.ga * 0.68), armaPezzo));
+    // braccio vicino (b, sinistra, con lo scudo): davanti al busto
+    const braccioB = pezzo(vb, 'f-braccio-b', xL, Y.spalla, omero(xL, manica),
+      pezzo(vb, 'f-avambraccio f-avambraccio-b', xL, Y.gomito, avambraccio(xL, avamb) + mano(xL) + scudo));
     const occhiCappuccio = cappuccio && spec.eco ? pezzo(vb, 'f-occhi', 67, 36, `<ellipse cx="63.6" cy="36" rx="5.4" ry="5" fill="${glow}" opacity=".25"/><ellipse cx="63.6" cy="36" rx="2.6" ry="3" fill="${glow}"/><ellipse cx="72.6" cy="36" rx="1.9" ry="2.9" fill="${glow}"/>`) : '';
     const testaPezzo = pezzo(vb, 'f-testa', 60, 50, testa,
       (cappuccio ? '' : pezzo(vb, 'f-sopracciglia', 67, 30, sopracciglia) + pezzo(vb, 'f-occhi', 67, 36, occhi) +
         pezzo(vb, 'f-bocca', 70.6, 44.6, bocca) + pezzo(vb, 'f-urlo', 70.6, 44.6, urlo)) +
       (spec.viso ? pezzo(vb, 'f-viso', 67, 36, sulViso(spec.viso)) : '') + occhiCappuccio);
     const dietroTesta = (coperto ? '' : hair.dietro) + thDietro;
-    // Lo scudo resta davanti al busto (si legge meglio); senza scudo il braccio lontano va dietro al corpo (profondità).
     // Scheletro: il busto è un gruppo che ruota sull'anca e porta con sé testa e braccia (niente colli o spalle che si staccano).
-    // Le parti dietro al corpo (mantello, capelli lunghi, braccio lontano) stanno in un secondo gruppo identico, disegnato prima delle gambe.
-    const dietro = (spec.mantello ? pezzo(vb, 'f-mantello', 60 - d.sw + 3, 57, mantello(spec.mantello, d)) : '') +
+    // Tre strati con la stessa animazione del busto: dietro (mantello, capelli lunghi) → gambe → braccio lontano → busto, testa, braccio vicino.
+    const dietro = (spec.mantello ? pezzo(vb, 'f-mantello', 60 - d.sw + 3, 57, treQuarti(mantello(spec.mantello, d))) : '') +
       (spec.dorso === 'gerla' ? pezzo(vb, 'f-mantello f-gerla', 46, 62, GERLA) : '') +
-      (dietroTesta ? pezzo(vb, 'f-testa f-capelli-d', 60, 50, dietroTesta) : '') +
-      (spec.scudo ? '' : braccioB);
-    const davanti = pezzo(vb, 'f-busto', 60, 106, torsoSvg) + (spec.scudo ? braccioB : '') + testaPezzo + braccioA;
+      (dietroTesta ? pezzo(vb, 'f-testa f-capelli-d', 60, 50, dietroTesta) : '');
+    const davanti = pezzo(vb, 'f-busto', 60, 106, torsoSvg) + testaPezzo + braccioB;
     return pezzo(vb, 'f-tutto', 60, 188,
       '', pezzo(vb, 'f-aura', 60, 100, `<circle cx="60" cy="100" r="46" fill="none" stroke="${glow}" stroke-width="3" opacity="0"/>`) +
       pezzo(vb, 'f-torso f-torso-d', 60, 106, '', dietro) +
       gambe + coda + piedi +
+      pezzo(vb, 'f-torso f-torso-m', 60, 106, '', braccioA) +
       pezzo(vb, 'f-torso', 60, 106, '', davanti));
   }
 
