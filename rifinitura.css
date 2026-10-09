@@ -119,3 +119,13 @@
   100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px) * .45), -135%); }
 }
 @media (max-height: 520px) { .num-fly { --nb: 21px; -webkit-text-stroke-width: 3px; } .num-fly.stato, .num-fly.testo { font-size: 12px; } .num-fly.sanita, .num-fly.assorbi { font-size: 11px; } }
+
+/* ----- Gradi di potenza delle skill ----- */
+/* grado 2: alone del colore dell'affinità attorno a chi attacca */
+.fig.potente .fig-in { filter: drop-shadow(0 0 4px var(--gc, #fff)) drop-shadow(0 0 10px color-mix(in srgb, var(--gc, #fff) 50%, transparent)); }
+/* grado 3 (culmine): alone più forte, scena oscurata e tinta, vignetta colorata */
+.fig.ultima .fig-in { filter: brightness(1.15) drop-shadow(0 0 6px var(--gc, #fff)) drop-shadow(0 0 18px var(--gc, #fff)); }
+#scr-battaglia.culmine #stage-bg, #scr-battaglia.culmine #stage-floor { filter: brightness(.3) saturate(.4); transition: filter .25s; }
+#scr-battaglia.culmine #vignetta { background: radial-gradient(ellipse at 50% 55%, #0000 35%, color-mix(in srgb, var(--cul, #fff) 30%, #000000d8) 100%); transition: background .25s; }
+#scr-battaglia.culmine .pg:not(.in-clash):not(.attivo) { opacity: .25; transition: opacity .25s; }
+.num-fly.critico { font-size: calc(var(--nb) * var(--k, 1) * 1.45); color: #fff; text-shadow: 0 3px 0 #0009, 0 0 22px var(--oro, #ffd84a); }

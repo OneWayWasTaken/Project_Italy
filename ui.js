@@ -99,7 +99,7 @@
   /* Motore effetti su canvas                                              */
   /* ===================================================================== */
   const Fx = UI.Fx = {
-    cv: null, ctx: null, W: 0, H: 0, dpr: 1, forme: [], velo: [], flares: [], parts: [], lines: [], rings: [], flashes: [], proiettili: [], pilastri: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
+    cv: null, ctx: null, W: 0, H: 0, dpr: 1, forme: [], velo: [], flares: [], parts: [], lines: [], rings: [], flashes: [], proiettili: [], pilastri: [], squarci: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
     init() {
       this.cv = $('#fx'); this.ctx = this.cv.getContext('2d');
       const res = () => {
@@ -223,6 +223,8 @@
     proiettile(a, b, colore, dur, arco, spessore) { this.proiettili.push({ a, b, c: colore, t: 0, max: dur || 0.2, arco: arco || 0, w: spessore || 1 }); },
     /** Colonna di luce verticale che cala sul bersaglio. */
     pilastro(x, y, colore) { this.pilastri.push({ x, y, c: colore, t: 0, max: 0.65 }); },
+    /** Squarcio: un taglio dritto che attraversa tutto lo schermo passando per (x, y). */
+    squarcio(x, y, ang, colore) { this.squarci.push({ x, y, ang, c: colore, t: 0, max: 0.55 }); },
     /** Linea "elettrica" persistente tra due punti: restituisce l'oggetto (poi .fine = true per toglierla). */
     linea(a, b, c1, c2) { const l = { a, b, c1, c2, pts: [], t: 0, ag: 0 }; this.lines.push(l); return l; },
     pulisciLinee() { this.lines.forEach(l => { l.fine = true; }); },
@@ -275,6 +277,14 @@
         g.globalAlpha = 0.5; g.strokeStyle = p.c; g.lineWidth = 8 * p.w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
         g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 3 * p.w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
       });
+      this.squarci = (this.squarci || []).filter(q => (q.t += dt) < q.max);
+      this.squarci.forEach(q => {
+        const k = q.t / q.max, L = Math.hypot(this.W, this.H), ex = Math.min(1, k * 5), dx = Math.cos(q.ang), dy = Math.sin(q.ang);
+        const x0 = q.x - dx * L * ex, y0 = q.y - dy * L * ex, x1 = q.x + dx * L * ex, y1 = q.y + dy * L * ex, fade = 1 - Math.max(0, k - 0.3) / 0.7;
+        [[q.c, 34 * (1 - k * 0.6), 0.35], [q.c, 14 * (1 - k * 0.5), 0.8], ['#fff', 5 * (1 - k * 0.7), 1]].forEach(([c, w, a]) => {
+          g.globalAlpha = a * fade; g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        });
+      });
       this.pilastri = this.pilastri.filter(p => (p.t += dt) < p.max);
       this.pilastri.forEach(p => {
         const k = p.t / p.max, w = 34 * (1 - k * 0.6), top = Math.max(0, p.y - 420), gr = g.createLinearGradient(0, top, 0, p.y);
@@ -313,6 +323,15 @@
   /* ===================================================================== */
   /* Elementi riutilizzabili                                               */
   /* ===================================================================== */
+  /** Mosse d'apertura per ogni mossa firma (stessa distanza dal bersaglio, così la figura non deve riposizionarsi). */
+  const COMBO = {
+    fendente: ['sweep'], sweep: ['fendente'], doppio: ['fendente', 'sweep'], affondo: ['lungo'], lungo: ['affondo'],
+    salto: ['fendente', 'sweep', 'doppio'], turbine: ['doppio', 'sweep', 'fendente'], carica: ['fendente', 'sweep', 'doppio'],
+    colpo_scudo: ['fendente', 'affondo'], raffica: ['fendente', 'doppio'], contrattacco: ['sweep', 'fendente'],
+    sparo: ['sparo'], sparo_rapido: ['sparo'], sparo_mira: ['sparo', 'sparo_rapido', 'sparo'],
+    lancio: ['lancio'], lancio_alto: ['lancio'],
+    preghiera: ['benedizione'], benedizione: ['preghiera'], invocazione: ['preghiera', 'benedizione', 'preghiera']
+  };
   /** Busto circolare per HUD e liste. Usa l'arte SVG (o lo sprite) se disponibile, altrimenti l'iniziale. */
   UI.ritratto = function (def, cls) {
     if (E.Arte) return E.Arte.busto(def, cls);
@@ -972,6 +991,14 @@
       const s = E.SKILL[skillId], u = this.V[unitId];
       return (E.ANIM_SKILL && E.ANIM_SKILL[skillId]) || (s && s.anim) || (E.ARTE && E.ARTE[u.def] && E.ARTE[u.def].attacco) || 'fendente';
     },
+    /** Combo: le monete prima dell'ultima usano mosse d'apertura diverse; l'ultima è sempre la mossa firma della skill. */
+    stileColpo(unitId, skillId, idx, n) {
+      const base = this.stile(unitId, skillId), op = COMBO[base];
+      if (!op || idx >= n - 1) return base;
+      return op[idx % op.length];
+    },
+    /** Grado di potenza della skill: 1 base · 2 media (costa Ardore) · 3 culmine. */
+    grado(skillId) { const s = E.SKILL[skillId] || {}; return s.costo >= 5 || s.ultima ? 3 : s.costo >= 2 ? 2 : 1; },
     anima(id, nome) { return E.Arte ? E.Arte.anima(this.els[id].fig, nome, this.vel) : Promise.resolve(); },
 
     /* ----- spostamenti delle figure ----- */
@@ -1000,14 +1027,17 @@
       }
     },
     /** Immagine residua: copia ferma e sbiadita della figura nel punto in cui si trova adesso (scie degli scatti). */
-    fantasma(id) {
+    fantasma(id, durata, alfa) {
       const e = this.els[id]; if (!e || this.skip) return;
       const g = e.pg.cloneNode(true); g.classList.add('fantasma'); g.removeAttribute('data-id'); g.onclick = null;
       g.querySelectorAll('.targa,.pg-dadi,.pg-base,.pg-ombra,.pg-aure').forEach(x => x.remove());
       const m = g.querySelector('.pg-mov'); m.style.transition = 'none'; m.style.transform = getComputedStyle(e.mov).transform;
       g.style.zIndex = (parseInt(e.pg.style.zIndex, 10) || 1000) - 1; g.style.setProperty('--gc', (E.AFFINITA[this.V[id].aff] || {}).colore || '#fff');
       $('#cam').appendChild(g);
-      g.animate([{ opacity: 0.5 }, { opacity: 0 }], { duration: 320 / this.vel, easing: 'ease-out' }).onfinish = () => g.remove();
+      // stessa posa dell'originale: ogni animazione CSS della copia viene fermata allo stesso istante
+      const src = [e.fig, ...e.fig.querySelectorAll('*')], gf = g.querySelector('.fig'), dst = gf ? [gf, ...gf.querySelectorAll('*')] : [];
+      src.forEach((x, i) => { const sa = x.getAnimations(), da = dst[i] ? dst[i].getAnimations() : []; sa.forEach((a, j) => { if (da[j]) { try { da[j].currentTime = a.currentTime; da[j].pause(); } catch (err) { /* animazione non allineata */ } } }); });
+      g.animate([{ opacity: alfa || 0.5 }, { opacity: 0 }], { duration: (durata || 320) / this.vel, easing: 'ease-out' }).onfinish = () => g.remove();
     },
     /** L'attaccante raggiunge il bersaglio lungo il terreno; la distanza dipende dal tipo di animazione. */
     async avanza(att, bers, A) {
@@ -1234,7 +1264,8 @@
     /* ----- Colpo singolo ----- */
     async colpo(e) {
       const att = this.V[e.att], bers = this.V[e.bers];
-      const skillId = this.skillDi[e.att], stile = this.stile(e.att, skillId), A = E.Arte.ANIM[stile] || E.Arte.ANIM.fendente, s = E.SKILL[skillId] || {};
+      const skillId = this.skillDi[e.att], stile = this.stileColpo(e.att, skillId, e.idx, e.n), A = E.Arte.ANIM[stile] || E.Arte.ANIM.fendente, s = E.SKILL[skillId] || {};
+      const grado = this.grado(skillId), finale = e.idx === e.n - 1, molt = [1, 1.35, 1.8][grado - 1];
       if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers, A);
       // colpo libero (senza scontro): la camera si avvicina un poco alla coppia
       if (e.idx === 0 && !this.skip) this.messaAFuoco([e.att, e.bers]);
@@ -1246,7 +1277,13 @@
       if (em && !this.skip) { const c = em.coins[e.idx]; if (c) lanciaMoneta(c, e.testa); Snd.sfx('moneta'); await this.sleep(480); this.potenza(em.pot, e.pot); }
       else await this.miniMoneta(e.att, e.testa);
       const colore = E.AFFINITA[att.aff].colore, figA = this.els[e.att].fig;
-      if (s.costo >= 5 || s.ultima) figA.classList.add('ultima');
+      figA.style.setProperty('--gc', colore);
+      if (grado >= 2) figA.classList.add('potente');
+      if (grado === 3) {
+        figA.classList.add('ultima');
+        // culmine: la scena si oscura e si tinge del colore dell'affinità, la camera stringe sulla coppia
+        if (e.idx === 0 && !this.skip) { const sc = $('#scr-battaglia'); sc.style.setProperty('--cul', colore); sc.classList.add('culmine'); const a1 = this.pos(e.att), b1 = this.pos(e.bers); this.zoom((a1.x + b1.x) / 2, (a1.y + b1.y) / 2 + 10, 1.3); this.zoomLibero = true; }
+      }
       const tImp = A.dur * A.imp, pAnim = this.anima(e.att, stile);
       const a0 = this.pos(e.att), b0 = this.pos(e.bers);
       // proiettili / lanci: partono in anticipo in modo da arrivare nel momento d'impatto
@@ -1267,27 +1304,44 @@
       bers.pv = e.pvDopo; this.render(e.bers);
       { const st = this.stat[e.att], sb = this.stat[e.bers]; if (st) { st.danno += e.danno; st.colpi++; st.max = Math.max(st.max, e.danno); } if (sb) sb.subito += e.danno; }
       const p = this.pos(e.bers), pa = this.pos(e.att), ang = Math.atan2(p.y - pa.y, p.x - pa.x);
-      Fx.sparks(p.x, p.y, clamp(6 + Math.round(e.danno * 0.5), 6, 30), colore, 0.7 + Math.min(1, e.danno / 40));
-      if (forte) Fx.ring(p.x, p.y, colore, 60 + e.danno);
+      Fx.sparks(p.x, p.y, clamp(Math.round((6 + e.danno * 0.5) * molt), 6, 50), colore, (0.7 + Math.min(1, e.danno / 40)) * molt);
+      if (forte || grado >= 2) Fx.ring(p.x, p.y, colore, (60 + e.danno) * molt);
       const fp = this.piedi(e.bers);
-      this.effettoImpatto(A.fx, p, fp, ang, colore, e.danno);
-      Fx.impattoAff(s.aff || att.aff, p.x, p.y, clamp(e.danno / 18, 0.6, 2.2), ang);
+      this.effettoImpatto(A.fx, p, fp, ang, colore, e.danno * molt);
+      Fx.impattoAff(s.aff || att.aff, p.x, p.y, clamp(e.danno / 18 * molt, 0.6, 2.8), ang);
+      if (grado >= 2) { Fx.flare(p.x, p.y, colore, 70 * molt); this.fantasma(e.att, 260 * molt, 0.45); }
+      if (grado >= 2 && finale) this.colpoFinale(grado, e, p, fp, ang, colore);
       if (forte) { Fx.flash(colore, 0.1); Fx.urto(fp.x, fp.y, 70 + e.danno, colore); Fx.polvere(fp.x, fp.y, 4, 0.9); }
       if (e.danno >= 30 || (e.rel === 1 && e.danno >= 20)) Fx.velocita(p.x, p.y, '#fff');
       // contraccolpo: il bersaglio viene spinto indietro e ritorna con un rimbalzo
       { const kb = clamp(6 + e.danno * 0.6, 8, 30) * (Math.cos(ang) >= 0 ? 1 : -1);
         this.els[e.bers].fig.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${kb}px)`, offset: 0.25 }, { transform: `translateX(${-kb * 0.2}px)`, offset: 0.6 }, { transform: 'translateX(0)' }], { duration: 420 / this.vel, easing: 'ease-out' }); }
-      this.numero(e.bers, e.danno, e.rel === 1 ? 'vant' : e.rel === -1 ? 'svant' : '');
+      this.numero(e.bers, e.danno, (e.rel === 1 ? 'vant' : e.rel === -1 ? 'svant' : '') + (grado === 3 && finale ? ' critico' : ''));
       if (e.assorbito) this.numero(e.bers, 'assorbe ' + e.assorbito, 'assorbi', 24);
       this.anima(e.bers, 'hit');
       if (forte) this.shake($('#cam'), 3 + Math.min(8, e.danno / 6), 320);
       Snd.colpoAff(s.aff || att.aff, e.danno); if (forte) Snd.sfx('forte', e.danno);
       this.log(`${att.breve} → ${bers.breve}: ${e.danno} danni${e.rel === 1 ? ' (vantaggio)' : e.rel === -1 ? ' (svantaggio)' : ''}${e.testa ? '' : ' [croce]'}.`);
-      await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150));
+      await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150) * (finale ? molt : 1) + (grado === 3 && finale ? 120 : 0));
       await pAnim;
-      figA.classList.remove('ultima');
+      if (finale) { figA.classList.remove('ultima', 'potente'); $('#scr-battaglia').classList.remove('culmine'); }
       if (this.zoomLibero && e.idx === e.n - 1) { this.zoom(0, 0, 1); this.zoomLibero = false; this.messaAFuoco(null); }
       await this.sleep(120);
+    },
+    /** Colpo conclusivo delle skill di grado 2 e 3: più l'attacco è forte, più l'ultimo colpo è spettacolare. */
+    colpoFinale(grado, e, p, fp, ang, colore) {
+      Fx.velocita(p.x, p.y, grado === 3 ? colore : '#fff');
+      Fx.urto(fp.x, fp.y, grado === 3 ? 220 : 140, colore);
+      this.shake($('#cam'), grado === 3 ? 12 : 6, grado === 3 ? 520 : 340);
+      Snd.sfx('forte', 40);
+      if (grado < 3) return;
+      // culmine: squarcio a tutto schermo, doppio lampo, anelli in sequenza, colonna di luce
+      Fx.squarcio(p.x, p.y, ang + (Math.random() < 0.5 ? 0.35 : -0.35), colore);
+      Fx.flash(colore, 0.2); setTimeout(() => Fx.flash('#fff', 0.22), 70 / this.vel);
+      [0, 1, 2].forEach(i => setTimeout(() => Fx.ring(p.x, p.y, i === 1 ? '#fff' : colore, 120 + i * 70), i * 90 / this.vel));
+      Fx.pilastro(p.x, fp.y, colore); Fx.polvere(fp.x, fp.y, 14, 1.8);
+      const a1 = this.pos(e.att); this.zoom((a1.x + p.x) / 2, p.y, 1.48);
+      setTimeout(() => { if (this.zoomLibero) this.zoom((a1.x + p.x) / 2, p.y, 1.3); }, 260 / this.vel);
     },
     /** Effetto grafico all'impatto, specifico di ogni tipo di attacco (vedi Arte.ANIM[x].fx). */
     effettoImpatto(fx, p, fp, ang, colore, danno) {
