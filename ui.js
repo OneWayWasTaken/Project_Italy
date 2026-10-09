@@ -922,12 +922,12 @@
         bx.append(b1, b2, b3);
       }
       r.appendChild(bx);
-      if (mvp && E.Arte) { const f = E.Arte.figura(mvp.def); $('.ris-mvp', r).appendChild(f); $('.ris-mvp', r).insertAdjacentHTML('beforeend', `<div class="ris-mvp-n">${B.esito === 'vittoria' ? '★ ' + mvp.breve : mvp.breve}</div>`); if (B.esito === 'vittoria') f.classList.add('a-vittoria'); else f.classList.add('ced'); }
+      if (mvp && E.Arte) { const f = E.Arte.figura(mvp.def); $('.ris-mvp', r).appendChild(f); $('.ris-mvp', r).insertAdjacentHTML('beforeend', `<div class="ris-mvp-n">${B.esito === 'vittoria' ? '★ ' + mvp.breve : mvp.breve}</div>`); if (B.esito === 'vittoria') f.classList.add('a-vittoria'); else f.classList.add('sconfitto'); }
       if (!this.ctx.fineCampagna) this.ctx.onFine(B.esito, B);
     },
 
     /* ----- controlli velocità ----- */
-    aggiornaVel() { $$('#comandi .vel button').forEach(b => { b.classList.toggle('attivo', +b.dataset.vel === this.velBase); }); },
+    aggiornaVel() { $$('#scr-battaglia [data-vel]').forEach(b => { b.classList.toggle('attivo', +b.dataset.vel === this.velBase); }); document.documentElement.style.setProperty('--velb', this.velBase || 1); },
     setVel(v) {
       if (v === 0) { this.skip = true; return; }
       this.velBase = v; this.ctx.save.opzioni.vel = v; this.ctx.persist(); this.aggiornaVel();
@@ -1221,15 +1221,19 @@
         e[k].flips.forEach((f, i) => { if (intatte[i]) lanciaMoneta(intatte[i], f); });
         cl[k].lato.classList.remove('vince', 'perde');
       });
-      Snd.sfx('moneta'); await this.sleep(950);
+      Snd.sfx('moneta'); await this.sleep(660);
       ['a', 'b'].forEach(k => {
         this.potenza(cl[k].pot, e[k].pot);
         cl[k].lato.classList.toggle('vince', e.v === k); cl[k].lato.classList.toggle('perde', !!e.v && e.v !== k);
       });
       // Entrambi i combattenti si lanciano l'uno contro l'altro; all'impatto scintille al centro
       const A = this.pos(cl.a.id), Bp = this.pos(cl.b.id), mx = (A.x + Bp.x) / 2, my = (A.y + Bp.y) / 2;
-      const pa = this.anima(cl.a.id, cl.sa), pb = this.anima(cl.b.id, cl.sb);
-      const imp = Math.min(E.Arte.IMPATTO[cl.sa] * E.Arte.DURATA[cl.sa], E.Arte.IMPATTO[cl.sb] * E.Arte.DURATA[cl.sb]);
+      // ogni round una mossa diversa (apertura / mossa firma alternate), così gli scontri lunghi non si ripetono
+      cl.r = (cl.r || 0) + 1;
+      const alt = st => (cl.r % 2 === 0 && COMBO[st]) ? COMBO[st][(cl.r / 2 - 1) % COMBO[st].length] : st;
+      const sa = alt(cl.sa), sb = alt(cl.sb);
+      const pa = this.anima(cl.a.id, sa), pb = this.anima(cl.b.id, sb);
+      const imp = Math.min(E.Arte.IMPATTO[sa] * E.Arte.DURATA[sa], E.Arte.IMPATTO[sb] * E.Arte.DURATA[sb]);
       await this.sleep(imp * 1000);
       Fx.sparks(mx, my, 30, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); Fx.flare(mx, my, '#fff3c4', 110); Fx.urto(mx, Math.max(this.piedi(cl.a.id).y, this.piedi(cl.b.id).y), 110, '#ffd75e'); this.shake($('#cam'), 3, 200); Snd.sfx('clash');
       await this.hitStop(60);
@@ -1245,7 +1249,7 @@
           const pc = L.coins[idx].getBoundingClientRect(); Fx.sparks(pc.left + pc.width / 2, pc.top + pc.height / 2, 18, '#ffd75e', 0.8);
         }
       } else this.log('Pareggio: si rilancia!');
-      await this.sleep(450);
+      await this.sleep(260);
     },
     async chiudiClash(e) {
       const cl = this.cl; if (!cl) return;

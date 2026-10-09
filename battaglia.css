@@ -227,7 +227,7 @@
 .moneta .testa, .moneta .croce { backface-visibility: hidden; display: grid; place-items: center; font-size: 22px; font-weight: bold; border: 3px solid #fff3; }
 .moneta .testa { transform: translateZ(2px); color: #5a3d00; background: radial-gradient(circle at 35% 30%, #fff1b3, #e0b43a 55%, #a47f1c); box-shadow: inset 0 0 8px #fff8, 0 0 10px #e0b43a99; }
 .moneta .croce { transform: rotateX(180deg) translateZ(2px); color: #2c2a33; background: radial-gradient(circle at 35% 30%, #d8d6e0, #8d8a99 55%, #55525f); }
-.moneta.lancio .m3d { animation: lancio .9s cubic-bezier(.3, .6, .4, 1) forwards; }
+.moneta.lancio .m3d { animation: lancio calc(.62s / var(--velb, 1)) cubic-bezier(.3, .6, .4, 1) forwards; }
 .moneta.lancio.esito-croce .m3d { --fin: 1620deg; }
 .moneta.lancio.esito-testa .m3d { --fin: 1440deg; }
 @keyframes lancio { 0% { transform: translateY(0) rotateX(0deg) scale(1); } 45% { transform: translateY(-34px) rotateX(calc(var(--fin) * .55)) scale(1.25); } 100% { transform: translateY(0) rotateX(var(--fin)) scale(1); } }

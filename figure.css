@@ -553,3 +553,13 @@
 .sprite-fig.a-morte .spr:not(.sheet) { animation: morte 1.1s ease-in forwards; }
 @keyframes spr-atk { 0%, 100% { transform: translateX(0) rotate(0); } 35% { transform: translateX(-8%) rotate(-7deg); } 66% { transform: translateX(14%) rotate(8deg) scale(1.05); } }
 @keyframes spr-hit { 0% { filter: brightness(3); } 18% { transform: translateX(-11%) rotate(-5deg); } 100% { filter: none; transform: none; } }
+
+/* Posa della sconfitta (schermata di risultato): testa china, spalle cadenti, braccia lungo i fianchi, colori spenti */
+.fig.sconfitto * { animation: none !important; }
+.fig.sconfitto .fig-in { filter: grayscale(.6) brightness(.7); }
+.fig.sconfitto .f-torso { transform: rotate(5deg); }
+.fig.sconfitto .f-testa { transform: rotate(16deg) translateY(2%); }
+.fig.sconfitto .f-braccio-a { transform: rotate(6deg); } .fig.sconfitto .f-avambraccio-a { transform: rotate(-4deg); }
+.fig.sconfitto .f-braccio-b { transform: rotate(4deg); } .fig.sconfitto .f-avambraccio-b { transform: rotate(-2deg); }
+.fig.sconfitto .f-gamba-a, .fig.sconfitto .f-gamba-b, .fig.sconfitto .f-stinco-a, .fig.sconfitto .f-stinco-b { transform: none; }
+.fig.sconfitto .f-occhi { transform: scaleY(.45); }

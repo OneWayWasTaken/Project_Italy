@@ -146,3 +146,8 @@ body.lite .pg .f-tutto { filter: none; }
 .banner::before, .banner::after { height: 1px; width: min(260px, 40vw); margin: 8px auto; background: linear-gradient(90deg, #0000, rgba(227, 196, 126, .7), #0000); }
 .banner.risonanza { font-weight: 600; }
 @keyframes banner-m { 0% { opacity: 0; letter-spacing: .7em; } 18% { opacity: 1; letter-spacing: .4em; } 78% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ----- Niente scorrimento accidentale: bande e dock nascosti fuori schermo non devono creare spazio scorrevole ----- */
+#app, .screen, #scr-battaglia { overflow: hidden; overflow: clip; }
+#cinema { overflow: hidden; }
+#risultato { overflow-y: auto; justify-content: safe center; }
