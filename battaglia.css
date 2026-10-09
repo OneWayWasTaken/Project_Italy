@@ -191,6 +191,7 @@
 #btn-esegui small { font: 600 11px var(--font-ui); letter-spacing: .3em; text-transform: uppercase; opacity: .8; margin-top: 3px; }
 #btn-esegui:not(:disabled) { animation: invita 1.8s ease-in-out infinite; }
 @keyframes invita { 50% { box-shadow: 0 4px 14px #000a, 0 0 26px #e0b43aaa, inset 0 1px 0 #ffe9a866; } }
+#btn-auto { padding: 3px 6px; font: 700 12px var(--font-ui); }
 #btn-affondo { padding: 6px; font: 700 14px var(--font-ui); border-color: var(--rosso); color: #ffd0d4; background: linear-gradient(#5a1a24, #3a0e16); animation: invita-r 1s ease-in-out infinite; }
 #btn-affondo.attivo { background: linear-gradient(#d2455a, #8a1a2a); color: #fff; }
 @keyframes invita-r { 50% { box-shadow: 0 0 18px #d2455a; } }
@@ -318,7 +319,7 @@
   .skill-btn .d { display: none; } .skill-btn .prev { font-size: 9px; } .skill-btn::before { font-size: 44px; }
   .rel { font-size: 8px; padding: 0 3px; }
   #btn-esegui { font-size: 15px; border-radius: 10px; } #btn-esegui small { font-size: 8px; }
-  #btn-affondo { font-size: 11px; padding: 3px; }
+  #btn-affondo { font-size: 11px; padding: 3px; } #btn-auto { font-size: 9px; padding: 1px 4px; }
   .targa { width: max(70px, 104%); gap: 1px; }
   .targa .t-nome { font-size: 8.5px; } .targa .t-aff { width: 11px; height: 11px; font-size: 7px; }
   .targa .t-pv { height: 5px; } .targa .chip { font-size: 7px; line-height: 10px; padding: 0 2px; } .targa .t-int { font-size: 7.5px; padding: 0 3px; }

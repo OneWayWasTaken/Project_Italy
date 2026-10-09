@@ -789,6 +789,11 @@
       if (!a) return;
       const idx = this.B.byId[this.sel].skills.indexOf(a.skill);
       Combat().pianifica(this.B, this.sel, idx, id); Snd.sfx('ui');
+      // passa da sola alla Voce successiva che deve ancora agire (fuori dal tutorial)
+      if (!(E.Tutorial && E.Tutorial.attivo)) {
+        const ord = Object.keys(this.V).filter(k => this.V[k].lato === 'a' && this.V[k].vivo && this.B.azioni.some(x => x.u === k));
+        const i = ord.indexOf(this.sel); if (i >= 0 && i < ord.length - 1) this.sel = ord[i + 1];
+      }
       this.aggiornaPiano();
       if (E.Tutorial) E.Tutorial.notifica('bersaglio');
     },
@@ -799,6 +804,27 @@
       if (E.SKILL[this.B.byId[this.sel].skills[idx]].costo > dis) return;
       Combat().pianifica(this.B, this.sel, idx, a.bers); Snd.sfx('ui');
       this.aggiornaPiano();
+    },
+    /** Pianificazione automatica: per ogni Voce sceglie skill e bersaglio con il miglior valore atteso
+     *  (probabilità di vincere lo scontro × potenza media, con il vantaggio di affinità), rispettando l'Ardore. */
+    autoPiano() {
+      if (this.fase !== 'pianifica' || this.bloccato()) return;
+      const B = this.B; let budget = B.ardore;
+      const nemici = Object.values(this.V).filter(u => u.lato === 'n' && u.vivo);
+      B.azioni.filter(a => this.V[a.u] && this.V[a.u].lato === 'a' && !this.V[a.u].panico).forEach(a => {
+        const u = B.byId[a.u]; let best = null;
+        u.skills.forEach((sid, idx) => {
+          const s = E.SKILL[sid]; if (s.costo > budget) return;
+          nemici.forEach(t => {
+            const p = Combat().anteprima(B, a.u, sid, t.id); if (!p) return;
+            const vinci = p.scontro ? p.vittoria : 1, media = (p.min + p.max) / 2 * p.monete;
+            const v = vinci * media * (p.rel > 0 ? 1.3 : p.rel < 0 ? 0.8 : 1) * (t.ced > 0 ? 1.3 : 1) + (t.boss ? 0 : (1 - t.pv / t.pvMax) * 4) - s.costo * 0.8;
+            if (!best || v > best.v) best = { v, idx, t: t.id, costo: s.costo };
+          });
+        });
+        if (best) { Combat().pianifica(B, a.u, best.idx, best.t); budget -= best.costo; }
+      });
+      Snd.sfx('ui'); this.log('Piano automatico preparato: puoi ancora cambiarlo.', 'imp'); this.aggiornaPiano();
     },
     /** Attiva/disattiva l'Affondo: la Voce selezionata colpisce gratis un nemico in Cedimento. */
     toggleAffondo() {
@@ -1318,6 +1344,7 @@
     $('#btn-esegui').onclick = () => Bat.conferma();
     $('#btn-menu').onclick = () => Bat.menuPausa();
     $('#btn-affondo').onclick = () => Bat.toggleAffondo();
+    $('#btn-auto').onclick = () => Bat.autoPiano();
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
     $('#btn-audio').onclick = () => {
       Snd.init(); Snd.on = !Snd.on; ctx.save.opzioni.audio = Snd.on; ctx.save.opzioni.musica = Snd.on; ctx.persist();
