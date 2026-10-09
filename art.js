@@ -452,6 +452,12 @@
     const iride = spec.iride || (spec.eco ? glow : mix(hc, '#6a4a2a', 0.4));
     const ciglia = (spec.corpo === 'f');
 
+    // espressione (dal carattere: spec.espr oppure dedotta dalla personalità di riposo)
+    const ESPR_IDLE = { fiero: 'fiero', regale: 'severo', nervoso: 'grinta', sereno: 'gentile', curioso: 'sorriso', sfrontato: 'sorriso', composto: 'serio', dondola: 'sorriso', spettro: 'severo', pesante: 'severo' };
+    const espr = spec.espr || ESPR_IDLE[spec.idle] || 'serio';
+    const BOCCHE = { sorriso: 'M68.2 43.8 Q70.8 46.6 73.2 43.8', gentile: 'M68.6 44.4 Q70.8 45.8 72.8 44.2', serio: 'M68.8 44.8 Q70.8 45.2 72.8 44.6', severo: 'M68.6 45.6 Q70.8 44.2 72.9 45.4', grinta: 'M68.4 45.2 Q71 45.6 73.1 43.6', fiero: 'M68.6 44.8 Q70.8 45.4 73 44.2' };
+    const bocca = `<path d="${BOCCHE[espr] || BOCCHE.serio}" stroke="${spec.eco ? '#1b1422' : '#7a2a32'}" stroke-width="1.1" fill="none" stroke-linecap="round"/>${espr === 'sorriso' && !spec.eco ? '<path d="M67.6 43.4 L68.4 44" stroke="#7a2a32" stroke-width=".8" stroke-linecap="round"/>' : ''}`;
+    const rughe = spec.eta === 'anziano' ? `<path d="M60.6 39.6 Q63 40.8 65.6 39.8 M70.6 39.8 Q72.4 40.6 74.2 39.8 M66.4 41.6 Q66 44 67.2 46 M58 22.6 Q62 21.6 66 22.4" stroke="${pelleOmbra}" stroke-width=".8" fill="none" opacity=".8"/>` : '';
     // --- testa: cranio a uovo con mento in avanti, ombra cel netta sulla nuca, orecchio, naso, guance
     const VISO = 'M44.5 30 Q44 13 60.5 13 Q76.5 13 77 28.5 Q77.6 38.5 74 44.5 Q69.5 50.5 62.5 50.5 Q53.5 50 48.5 44 Q44.5 38.5 44.5 30 Z';
     const testa = `<path d="${VISO}" fill="${pelle}" ${OUT}/>
@@ -460,8 +466,7 @@
       <ellipse cx="50.2" cy="36.2" rx="2.7" ry="3.8" fill="${pelle}" ${OUT}/><path d="M50.6 34.4 Q49.2 36.2 50.6 38" stroke="${pelleOmbra}" stroke-width="1" fill="none"/>
       <path d="M76.8 34.6 Q79.4 38.8 76.2 40.6" fill="${pelle}" ${OUT}/>
       <ellipse cx="65.6" cy="41.4" rx="2.9" ry="1.3" fill="#ec6a7c" opacity="${spec.eco ? 0 : 0.3}"/><ellipse cx="75.4" cy="41.4" rx="1.3" ry="1.1" fill="#ec6a7c" opacity="${spec.eco ? 0 : 0.3}"/>
-      ${barba(cap.barba, hc)}${coperto ? '' : hair.davanti}${th}`;
-    const bocca = `<path d="M68.6 44.6 Q70.6 45.6 72.8 44.2" stroke="${spec.eco ? '#1b1422' : '#7a2a32'}" stroke-width="1.05" fill="none" stroke-linecap="round"/>`;
+      ${rughe}${barba(cap.barba, hc)}${coperto ? '' : hair.davanti}${th}`;
     const urlo = `<path d="M68.2 43.8 Q70.6 43 73 43.6 Q72.4 47.8 70.4 47.8 Q68.6 47.4 68.2 43.8 Z" fill="#4a1420" stroke="#1b1422" stroke-width=".8"/><path d="M69 46.4 Q70.6 45.6 72 46.6" fill="#d05a6a"/><path d="M68.6 44 L72.6 43.8" stroke="#fff" stroke-width=".9"/>`;
     const occhi = spec.eco
       ? `<ellipse cx="63.6" cy="35.8" rx="5.6" ry="5.2" fill="${glow}" opacity=".22"/><ellipse cx="63.6" cy="35.8" rx="3" ry="3.6" fill="${glow}"/><ellipse cx="72.6" cy="35.8" rx="2" ry="3.4" fill="${glow}"/><ellipse cx="63.9" cy="35.6" rx="1.1" ry="1.6" fill="#fff"/>
@@ -472,8 +477,12 @@
          <ellipse cx="64.2" cy="36.3" rx="1.15" ry="1.8" fill="#120a16"/><ellipse cx="73.1" cy="36.3" rx=".85" ry="1.7" fill="#120a16"/>
          <circle cx="65" cy="34.6" r="1" fill="#fff"/><circle cx="73.6" cy="34.6" r=".75" fill="#fff"/><circle cx="62.9" cy="38" r=".5" fill="#fff" opacity=".8"/>
          <path d="M59.4 33 Q62.9 30.2 66.9 32.4" stroke="#1b1422" stroke-width="${ciglia ? 1.9 : 1.6}" fill="none" stroke-linecap="round"/><path d="M70 32.6 Q72.5 30.8 75 32.6" stroke="#1b1422" stroke-width="${ciglia ? 1.6 : 1.3}" fill="none" stroke-linecap="round"/>
-         ${ciglia ? '<path d="M59.6 33 L57.8 31.8 M60.4 32.2 L59 30.6 M70.2 32.6 L69 31.4" stroke="#1b1422" stroke-width="1" stroke-linecap="round"/>' : ''}`;
-    const sopracciglia = spec.eco ? '' : `<path d="M59.2 29.4 Q63 27.2 66.8 28.6" stroke="${scuro(hc, 0.15)}" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M70 28.8 Q72.8 27.6 75.2 29" stroke="${scuro(hc, 0.15)}" stroke-width="1.35" fill="none" stroke-linecap="round"/>`;
+         ${ciglia ? '<path d="M59.6 33 L57.8 31.8 M60.4 32.2 L59 30.6 M70.2 32.6 L69 31.4" stroke="#1b1422" stroke-width="1" stroke-linecap="round"/>' : ''}
+         ${['fiero', 'grinta', 'severo'].includes(espr) ? `<path d="M59.4 33.2 Q63 31 66.9 32.6 L66.9 31 L59.4 31 Z" fill="${pelle}"/><path d="M59.4 33.4 Q62.9 31.2 66.9 32.8" stroke="#1b1422" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M70 32.8 Q72.5 31.4 75 32.8 L75 31 L70 31 Z" fill="${pelle}"/><path d="M70 33 Q72.5 31.6 75 33" stroke="#1b1422" stroke-width="1.4" fill="none" stroke-linecap="round"/>` : ''}`;
+    const SOPR = { fiero: ['M59.2 28.6 Q63 27.4 66.8 29.6', 'M70 29.6 Q72.8 27.8 75.2 28.6'], grinta: ['M59.2 28.4 Q63 27.6 66.8 30.2', 'M70 30.2 Q72.8 27.6 75.2 28'], severo: ['M59.2 28.8 Q63 28 66.8 30', 'M70 30 Q72.8 28.4 75.2 28.8'],
+      gentile: ['M59.2 29.6 Q63 27 66.8 28.2', 'M70 28.4 Q72.8 27.2 75.2 29'], sorriso: ['M59.2 29.2 Q63 26.8 66.8 28.4', 'M70 28.6 Q72.8 27.2 75.2 28.8'], serio: ['M59.2 29.4 Q63 27.6 66.8 28.8', 'M70 28.9 Q72.8 27.8 75.2 29'] };
+    const sp = SOPR[espr] || SOPR.serio;
+    const sopracciglia = spec.eco ? '' : `<path d="${sp[0]}" stroke="${scuro(hc, 0.15)}" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="${sp[1]}" stroke="${scuro(hc, 0.15)}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
 
     const gambe = A.nascondiGambe || spec.eco ? '' :
       pezzo(vb, 'f-gamba f-gamba-b', 60 - d.hw * 0.5, Y.anca, coscia(60 - d.hw * 0.5, 55) + `<path d="${seg(60 - d.hw * 0.5, Y.anca, 55, Y.ginocchio, d.gl, d.gl * 0.8)}" fill="#140a1e" opacity=".18"/>`,

@@ -127,7 +127,7 @@
   E.NEMICI.radetzky = { id: 'radetzky', nome: 'Josef Radetzky — Eco delle Cinque Giornate', breve: 'Radetzky', boss: true, aff: 'ordine', pv: 960, vel: [3, 6], azioni: 2, skills: ['ra_linea', 'ra_cavalleria', 'ra_cannonata'],
     ia: ['ra_linea', 'ra_cavalleria', 'ra_cannonata'], soglie: [0.66, 0.33], colore: AFF('ordine'), sigla: 'R', statiIniziali: { formazione: 1 },
     fasi: [{ soglia: 0.5, azioni: 3, ia: ['ra_cannonata', 'ra_cavalleria', 'ra_linea'], testo: 'Radetzky ordina la carica generale!' }] };
-  E.ARTE.radetzky = { eco: true, glow: '#9fb3c8', idle: 'regale', corpo: 'm', scala: 1.2, pelle: '#9a8a8a', capelli: { stile: 'calvo', colore: '#9a9aa4', barba: 'baffi' }, abito: { tipo: 'uniforme', c1: '#e0e0ea', c2: '#2a3a6a' }, mantello: '#c8c8d4', testa: { tipo: 'bicorno', c1: '#1a1a26', c2: '#d9b44a' }, arma: 'sciabola', attacco: 'sweep' };
+  E.ARTE.radetzky = { eco: true, eta: 'anziano', glow: '#9fb3c8', idle: 'regale', corpo: 'm', scala: 1.2, pelle: '#9a8a8a', capelli: { stile: 'calvo', colore: '#9a9aa4', barba: 'baffi' }, abito: { tipo: 'uniforme', c1: '#e0e0ea', c2: '#2a3a6a' }, mantello: '#c8c8d4', testa: { tipo: 'bicorno', c1: '#1a1a26', c2: '#d9b44a' }, arma: 'sciabola', attacco: 'sweep' };
 
   // VI — L'Eco dell'Isonzo (entità, non una persona)
   sk('is_offensiva', "L'Offensiva", 'sangue', 3, 5, 3, [{ on: 'hit', stato: 'sanguinamento', n: 2, to: 'target' }], 'sweep');
