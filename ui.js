@@ -352,12 +352,25 @@
     void m.offsetWidth;   // riavvia l'animazione
     m.classList.add('lancio', testa ? 'esito-testa' : 'esito-croce');
   }
-  UI.modale = function (nodo) {
+  /**
+   * Finestra modale. opz.obbligatoria: niente «Chiudi» e il tocco fuori non la chiude (si deve scegliere un'opzione).
+   * opz.onChiudi: chiamata quando la si chiude con «Chiudi» o toccando fuori (così chi aspetta la chiusura non resta bloccato).
+   */
+  /** Rettangolo a schermo di un elemento ignorando le animazioni di scala in corso (dimensioni di layout reali). */
+  UI.rettangoloVero = function (e) {
+    const par = e.offsetParent ? e.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
+    const left = par.left + e.offsetLeft, top = par.top + e.offsetTop;
+    return { left, top, right: left + e.offsetWidth, bottom: top + e.offsetHeight };
+  };
+  UI.modale = function (nodo, opz) {
+    opz = opz || {};
     const m = $('#modale'); m.innerHTML = ''; const p = el('div', 'pannello-modale');
     p.appendChild(nodo);
-    const b = el('button', 'btn', 'Chiudi'); b.style.marginTop = '12px'; b.onclick = () => m.classList.remove('on');
+    const chiudi = () => { if (!m.classList.contains('on')) return; m.classList.remove('on'); if (opz.onChiudi) opz.onChiudi(); };
+    const b = el('button', 'btn', 'Chiudi'); b.style.marginTop = '12px'; b.onclick = chiudi;
+    if (opz.obbligatoria) b.style.display = 'none';
     p.appendChild(b); m.appendChild(p); m.classList.add('on');
-    m.onclick = e => { if (e.target === m) m.classList.remove('on'); };
+    m.onclick = e => { if (e.target === m && !opz.obbligatoria) chiudi(); };
   };
   UI.mostra = function (nome) {
     $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + nome));
@@ -698,7 +711,7 @@
       mk('Registro dei combattimenti', () => { const w = el('div', 'log-modale'); w.innerHTML = '<h3>Registro</h3>' + $('#log').innerHTML; UI.modale(w); });
       mk('Opzioni', () => UI.opzioni(this.ctx.save, this.ctx.persist, v => { this.velBase = v; this.aggiornaVel(); }));
       mk('Abbandona battaglia', () => { if (confirm('Abbandonare la battaglia? I progressi di questo scontro andranno persi.')) { $('#modale').classList.remove('on'); this.abbandona(); } }, 'pericolo');
-      UI.modale(d); const cb = $('#modale .pannello-modale > .btn:last-child'); if (cb) cb.style.display = 'none';
+      UI.modale(d, { obbligatoria: false }); const cb = $('#modale .pannello-modale > .btn:last-child'); if (cb) cb.style.display = 'none';   // fuori = Riprendi
     },
     bloccato() { return !!(E.Tutorial && E.Tutorial.bloccaInput()); },
     clickCarta(id) {
@@ -830,6 +843,8 @@
       if (sx) d.style.right = clamp(st.width - (p.x - st.left - p.w * 0.38), 10, st.width - 200) + 'px'; else d.style.left = clamp(p.x - st.left + p.w * 0.38, 10, st.width - 200) + 'px';
       d.style.top = y + 'px';
       $('#clash').className = 'on';
+      // un'etichetta volante che finirebbe sotto lo stemma sfuma subito (lo stemma ha la precedenza)
+      { const r = UI.rettangoloVero(d); $$('.num-fly').forEach(n => { const q = n.getBoundingClientRect(); if (q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top) n.classList.add('sfuma'); }); }
       return { el: d, coins, pot: d.querySelector('.emb-pot') };
     },
     potenza(potEl, v) { potEl.textContent = v; potEl.classList.remove('pop'); void potEl.offsetWidth; potEl.classList.add('pop'); },
@@ -957,13 +972,49 @@
       await this.rientraTutti();
       this.skip = false;
     },
+    /**
+     * Testo volante su un combattente. Prima di comparire cerca un posto libero: controlla tutte le scritte
+     * già a schermo (di qualunque personaggio), gli stemmi dello scontro e il riquadro delle battute,
+     * e sale riga per riga finché non trova spazio. Così non si sovrappone mai niente.
+     *  - numeri (danni, cure): sul busto;  - etichette (stati, Sanità, CEDIMENTO…): sopra la testa.
+     */
     numero(id, testo, cls, dy) {
       if (!this.els[id]) return;
-      const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), String(testo));
-      n.style.left = clamp(p.x + rnd(-18, 18), cls === 'testo' ? 90 : 20, root.innerWidth - (cls === 'testo' ? 90 : 20)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px'; n.style.setProperty('--dx', rnd(-46, 46) + 'px');
-      if (typeof testo === 'number') n.style.setProperty('--k', clamp(0.85 + testo / 45, 0.85, 1.9).toFixed(2));
-      $('#app').appendChild(n); setTimeout(() => n.remove(), 1200);
+      cls = cls || '';
+      const etichetta = /\b(stato|sanita|testo|assorbi)\b/.test(cls);
+      const p = this.pos(id), tel = root.innerHeight < 520, ora = performance.now();
+      const n = el('div', 'num-fly ' + cls, String(testo));
+      n.style.visibility = 'hidden'; n.style.animation = 'none'; n.style.left = '0px'; n.style.top = '0px';
+      $('#app').appendChild(n);
+      const w = n.offsetWidth, h = n.offsetHeight, passo = h + (tel ? 3 : 5);
+      n.style.visibility = ''; n.style.animation = '';
+      // ostacoli: scritte ancora visibili + stemmi + battuta
+      this.occupati = (this.occupati || []).filter(o => o.fine > ora);
+      const ostacoli = this.occupati.slice();
+      $$('#clash .emb:not(.via), .battuta.on').forEach(e => { const r = UI.rettangoloVero(e); ostacoli.push({ l: r.left, t: r.top, r: r.right, b: r.bottom }); });
+      const cx = clamp(p.x, w / 2 + 6, root.innerWidth - w / 2 - 6);
+      const y0 = etichetta ? p.y - p.h * 0.45 - (tel ? 18 : 26) : p.y - p.h * 0.18;
+      const libero = (x, y) => !ostacoli.some(o => x - w / 2 < o.r + 2 && x + w / 2 > o.l - 2 && y - h / 2 < o.b + 2 && y + h / 2 > o.t - 2);
+      let x = cx, y = y0, trovato = false;
+      const xs = etichetta ? [cx] : [cx, cx - w * 0.6, cx + w * 0.6];
+      for (let k = 0; k < 9 && !trovato; k++) {
+        const yy = Math.max(h / 2 + (tel ? 38 : 62), y0 - k * passo);
+        for (const xx of xs) if (libero(xx, yy)) { x = xx; y = yy; trovato = true; break; }
+      }
+      if (!trovato) { // nessun posto sopra: si prova sotto la testa, lungo il fianco
+        for (let k = 1; k < 8 && !trovato; k++) { const yy = y0 + k * passo; if (libero(cx, yy)) { x = cx; y = yy; trovato = true; } }
+      }
+      this.occupati.push({ l: x - w / 2, t: y - h / 2, r: x + w / 2, b: y + h / 2, fine: ora + (etichetta ? 1100 : 650) / Math.max(1, this.velBase || 1) });
+      n.style.left = x + 'px'; n.style.top = y + 'px';
+      n.style.setProperty('--dx', (etichetta ? 0 : rnd(-24, 24)) + 'px');
+      setTimeout(() => n.remove(), 1200);
       return n;
+    },
+    /** Variazioni di Sanità ravvicinate sullo stesso personaggio: si sommano e si mostra solo il totale. */
+    sanitaVolante(id, delta) {
+      const acc = this.sanAcc || (this.sanAcc = {});
+      if (!acc[id]) { acc[id] = { d: 0 }; setTimeout(() => { const net = acc[id].d; delete acc[id]; if (Math.abs(net) >= 3) this.numero(id, (net > 0 ? '+' : '') + net + ' ◇', 'sanita' + (net < 0 ? ' neg' : '')); }, 160 / Math.max(1, this.velBase || 1)); }
+      acc[id].d += delta;
     },
     shake(elem, amp, dur) {
       const k = []; for (let i = 0; i < 8; i++) k.push({ transform: `translate(${rnd(-amp, amp)}px,${rnd(-amp, amp)}px)` }); k.push({ transform: 'translate(0,0)' });
@@ -1152,7 +1203,7 @@
         }
         case 'sanita': {
           this.V[e.id].sanita = e.valore; this.render(e.id);
-          if (Math.abs(e.delta) >= 3) this.numero(e.id, (e.delta > 0 ? '+' : '') + e.delta + ' ◇', 'sanita' + (e.delta < 0 ? ' neg' : ''), 40);
+          if (!this.skip) this.sanitaVolante(e.id, e.delta);
           break;
         }
         case 'ardore': this.ardoreV = e.valore; this.mostraArdore(); break;
@@ -1188,7 +1239,8 @@
           this.V[e.id].panico = true; this.render(e.id); this.log(e.msg, 'imp'); this.numero(e.id, 'PANICO!', 'testo', -30); await this.sleep(300); break;
         }
         case 'fase': { const bo = Object.values(this.V).find(x => x.boss && x.vivo); if (bo) this.battuta(bo.id, 'testo', e.testo); }
-          this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#cam'), 10, 500); await this.sleep(1000); break;
+          // il testo completo della fase va nel riquadro delle battute; al centro solo una scritta breve
+          this.banner('NUOVA FASE'); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#cam'), 10, 500); await this.sleep(1000); break;
         case 'evoca': this.aggiungiCarta(e.unit); this.layout(); this.log(e.msg, 'imp'); Snd.sfx('forte'); await this.sleep(700); break;
         case 'fine': break;
       }

@@ -151,3 +151,18 @@ body.lite .pg .f-tutto { filter: none; }
 #app, .screen, #scr-battaglia { overflow: hidden; overflow: clip; }
 #cinema { overflow: hidden; }
 #risultato { overflow-y: auto; justify-content: safe center; }
+
+/* ----- Etichette volanti (stati, Sanità, CEDIMENTO): restano in colonna, salgono appena e svaniscono ----- */
+.num-fly.stato, .num-fly.sanita, .num-fly.testo, .num-fly.assorbi { animation: et-pop 1.15s ease-out forwards; white-space: nowrap; line-height: 1;
+  padding: 2px 8px; border-radius: 3px; background: rgba(10, 8, 12, .62); -webkit-text-stroke: 0; text-shadow: none; }
+@keyframes et-pop { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.8); } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; transform: translate(-50%, -62%); } 100% { opacity: 0; transform: translate(-50%, -72%); } }
+
+/* ----- Scritta centrale: in alto, su una fascia scura, sopra le teste ----- */
+.banner { top: calc(var(--top, 58px) + 60px); padding: 8px 0; background: linear-gradient(90deg, transparent, rgba(8, 6, 10, .78) 25%, rgba(8, 6, 10, .78) 75%, transparent); z-index: 72; }
+.banner::before, .banner::after { margin: 4px auto; }
+@media (max-height: 520px) { .banner { top: 42px; padding: 3px 0; font-size: 14px; } .num-fly.stato, .num-fly.sanita, .num-fly.testo, .num-fly.assorbi { padding: 1px 5px; } }
+/* la fascia occupa solo il centro, dove tra le due squadre non c'è nessuno */
+.banner { left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: 38vw; padding: 8px 46px; top: 40%; white-space: nowrap;
+  background: radial-gradient(ellipse at 50% 50%, rgba(8, 6, 10, .82) 30%, rgba(8, 6, 10, 0) 72%); }
+@media (max-height: 520px) { .banner { top: 40%; padding: 3px 26px; max-width: 34vw; } }
+.num-fly.sfuma { opacity: 0 !important; transition: opacity .12s; }

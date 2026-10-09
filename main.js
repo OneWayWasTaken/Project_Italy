@@ -108,8 +108,7 @@
       b1.onclick = () => { document.getElementById('modale').classList.remove('on'); ctx.avviaTutorial(); };
       b2.onclick = () => { save.tutorial = 'saltato'; persist(); document.getElementById('modale').classList.remove('on'); };
       d.querySelector('.primo-btn').append(b1, b2);
-      E.UI.modale(d);
-      document.querySelector('#modale .pannello-modale > .btn:last-child').style.display = 'none';   // niente "Chiudi": si sceglie uno dei due
+      E.UI.modale(d, { obbligatoria: true });   // niente "Chiudi": si sceglie uno dei due
     }
     document.querySelectorAll('[data-azione]').forEach(b => {
       b.addEventListener('click', () => {

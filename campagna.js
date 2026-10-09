@@ -186,7 +186,7 @@
     const b1 = el('button', 'btn grande', 'Riposare: +35% PV, +10 Sanità'); b1.onclick = () => fai(0.35, 10);
     const b2 = el('button', 'btn', 'Meditare: +15% PV, +25 Sanità'); b2.onclick = () => fai(0.15, 25);
     b1.style.margin = b2.style.margin = '4px'; d.append(b1, b2);
-    E.UI.modale(d); const cb = $('#modale .pannello-modale > .btn:last-child'); if (cb) cb.style.display = 'none';
+    E.UI.modale(d, { obbligatoria: true });
   };
   K.negozio = function () {
     const run = S().data.run, si = run.strato;
@@ -201,7 +201,7 @@
         riga.appendChild(b); d.appendChild(riga);
       });
       const es = el('button', 'btn grande', 'Esci dal negozio'); es.style.marginTop = '8px'; es.onclick = () => { $('#modale').classList.remove('on'); K.avanza(); }; d.appendChild(es);
-      E.UI.modale(d); const cb = $('#modale .pannello-modale > .btn:last-child'); if (cb) cb.style.display = 'none';
+      E.UI.modale(d, { obbligatoria: true });
     };
     disegna();
   };
@@ -264,7 +264,7 @@
     m.innerHTML = `<h3>★ Capitolo ${c.num} completato</h3><p>${primo ? `Ricompense: <b>◎ ${r.denari}</b> · <b>❂ ${r.sigilli}</b>` : `Ripetizione: <b>◎ ${Math.round(r.denari / 2)}</b> · <b>❂ 3</b>`}</p>` +
       (nuove.length ? '<p>' + nuove.map(x => (x.nuova ? 'Nuova Voce: ' : 'Duplicato (Eco ' + x.lv + '): ') + '<b>' + E.VOCI[x.id].breve + '</b>').join('<br>') + '</p>' : '') +
       (primo && n < 7 ? `<p>Si apre il capitolo ${E.CAPITOLI[n].num}.</p>` : '');
-    await new Promise(res => { E.UI.modale(m); const cb = $('#modale .pannello-modale > .btn:last-child'); if (cb) cb.onclick = () => { $('#modale').classList.remove('on'); res(); }; });
+    await new Promise(res => E.UI.modale(m, { onChiudi: res }));   // in qualunque modo si chiuda, si prosegue
     if (n === 7) { const f = d.flag.finale || 'addolcire'; await K.scena('fine_' + f); }
     K.hub();
   };
