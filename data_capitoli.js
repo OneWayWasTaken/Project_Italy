@@ -25,7 +25,7 @@
   inc('cap3_c1', 'Mura del Comune', ['milizia_torre', 'falconiere_tetro']);
   inc('cap3_c2', 'Strada dei Mercenari', ['mercenario_ventura', 'milizia_torre', 'falconiere_tetro']);
   inc('cap3_c3', 'Piazza della Torre', ['mercenario_ventura', 'mercenario_ventura', 'milizia_torre'], { scalaPv: 1.1 });
-  inc('cap3_boss', 'Ezzelino, Eco della Torre', ['ezzelino'], { scalaDan: 0.6 });
+  inc('cap3_boss', 'Ezzelino, Eco della Torre', ['ezzelino'], { scalaDan: 0.52 });
   // IV
   inc('cap4_c1', 'Vicoli di Firenze', ['bargello_cieco', 'fantasma_artista']);
   inc('cap4_c2', 'Bottega Perduta', ['fantasma_artista', 'condottiero_ombra', 'bargello_cieco']);
@@ -40,7 +40,7 @@
   inc('cap6_c1', 'Trincea del Carso', ['eco_trincea', 'fante_fango']);
   inc('cap6_c2', 'Terra di Nessuno', ['cecchino_senza_nome', 'eco_trincea', 'fante_fango']);
   inc('cap6_c3', 'Altopiano Spezzato', ['eco_trincea', 'cecchino_senza_nome', 'eco_trincea'], { scalaPv: 1.1 });
-  inc('cap6_boss', "L'Eco dell'Isonzo", ['isonzo'], { scalaDan: 0.55 });
+  inc('cap6_boss', "L'Eco dell'Isonzo", ['isonzo'], { scalaDan: 0.48 });
   // VII (Echi astratti: paura, obbedienza, indifferenza)
   inc('cap7_c1', 'Strade Deserte', ['eco_paura', 'eco_obbedienza']);
   inc('cap7_c2', 'Finestre Chiuse', ['eco_indifferenza', 'eco_paura', 'eco_obbedienza']);
@@ -88,8 +88,8 @@
   /** Calibrazione della difficoltà (PV finali dei nemici): cresce lentamente, i giocatori crescono con livelli Eco e nuove Voci. */
   const PV = { gladiatore_fumante: 175, pretoriano_ombra: 190, eco_rogo: 150, milizia_torre: 190, mercenario_ventura: 180, falconiere_tetro: 160, guardia_ezzelino: 120,
     bargello_cieco: 205, condottiero_ombra: 195, fantasma_artista: 180, granatiere_bianco: 215, spia_restaurazione: 195, patriota_frainteso: 210,
-    eco_trincea: 235, fante_fango: 230, cecchino_senza_nome: 205, eco_obbedienza: 250, eco_paura: 240, eco_indifferenza: 265,
-    nerone: 500, ezzelino: 560, savonarola: 560, radetzky: 500, isonzo: 640, silenzio: 900 };
+    eco_trincea: 235, fante_fango: 230, cecchino_senza_nome: 205, eco_obbedienza: 225, eco_paura: 215, eco_indifferenza: 235,
+    nerone: 500, ezzelino: 500, savonarola: 560, radetzky: 500, isonzo: 580, silenzio: 900 };
   Object.keys(PV).forEach(k => { E.NEMICI[k].pv = PV[k]; });
   /** Voci possedute all'inizio di una nuova partita. */
   E.ROSTER_INIZIALE = ['scipione', 'spartaco', 'perpetua', 'leonardo'];

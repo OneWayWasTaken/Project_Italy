@@ -107,7 +107,7 @@
   E.NEMICI.ezzelino = { id: 'ezzelino', nome: 'Ezzelino da Romano — Eco della Torre', breve: 'Ezzelino', boss: true, aff: 'sangue', pv: 760, vel: [3, 6], azioni: 2, skills: ['ez_catena', 'ez_esecuzione', 'ez_terrore'],
     ia: ['ez_catena', 'ez_esecuzione', 'ez_catena'], soglie: [0.66, 0.33], colore: AFF('sangue'), sigla: 'E',
     regole: [{ da: 2, a: 'alleati', sanita: -2, testo: 'Il terrore dei sudditi pesa sui cuori.' }],
-    fasi: [{ soglia: 0.5, azioni: 3, ia: ['ez_terrore', 'ez_esecuzione', 'ez_catena'], evoca: ['guardia_ezzelino', 'guardia_ezzelino'], testo: 'Ezzelino richiama le sue guardie!' }] };
+    fasi: [{ soglia: 0.5, azioni: 3, ia: ['ez_terrore', 'ez_esecuzione', 'ez_catena'], evoca: ['guardia_ezzelino'], testo: 'Ezzelino richiama la sua guardia!' }] };
   E.ARTE.ezzelino = { eco: true, glow: '#c0303f', idle: 'regale', corpo: 'g', scala: 1.25, pelle: '#8a6a5a', capelli: { stile: 'corto', colore: '#15101c', barba: 'barba' }, abito: { tipo: 'armatura', c1: '#3a3a42', c2: '#a02828' }, mantello: '#2a0f12', testa: { tipo: 'elmo_medievale', c1: '#5a5a66' }, arma: 'mazza', attacco: 'fendente' };
 
   // IV — Girolamo Savonarola (Fede)

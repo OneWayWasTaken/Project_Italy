@@ -48,10 +48,38 @@
       s.buffer = buf; f.type = 'bandpass'; f.frequency.value = freq || 1200; g.gain.value = vol || 0.2;
       s.connect(f); f.connect(g); g.connect(c.destination); s.start();
     },
+    /** Parziali inarmoniche (metallo, campane). */
+    metallo(f, d, vol, rapporti) {
+      if (!this.on || !this.ctx) return;
+      const c = this.ctx, t = c.currentTime, g = c.createGain(); g.connect(c.destination);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      (rapporti || [1, 2.41, 3.77, 5.2]).forEach((r, i) => { const o = c.createOscillator(), gg = c.createGain(); o.type = 'sine'; o.frequency.value = f * r; gg.gain.value = 1 / (i + 1.4); o.connect(gg); gg.connect(g); o.start(t); o.stop(t + d + 0.02); });
+    },
+    rumoreF(d, vol, tipo, f0, f1) {
+      if (!this.on || !this.ctx) return;
+      const c = this.ctx, t = c.currentTime, n = Math.floor(c.sampleRate * d), buf = c.createBuffer(1, n, c.sampleRate), dat = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) dat[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.6);
+      const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = buf; f.type = tipo; f.frequency.setValueAtTime(f0, t); if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + d); g.gain.value = vol;
+      s.connect(f); f.connect(g); g.connect(c.destination); s.start(t);
+    },
+    /** Suono d'impatto con la "materia" dell'affinità della skill. */
+    colpoAff(aff, forza) {
+      const k = Math.min(1.4, 0.6 + (forza || 0) / 40);
+      this.tono(110, 0.16, 'sine', 0.22 * k, -60);                       // tonfo comune
+      switch (aff) {
+        case 'sangue': this.rumoreF(0.16, 0.38 * k, 'highpass', 2600, 900); this.rumoreF(0.1, 0.25 * k, 'lowpass', 500); break;
+        case 'ordine': this.metallo(520, 0.5, 0.11 * k, [1, 2.76, 4.07, 5.93]); this.rumoreF(0.05, 0.25, 'highpass', 3000); break;
+        case 'astuzia': this.rumoreF(0.28, 0.25 * k, 'bandpass', 600, 2400); this.tono(900, 0.08, 'triangle', 0.08, -500); break;
+        case 'ingegno': this.rumoreF(0.45, 0.45 * k, 'lowpass', 1400, 120); this.tono(70, 0.35, 'sawtooth', 0.12 * k, -30); break;
+        case 'fede': this.metallo(880, 0.8, 0.08 * k, [1, 2, 3.01, 4.2]); this.rumoreF(0.12, 0.15, 'bandpass', 1600); break;
+        default: this.tono(392, 0.22, 'sawtooth', 0.09 * k); this.tono(587, 0.22, 'sawtooth', 0.07 * k); this.rumoreF(0.12, 0.3 * k, 'bandpass', 1800); break;
+      }
+    },
     sfx(nome, x) {
       switch (nome) {
-        case 'moneta': this.tono(1200, 0.07, 'triangle', 0.1, 500); setTimeout(() => this.tono(1800, 0.06, 'triangle', 0.07), 120); break;
-        case 'clash': this.rumore(0.18, 0.25, 2500); this.tono(220, 0.2, 'sawtooth', 0.1, -120); break;
+        case 'moneta': this.metallo(1900, 0.18, 0.05, [1, 2.4, 3.9]); setTimeout(() => this.metallo(2300, 0.14, 0.04, [1, 2.4]), 110); break;
+        case 'clash': this.rumore(0.18, 0.25, 2500); this.metallo(330, 0.6, 0.1, [1, 2.76, 4.07, 5.93, 8.2]); break;
         case 'colpo': this.rumore(0.14, 0.3, 700 + (x || 0) * 8); this.tono(140, 0.14, 'square', 0.12, -90); break;
         case 'forte': this.rumore(0.3, 0.45, 400); this.tono(90, 0.3, 'sawtooth', 0.2, -50); break;
         case 'sparo': this.rumore(0.12, 0.35, 2000); this.tono(300, 0.1, 'square', 0.1, -200); break;
@@ -1113,7 +1141,7 @@
       this.log(e.msg, 'imp'); Snd.sfx('clash');
       this.messaAFuoco([e.a.id, e.b.id]);
       await this.incontra(e.a.id, e.b.id);
-      { const a0 = this.pos(e.a.id), b0 = this.pos(e.b.id); this.zoom((a0.x + b0.x) / 2, (a0.y + b0.y) / 2 + 10, 1.22); }
+      { const a0 = this.pos(e.a.id), b0 = this.pos(e.b.id); this.zoom((a0.x + b0.x) / 2, (a0.y + b0.y) / 2 + 10, 1.34); }
       await this.sleep(380);
       const a = this.pos(e.a.id), b = this.pos(e.b.id);
       this.linea = Fx.linea(a, b, E.AFFINITA[this.V[e.a.id].aff].colore, E.AFFINITA[this.V[e.b.id].aff].colore);
@@ -1206,7 +1234,7 @@
       if (e.assorbito) this.numero(e.bers, 'assorbe ' + e.assorbito, 'assorbi', 24);
       this.anima(e.bers, 'hit');
       if (forte) this.shake($('#cam'), 3 + Math.min(8, e.danno / 6), 320);
-      Snd.sfx(forte ? 'forte' : 'colpo', e.danno);
+      Snd.colpoAff(s.aff || att.aff, e.danno); if (forte) Snd.sfx('forte', e.danno);
       this.log(`${att.breve} → ${bers.breve}: ${e.danno} danni${e.rel === 1 ? ' (vantaggio)' : e.rel === -1 ? ' (svantaggio)' : ''}${e.testa ? '' : ' [croce]'}.`);
       await this.hitStop(clamp(40 + e.danno * 2.2, 50, 150));
       await pAnim;
