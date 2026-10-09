@@ -227,8 +227,13 @@
     const d = S().data, run = d.run, c = capo();
     if (esito !== 'vittoria') {
       d.stats.sconfitte++;
-      return { html: '<p class="rw">Gli Echi vi hanno sopraffatto. I danni subiti non vengono conservati se ritenti.</p>', bottoni: [
-        { testo: 'Ritenta', cls: 'grande', fn: () => { d.run = prima; S().save(); K.battaglia(nodo); } },
+      return { html: '<p class="rw">Gli Echi vi hanno sopraffatto. Se ritenti, le Voci ripartono con almeno il 40% dei PV.</p>', bottoni: [
+        { testo: 'Ritenta', cls: 'grande', fn: () => {
+          // si riparte da prima dello scontro, ma mai con la squadra quasi a terra: altrimenti si perderebbe all'infinito
+          d.run = prima;
+          (prima.squadra || []).forEach(id => { const st = prima.stati && prima.stati[id]; if (st) { st.pv = Math.max(st.pv, Math.round(0.4 * pvMax(id))); st.sanita = Math.max(st.sanita || 0, 0); } });
+          S().save(); K.battaglia(nodo);
+        } },
         { testo: 'Abbandona capitolo', fn: () => { d.run = null; S().save(); K.hub(); } }] };
     }
     d.stats.vittorie++; if (E.Hub) E.Hub.esperienza(25);

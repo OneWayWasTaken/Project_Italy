@@ -920,6 +920,7 @@
       // Posa di vittoria dei sopravvissuti
       if (B.esito === 'vittoria') Object.keys(this.els).forEach(id => { if (this.V[id].lato === 'a' && this.V[id].vivo) this.els[id].fig.classList.add('a-vittoria'); });
       await this.sleep(900);
+      $$('.num-fly, .banner').forEach(n => n.remove());   // nessun numero volante sopra la schermata del risultato
       const r = $('#risultato'); r.className = 'overlay on ' + B.esito;
       Snd.sfx(B.esito); if (E.Musica) E.Musica.fanfara(B.esito);
       const alleati = B.unita.filter(x => x.lato === 'a' && !x.npc), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
@@ -979,7 +980,7 @@
      *  - numeri (danni, cure): sul busto;  - etichette (stati, Sanità, CEDIMENTO…): sopra la testa.
      */
     numero(id, testo, cls, dy) {
-      if (!this.els[id]) return;
+      if (!this.els[id] || $('#risultato').classList.contains('on')) return;
       cls = cls || '';
       const etichetta = /\b(stato|sanita|testo|assorbi)\b/.test(cls);
       const p = this.pos(id), tel = root.innerHeight < 520, ora = performance.now();
