@@ -506,7 +506,9 @@
         <div class="barra-pv"><div class="ritardo"></div><div class="pieno"></div><div class="num"></div></div>
         <div class="barra-sanita"><div class="riempi"></div><div class="num"></div></div>
         <div class="chips"></div><div class="intenzioni"></div>`;
-      c.append(rit, info);
+      info.insertAdjacentHTML('beforeend', '<div class="u-stat"><b class="u-hp"></b><span class="u-san"></span></div>');
+      const uSk = el('div', 'u-skill', '<span class="sim"></span>');
+      c.append(uSk, rit, info);
       const dadi = el('div', 'dadi'); c.appendChild(dadi);
       c.onclick = () => this.clickCarta(u.id);
       if (u.lato === 'a') $('#col-alleati').appendChild(c);
@@ -516,17 +518,19 @@
       const mov = el('div', 'pg-mov'), fig = E.Arte ? E.Arte.figura(u.def) : el('div', 'fig');
       const aure = el('div', 'pg-aure');
       const targa = el('div', 'targa'); targa.style.setProperty('--ac', a.colore);
-      targa.innerHTML = `<div class="dadi"></div><div class="t-riga"><span class="t-aff">${a.simbolo}</span><span class="t-nome">${u.breve}</span></div>
-        <div class="t-pv"><b></b><i></i></div><div class="t-san"><i></i></div><div class="t-chips"></div><div class="t-int"></div>`;
+      targa.innerHTML = `<div class="t-riga"><b class="t-hp"></b><div class="t-pv"><b></b><i></i></div><span class="t-sanc"></span></div>
+        <div class="t-nome"><span class="t-aff">${a.simbolo}</span>${u.boss ? (def.nome || u.breve).split('—')[0].trim() : u.breve}</div><div class="t-chips"></div><div class="t-int"></div>`;
+      const pgDadi = el('div', 'pg-dadi');
       targa.dataset.tip = `<b>${def.nome || u.breve}</b><br>${a.simbolo} ${a.nome}${def.ruolo ? ' · ' + def.ruolo : ''}`;
-      mov.append(el('div', 'pg-ombra'), aure, fig, targa);
+      mov.append(el('div', 'pg-base'), el('div', 'pg-ombra'), aure, fig, targa, pgDadi);
       pg.append(mov);
       pg.onclick = () => this.clickCarta(u.id);
       $('#cam').appendChild(pg);
       fig.classList.add('entra'); setTimeout(() => fig.classList.remove('entra'), 1000);
       this.els[u.id] = { card: c, rit, ritardo: $('.ritardo', c), pieno: $('.pieno', c), num: $('.barra-pv .num', c), san: $('.barra-sanita .riempi', c),
         sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.t-int', targa), dadi, tag: null, pg, mov, fig, pgTag: null, aure,
-        targa, tPv: $('.t-pv i', targa), tPvR: $('.t-pv b', targa), tSan: $('.t-san i', targa), tChips: $('.t-chips', targa), tDadi: $('.dadi', targa) };
+        targa, tPv: $('.t-pv i', targa), tPvR: $('.t-pv b', targa), tHp: $('.t-hp', targa), tSanc: $('.t-sanc', targa), tChips: $('.t-chips', targa), tDadi: pgDadi,
+        uSk, uHp: $('.u-hp', c), uSan: $('.u-san', c) };
       this.render(u.id);
     },
     /** Posiziona le figure secondo le formazioni e ridimensiona in base al palcoscenico. */
@@ -538,7 +542,7 @@
         const slots = FORM[l][clamp(lista.length, 1, 4)];
         lista.forEach((u, i) => {
           const p = this.els[u.id].pg, s = slots[i] || slots[slots.length - 1];
-          p.style.left = s[0] + '%'; p.style.top = s[1] + '%'; p.style.zIndex = Math.round(s[1] * 10);
+          p.style.left = s[0] + '%'; p.style.top = (52 + (s[1] - 60) * 0.85) + '%'; p.style.zIndex = Math.round(s[1] * 10);
           p.dataset.z = p.style.zIndex;
           const spec = (E.ARTE && E.ARTE[u.def]) || {};
           p.style.setProperty('--sc', ((spec.scala || 1) * profondita(s[1]) * (u.boss ? 1.28 : 1)).toFixed(3));
@@ -558,7 +562,8 @@
       const chips = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" data-tip="<b>${d.nome} ${u.stati[s]}</b><br>${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
       e.chips.innerHTML = chips; e.tChips.innerHTML = chips;
       e.tPv.style.width = pct + '%'; e.tPvR.style.width = pct + '%';
-      e.tSan.style.width = w + '%'; e.tSan.style.left = (u.sanita >= 0 ? 50 : 50 - w) + '%'; e.tSan.style.background = u.sanita >= 0 ? '#9fd0ff' : '#d1a3ff';
+      e.tHp.textContent = Math.ceil(u.pv); e.uHp.textContent = Math.ceil(u.pv);
+      [e.tSanc, e.uSan].forEach(x => { x.textContent = u.sanita; x.classList.toggle('neg', u.sanita < 0); x.classList.toggle('alta', u.sanita >= 30); });
       e.targa.dataset.tip = e.targa.dataset.tip.split('<br><small>')[0] + `<br><small>PV ${Math.ceil(u.pv)}/${u.pvMax} · Sanità ${u.sanita}</small>`;
       // aure degli stati (CSS) + particelle continue (Fx)
       Object.keys(E.STATI).forEach(st => {
@@ -636,6 +641,7 @@
       this.fase = 'pianifica'; this.skip = false;
       const prima = Object.keys(this.V).filter(id => this.V[id].lato === 'a' && this.V[id].vivo && B.azioni.some(a => a.u === id))[0];
       this.sel = this.sel && B.azioni.some(a => a.u === this.sel) && this.V[this.sel].vivo ? this.sel : prima;
+      $('#scr-battaglia').classList.remove('cinema'); this.togliEmblemi();
       this.aggiornaPiano(); setTimeout(() => { if (this.fase === 'pianifica') this.disegnaFrecce(); }, 450);
       this.log('— Pianifica: scegli skill e bersagli, poi Esegui turno —');
       if (E.Tutorial && E.Tutorial.attivo) E.Tutorial.pianifica(B.turno, this);
@@ -649,7 +655,8 @@
       this.fase = 'riproduzione'; $('#btn-esegui').disabled = true; $('#btn-affondo').style.display = 'none';
       $$('.unit, .pg').forEach(c => c.classList.remove('sel', 'bersaglio-di-sel', 'bersagliabile'));
       Object.keys(this.els).forEach(id => { this.els[id].intent.textContent = ''; });
-      $('#scr-battaglia').classList.remove('pianifica'); this.disegnaFrecce();
+      this.costruisciSequenza();
+      $('#scr-battaglia').classList.remove('pianifica'); $('#scr-battaglia').classList.add('cinema'); this.disegnaFrecce();
       this.disegnaSkills();
       const r = this._pronto; this._pronto = null; r && r();
     },
@@ -753,8 +760,64 @@
       ab.style.display = ced.length && this.fase === 'pianifica' ? '' : 'none';
       ab.classList.toggle('attivo', !!B.affondo);
       ab.textContent = B.affondo ? 'Affondo ✔' : 'Affondo!';
+      Object.keys(this.els).forEach(id => {
+        const e = this.els[id], acts = B.azioni.filter(a => a.u === id);
+        [e.tDadi, e.dadi].forEach(box => Array.from(box.children).forEach((dd, i) => { const a = acts[i], s = a && a.skill && E.SKILL[a.skill]; dd.style.setProperty('--ac', s ? E.AFFINITA[s.aff].colore : '#888'); dd.classList.toggle('pianificato', !!s); }));
+        if (e.uSk) { const a = acts[0], s = a && a.skill && E.SKILL[a.skill]; e.uSk.style.setProperty('--ac', s ? E.AFFINITA[s.aff].colore : '#555'); e.uSk.querySelector('.sim').textContent = s ? E.AFFINITA[s.aff].simbolo : '–'; e.uSk.dataset.tip = s ? `<b>${s.nome}</b> → ${this.V[a.bers] ? this.V[a.bers].breve : '?'}` : 'Non agisce'; e.uSk.classList.toggle('vuota', !s); }
+      });
+      { const r = Combat().risonanza(B), col = $('#ris-col'); col.innerHTML = E.AFFINITA_ORDINE.map(k => `<div class="rc${(r[k] || 0) >= 3 ? ' attiva' : ''}" style="--ac:${E.AFFINITA[k].colore}" data-tip="<b>${E.AFFINITA[k].nome}</b>: ${r[k] || 0} skill pianificate${(r[k] || 0) >= 3 ? ' · Risonanza attiva!' : ' (3 = Risonanza)'}"><i>${E.AFFINITA[k].simbolo}</i><b>${r[k] || 0}</b></div>`).join(''); }
       this.disegnaSkills(); this.mostraArdore(); this.disegnaFrecce();
       $('#btn-esegui').disabled = this.fase !== 'pianifica' || !Combat().pianoValido(B);
+    },
+    etichette: 'win',
+    /** Battuta di un personaggio nel riquadro in alto (si chiude da sola). */
+    battuta(id, tipo, testo) {
+      const u = this.V[id]; if (!u || this.skip) return;
+      const def = u.lato === 'a' ? E.VOCI[u.def] : E.NEMICI[u.def], t = testo || (E.battuta ? E.battuta(u.def, tipo) : '');
+      if (!t) return;
+      const b = $('#battuta'); b.innerHTML = ''; b.style.setProperty('--ac', E.AFFINITA[u.aff].colore);
+      b.appendChild(UI.ritratto(def)); b.appendChild(el('div', 'bt-t', `<b>${u.breve}</b><span>${t}</span>`));
+      b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+      clearTimeout(this._bt); this._bt = setTimeout(() => b.classList.remove('on'), 3400 / Math.min(2, this.velBase));
+    },
+    /** Sequenza delle azioni del turno (in basso, durante l'esecuzione), in ordine di velocità. */
+    costruisciSequenza() {
+      const B = this.B, box = $('#sequenza'); if (!box) return; box.innerHTML = '';
+      const ord = B.azioni.filter(a => !a.annullata && a.skill && this.V[a.u] && this.V[a.u].vivo).sort((x, y) => y.dado - x.dado);
+      ord.forEach((a, i) => {
+        const v = this.V[a.u], s = E.SKILL[a.skill], def = v.lato === 'a' ? E.VOCI[v.def] : E.NEMICI[v.def];
+        const it = el('div', 'sq-it ' + (v.lato === 'a' ? 'al' : 'ne')); it.style.setProperty('--ac', E.AFFINITA[s.aff].colore); it.dataset.u = a.u; it.dataset.s = a.skill;
+        const hx = el('div', 'sq-hex'); hx.appendChild(UI.ritratto(def)); it.appendChild(hx); it.appendChild(el('span', 'sq-ban', E.AFFINITA[s.aff].simbolo + ' ' + a.dado));
+        it.dataset.tip = `<b>${v.breve}</b>: ${s.nome} (dado ${a.dado})`;
+        box.appendChild(it); if (i < ord.length - 1) box.appendChild(el('i', 'sq-cat'));
+      });
+    },
+    segnaSequenza(att, skill) {
+      const its = $$('#sequenza .sq-it'), i = its.findIndex(x => x.dataset.u === att && x.dataset.s === skill && !x.classList.contains('fatto'));
+      its.forEach(x => x.classList.remove('ora'));
+      if (i >= 0) { its.slice(0, i).forEach(x => x.classList.add('fatto')); its[i].classList.add('ora'); }
+    },
+    /** Stemma dello scontro accanto a un combattente: striscia col nome della skill, monete, esagono con la potenza. */
+    emblema(id, skillId, monete, pb, pm, sx) {
+      const u = this.V[id], s = E.SKILL[skillId], A = E.AFFINITA[s.aff], def = u.lato === 'a' ? E.VOCI[u.def] : E.NEMICI[u.def];
+      const d = el('div', 'emb ' + (sx ? 'sx' : 'dx')); d.style.setProperty('--ac', A.colore);
+      const desc = E.descrizioneSkill(s)[0] || '';
+      d.innerHTML = `<div class="emb-corpo"><div class="emb-testa"><div class="emb-monete"></div><div class="emb-banda"><span class="emb-nome">${s.nome}</span></div>${desc ? `<div class="emb-desc">${desc.replace(/^([^:]+):/, '<em>[$1]</em>')}</div>` : ''}</div>
+        <div class="emb-hex"><div class="emb-ritr"></div><b class="emb-pot">${pb}</b><span class="emb-mod">+${pm}</span><span class="emb-sim">${A.simbolo}</span></div></div>`;
+      d.querySelector('.emb-ritr').appendChild(UI.ritratto(def));
+      const coins = []; for (let i = 0; i < monete; i++) { const m = creaMoneta(true); d.querySelector('.emb-monete').appendChild(m); coins.push(m); }
+      $('#clash').appendChild(d);
+      const p = this.pos(id), st = $('#stage').getBoundingClientRect(), y = clamp(p.y - st.top - p.h * 0.62, 50, st.height - 220);
+      if (sx) d.style.right = clamp(st.width - (p.x - st.left - p.w * 0.38), 10, st.width - 200) + 'px'; else d.style.left = clamp(p.x - st.left + p.w * 0.38, 10, st.width - 200) + 'px';
+      d.style.top = y + 'px';
+      $('#clash').className = 'on';
+      return { el: d, coins, pot: d.querySelector('.emb-pot') };
+    },
+    potenza(potEl, v) { potEl.textContent = v; potEl.classList.remove('pop'); void potEl.offsetWidth; potEl.classList.add('pop'); },
+    togliEmblemi() {
+      $$('.pg.attivo').forEach(x => x.classList.remove('attivo'));
+      $$('#clash .emb').forEach(x => { x.classList.add('via'); setTimeout(() => x.remove(), 300); });
+      this.embColpi = null; $('#clash').className = '';
     },
     /** Frecce sul palcoscenico: piani delle Voci (colore della skill) e intenzioni dei nemici (rosse tratteggiate). */
     disegnaFrecce() {
@@ -780,8 +843,10 @@
         if (u.lato === 'n') freccia(a.u, a.bers, '#ff5a6e', 'nem', '', conta[k] - 1);
         else {
           const pr = Combat().anteprima(B, a.u), col = E.AFFINITA[E.SKILL[a.skill].aff].colore;
-          const et = pr && pr.scontro ? Math.round(pr.vittoria * 100) + '%' : pr ? 'libero' : '';
-          freccia(a.u, a.bers, col, 'all' + (a.u === this.sel ? ' sel' : ''), a.u === this.sel ? et : '', conta[k] - 1);
+          let et = '';
+          if (pr && this.etichette === 'danni') et = '≈' + Math.round((pr.min + pr.max) / 2 * pr.monete * C.DANNO_MOLT * (pr.rel > 0 ? C.BONUS_VANTAGGIO : pr.rel < 0 ? C.MALUS_SVANTAGGIO : 1));
+          else if (pr) et = pr.scontro ? Math.round(pr.vittoria * 100) + '%' : 'libero';
+          freccia(a.u, a.bers, col, 'all' + (a.u === this.sel ? ' sel' : ''), a.u === this.sel || this.etichette ? et : '', conta[k] - 1);
         }
       });
       svg.innerHTML = h;
@@ -816,7 +881,7 @@
     },
     async finale() {
       const B = this.B; this.fase = 'fine';
-      await this.rientraTutti();
+      await this.rientraTutti(); this.togliEmblemi(); $('#scr-battaglia').classList.remove('cinema');
       if (E.Tutorial && E.Tutorial.attivo && B.esito === 'vittoria') await E.Tutorial.fine(); else if (E.Tutorial && E.Tutorial.attivo) E.Tutorial.ferma(null);
       // Posa di vittoria dei sopravvissuti
       if (B.esito === 'vittoria') Object.keys(this.els).forEach(id => { if (this.V[id].lato === 'a' && this.V[id].vivo) this.els[id].fig.classList.add('a-vittoria'); });
@@ -875,9 +940,10 @@
     },
     numero(id, testo, cls, dy) {
       if (!this.els[id]) return;
-      const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), testo);
+      const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), String(testo));
       n.style.left = clamp(p.x + rnd(-18, 18), cls === 'testo' ? 90 : 20, root.innerWidth - (cls === 'testo' ? 90 : 20)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px'; n.style.setProperty('--dx', rnd(-46, 46) + 'px');
       $('#app').appendChild(n); setTimeout(() => n.remove(), 1200);
+      return n;
     },
     shake(elem, amp, dur) {
       const k = []; for (let i = 0; i < 8; i++) k.push({ transform: `translate(${rnd(-amp, amp)}px,${rnd(-amp, amp)}px)` }); k.push({ transform: 'translate(0,0)' });
@@ -995,10 +1061,12 @@
 
     async gestisci(e) {
       if (E.Tutorial && E.Tutorial.attivo) await E.Tutorial.evento(e);
+      if (['turno', 'dot', 'regola'].includes(e.t)) this.togliEmblemi();
       if (['azione', 'turno', 'dot', 'affondo', 'regola'].includes(e.t)) { await this.rientraTutti(); if (this.zoomLibero) { this.zoom(0, 0, 1); this.zoomLibero = false; } }
       switch (e.t) {
         case 'turno':
-          $('#turno-n').textContent = 'Turno ' + e.n + (this.B.obiettivo && this.B.obiettivo.turni ? ' / ' + this.B.obiettivo.turni : ''); this.ardoreV = e.ardore; this.mostraArdore();
+          $('#turno-n').textContent = e.n + (this.B.obiettivo && this.B.obiettivo.turni ? '/' + this.B.obiettivo.turni : ''); this.ardoreV = e.ardore; this.mostraArdore();
+          { const vivi = Object.values(this.V).filter(x => x.lato === 'a' && x.vivo && !x.npc); const chi = vivi[Math.floor(Math.random() * vivi.length)]; if (chi && (e.n === 1 || Math.random() < 0.5)) this.battuta(chi.id, 'inizio'); }
           this.log('— Turno ' + e.n + ' —', 'imp'); this.banner('TURNO ' + e.n); await this.sleep(700); break;
         case 'dadi':
           this.dadi = e.dadi; Object.keys(e.dadi).forEach(id => this.renderDadi(id, true));
@@ -1009,15 +1077,16 @@
         case 'azione': {
           this.log(e.msg); this.skillDi[e.att] = e.skill;
           const s = E.SKILL[e.skill];
+          this.segnaSequenza(e.att, e.skill); this.togliEmblemi();
           if (s.costo >= 5 || s.ultima) await this.cutin(e.att, e.skill);     // skill culmine: cut-in a tutto schermo
-          else { this.numero(e.att, s.nome, 'testo', -34); await this.sleep(240); }
+          else await this.sleep(160);
           break;
         }
         case 'affondo': {
-          this.skillDi[e.att] = e.skill; this.log(e.msg, 'imp'); this.banner('AFFONDO!'); Fx.flash('#fff', 0.3); Snd.sfx('forte'); await this.sleep(700); break;
+          this.skillDi[e.att] = e.skill; this.log(e.msg, 'imp'); this.banner('AFFONDO!'); this.togliEmblemi(); Fx.flash('#fff', 0.3); Snd.sfx('forte'); await this.sleep(700); break;
         }
         case 'schiva': {
-          this.numero(e.id, 'SCHIVATA!', 'testo', -20); this.log(e.msg);
+          this.numero(e.id, '↺ SCHIVATA', 'stato schiva', -20); this.log(e.msg);
           const m = this.els[e.id].mov; m.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-34px)' }, { transform: 'translateX(0)' }], { duration: 400 / this.vel });
           await this.sleep(450); break;
         }
@@ -1030,7 +1099,7 @@
           if (e.totale) u.stati[e.stato] = e.totale; else delete u.stati[e.stato];
           this.render(e.id);
           const d = E.STATI[e.stato];
-          this.numero(e.id, (e.delta > 0 ? '+' : '') + e.delta + ' ' + d.nome, 'stato', 26);
+          { const n = this.numero(e.id, `<i>${d.icona}</i>${d.nome} ${e.delta > 0 ? '+' : ''}${e.delta}`, 'stato', 26); if (n) n.style.color = d.colore; }
           this.els[e.id].rit.animate([{ filter: 'brightness(2)' }, { filter: 'none' }], { duration: 300 });
           this.log(`${u.breve}: ${e.delta > 0 ? '+' : ''}${e.delta} ${d.nome}`);
           Snd.sfx('stato'); await this.sleep(150); break;
@@ -1054,7 +1123,7 @@
         }
         case 'cedimento': {
           const u = this.V[e.id]; u.ced = 2; this.render(e.id);
-          this.log(e.msg, 'imp'); this.numero(e.id, 'CEDIMENTO!', 'testo', -30);
+          this.log(e.msg, 'imp'); this.numero(e.id, 'CEDIMENTO!', 'testo', -30); if (u.lato === 'a' && !u.npc) this.battuta(e.id, 'dolore');
           const p = this.pos(e.id); Fx.ring(p.x, p.y, '#fff', 150); Fx.flash('#fff', 0.3); Fx.sparks(p.x, p.y, 40, '#fff', 1);
           this.shake($('#cam'), 8, 400); Snd.sfx('ced'); await this.hitStop(160); await this.sleep(500); break;
         }
@@ -1064,6 +1133,7 @@
           const u = this.V[e.id]; u.vivo = false; u.pv = 0;
           const p = this.pos(e.id); Fx.sparks(p.x, p.y, 50, u.colore, 1.2); Fx.ring(p.x, p.y, u.colore, 130);
           this.log(e.msg, 'imp'); Snd.sfx('morte');
+          if (u.lato === 'n' && this.ultimoAtt && this.V[this.ultimoAtt] && this.V[this.ultimoAtt].lato === 'a') this.battuta(this.ultimoAtt, 'vittoria');
           if (u.lato === 'n') { Fx.velocita(p.x, p.y, u.colore); Fx.flash('#fff', 0.35); await this.hitStop(220); }
           this.anima(e.id, 'morte'); setTimeout(() => Fx.dissolvi(p.x, p.y, p.w, p.h, u.colore || '#fff', u.lato === 'n'), 500 / this.vel);
           this.render(e.id); await this.sleep(700); break;
@@ -1071,7 +1141,8 @@
         case 'panico': {
           this.V[e.id].panico = true; this.render(e.id); this.log(e.msg, 'imp'); this.numero(e.id, 'PANICO!', 'testo', -30); await this.sleep(300); break;
         }
-        case 'fase': this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#cam'), 10, 500); await this.sleep(1000); break;
+        case 'fase': { const bo = Object.values(this.V).find(x => x.boss && x.vivo); if (bo) this.battuta(bo.id, 'testo', e.testo); }
+          this.banner(e.testo.toUpperCase().slice(0, 24)); this.log(e.testo, 'imp'); Fx.flash('#e0b43a', 0.35); this.shake($('#cam'), 10, 500); await this.sleep(1000); break;
         case 'evoca': this.aggiungiCarta(e.unit); this.layout(); this.log(e.msg, 'imp'); Snd.sfx('forte'); await this.sleep(700); break;
         case 'fine': break;
       }
@@ -1080,24 +1151,18 @@
     /* ----- Clash ----- */
     async apriClash(e) {
       this.skillDi[e.a.id] = e.a.skill; this.skillDi[e.b.id] = e.b.skill;
-      const box = $('#clash'); box.innerHTML = '';
+      this.togliEmblemi();
       const cl = this.cl = { a: null, b: null, sa: this.stile(e.a.id, e.a.skill), sb: this.stile(e.b.id, e.b.skill) };
-      ['a', 'b'].forEach(k => {
-        const s = e[k], u = this.V[s.id], lato = el('div', 'clash-lato');
-        lato.appendChild(el('div', 'nome', `${u.breve} — ${E.SKILL[s.skill].nome}`));
-        const row = el('div', 'monete'), coins = [];
-        for (let i = 0; i < s.monete; i++) { const m = creaMoneta(); row.appendChild(m); coins.push(m); }
-        lato.appendChild(row);
-        const pot = el('div', 'pot', ''); lato.appendChild(pot);
-        cl[k] = { id: s.id, lato, coins, lost: 0, pot, perse: [] };
-      });
-      box.appendChild(cl.a.lato); box.appendChild(el('div', 'clash-vs', 'VS')); box.appendChild(cl.b.lato);
-      box.className = 'on';
       this.log(e.msg, 'imp'); Snd.sfx('clash');
       this.messaAFuoco([e.a.id, e.b.id]);
       await this.incontra(e.a.id, e.b.id);
       { const a0 = this.pos(e.a.id), b0 = this.pos(e.b.id); this.zoom((a0.x + b0.x) / 2, (a0.y + b0.y) / 2 + 10, 1.34); }
-      await this.sleep(380);
+      await this.sleep(400);
+      const a1 = this.pos(e.a.id), b1 = this.pos(e.b.id), sxA = a1.x <= b1.x;
+      ['a', 'b'].forEach(k => {
+        const s = e[k], em = this.emblema(s.id, s.skill, s.monete, s.pb, s.pm, k === 'a' ? sxA : !sxA);
+        cl[k] = { id: s.id, lato: em.el, coins: em.coins, lost: 0, pot: em.pot, perse: [] };
+      });
       const a = this.pos(e.a.id), b = this.pos(e.b.id);
       this.linea = Fx.linea(a, b, E.AFFINITA[this.V[e.a.id].aff].colore, E.AFFINITA[this.V[e.b.id].aff].colore);
       Fx.flash('#fff', 0.18); Fx.ring((a.x + b.x) / 2, (a.y + b.y) / 2, '#fff', 120);
@@ -1108,11 +1173,11 @@
       ['a', 'b'].forEach(k => {
         const intatte = cl[k].coins.filter((_, i) => !cl[k].perse.includes(i));
         e[k].flips.forEach((f, i) => { if (intatte[i]) lanciaMoneta(intatte[i], f); });
-        cl[k].pot.textContent = ''; cl[k].lato.classList.remove('vince', 'perde');
+        cl[k].lato.classList.remove('vince', 'perde');
       });
       Snd.sfx('moneta'); await this.sleep(950);
       ['a', 'b'].forEach(k => {
-        cl[k].pot.textContent = e[k].pot;
+        this.potenza(cl[k].pot, e[k].pot);
         cl[k].lato.classList.toggle('vince', e.v === k); cl[k].lato.classList.toggle('perde', !!e.v && e.v !== k);
       });
       // Entrambi i combattenti si lanciano l'uno contro l'altro; all'impatto scintille al centro
@@ -1141,8 +1206,13 @@
       this.log(e.msg);
       ['a', 'b'].forEach(k => { cl[k].lato.classList.toggle('vince', cl[k].id === e.vincitore); cl[k].lato.classList.toggle('perde', cl[k].id !== e.vincitore); });
       this.anima(e.perdente, 'hit');
+      const W = cl.a.id === e.vincitore ? cl.a : cl.b, L = W === cl.a ? cl.b : cl.a;
+      if (this.V[e.vincitore] && this.V[e.vincitore].lato === 'a' && Math.random() < 0.45) this.battuta(e.vincitore, 'vittoria');
       await this.sleep(500);
-      $('#clash').className = ''; Fx.pulisciLinee(); this.linea = null; this.cl = null;
+      // lo stemma del vincitore resta: le sue monete superstiti colpiranno una a una
+      L.lato.classList.add('via'); setTimeout(() => L.lato.remove(), 300);
+      this.embColpi = { id: W.id, coins: W.coins.filter((_, i) => !W.perse.includes(i)), pot: W.pot, el: W.lato };
+      Fx.pulisciLinee(); this.linea = null; this.cl = null;
       this.zoom(0, 0, 1); this.messaAFuoco(null);
       await this.sleep(300);
     },
@@ -1154,7 +1224,12 @@
       if (!this.spostati.has(e.att)) await this.avanza(e.att, e.bers, A);
       // colpo libero (senza scontro): la camera si avvicina un poco alla coppia
       if (!this.cl && e.idx === 0 && !this.skip) { const a1 = this.pos(e.att), b1 = this.pos(e.bers); this.zoom((a1.x + b1.x) / 2, (a1.y + b1.y) / 2 + 10, 1.16); this.zoomLibero = true; }
-      await this.miniMoneta(e.att, e.testa);
+      this.ultimoAtt = e.att; $$('.pg.attivo').forEach(x => x.classList.remove('attivo')); this.els[e.att].pg.classList.add('attivo');
+      // stemma del colpo: per i colpi liberi ne nasce uno nuovo, dopo uno scontro resta quello del vincitore
+      let em = this.embColpi && this.embColpi.id === e.att ? this.embColpi : null;
+      if (!em && e.idx === 0 && !this.skip) { const pa1 = this.pos(e.att), pb1 = this.pos(e.bers); em = this.embColpi = Object.assign(this.emblema(e.att, skillId, e.n, s.pb || 0, s.pm || 0, pa1.x <= pb1.x), { id: e.att }); }
+      if (em && !this.skip) { const c = em.coins[e.idx]; if (c) lanciaMoneta(c, e.testa); Snd.sfx('moneta'); await this.sleep(480); this.potenza(em.pot, e.pot); }
+      else await this.miniMoneta(e.att, e.testa);
       const colore = E.AFFINITA[att.aff].colore, figA = this.els[e.att].fig;
       if (s.costo >= 5 || s.ultima) figA.classList.add('ultima');
       const tImp = A.dur * A.imp, pAnim = this.anima(e.att, stile);
@@ -1241,6 +1316,8 @@
     $('#btn-menu').onclick = () => Bat.menuPausa();
     $('#btn-affondo').onclick = () => Bat.toggleAffondo();
     $('#btn-auto').onclick = () => Bat.autoPiano();
+    const tog = m => { Bat.etichette = Bat.etichette === m ? null : m; $('#tog-win').classList.toggle('attivo', Bat.etichette === 'win'); $('#tog-dan').classList.toggle('attivo', Bat.etichette === 'danni'); Bat.disegnaFrecce(); Snd.sfx('ui'); };
+    $('#tog-win').onclick = () => tog('win'); $('#tog-dan').onclick = () => tog('danni');
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
     $('#btn-audio').onclick = () => {
       Snd.init(); Snd.on = !Snd.on; ctx.save.opzioni.audio = Snd.on; ctx.save.opzioni.musica = Snd.on; ctx.persist();

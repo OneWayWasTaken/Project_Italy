@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="battaglia.css">
 <link rel="stylesheet" href="gacha.css">
 <link rel="stylesheet" href="tema.css">
+<link rel="stylesheet" href="battaglia-tema.css">
 </head>
 <body>
 <div id="app">
@@ -92,26 +93,33 @@
       <div id="col-nemici" aria-hidden="true"></div>
       <div id="clash"></div>
     </div>
+    <div id="cinema"><div class="cb su"></div><div class="cb giu"><div id="sequenza"></div></div></div>
     <header id="b-top">
-      <button id="btn-menu" class="btn icona" title="Pausa (Esc)">❚❚</button>
-      <div id="turno-info"><span id="turno-n">Turno 1</span></div>
-      <div id="ardore"></div>
+      <div class="b-top-sx">
+        <div class="plq"><span>TURNO</span><b id="turno-n">1</b></div>
+        <div class="plq plq-ard"><span>ARDORE</span><div id="ardore"></div></div>
+      </div>
+      <div id="battuta" class="battuta"></div>
       <div class="b-top-dx">
         <div class="vel">
           <button class="btn piccolo" data-vel="1">×1</button><button class="btn piccolo" data-vel="2">×2</button><button class="btn piccolo" data-vel="4">×4</button><button class="btn piccolo" data-vel="0" title="Salta le animazioni di questo turno">⏭</button>
         </div>
         <button id="btn-log" class="btn piccolo icona" title="Registro del combattimento">☰</button>
         <button id="btn-audio" class="btn piccolo icona" title="Suono">♪</button>
+        <button id="btn-menu" class="btn icona" title="Pausa (Esc)">❚❚</button>
       </div>
     </header>
+    <div id="ris-col" title="Skill pianificate per affinità (3+ = Risonanza)"></div>
     <div id="b-dock">
+      <div class="dk-braccio sx"></div>
       <div id="col-alleati"></div>
       <div id="skills"></div>
       <div id="comandi">
-        <button id="btn-affondo" class="btn" style="display:none" title="Azione di squadra gratuita su un nemico in Cedimento (tasto A)">Affondo</button>
-        <button id="btn-auto" class="btn piccolo" title="Pianifica automaticamente (puoi poi cambiare)">⚙ Auto</button>
-        <button id="btn-esegui" class="btn grande" disabled><span>Esegui</span><small>turno</small></button>
+        <button id="btn-affondo" class="btn rosso" style="display:none" title="Azione di squadra gratuita su un nemico in Cedimento (tasto A)">Affondo!</button>
+        <div class="dk-tog"><button id="btn-auto" class="btn piccolo" title="Pianifica automaticamente (puoi poi cambiare)">Auto</button><button id="tog-win" class="btn piccolo attivo" title="Mostra la probabilità di vincere lo scontro su tutte le frecce">Vittoria %</button><button id="tog-dan" class="btn piccolo" title="Mostra i danni stimati sulle frecce">Danni</button></div>
+        <button id="btn-esegui" disabled title="Esegui il turno (Invio)"><svg class="ingr" viewBox="-50 -50 100 100"><polygon points="45.8,-4.1 45.8,4.1 37.7,4.9 36.7,9.8 43.9,13.7 40.7,21.4 32.9,19.0 30.2,23.1 35.3,29.5 29.5,35.3 23.2,30.1 19.1,32.9 21.4,40.7 13.7,43.9 9.9,36.7 5.0,37.7 4.1,45.8 -4.1,45.8 -4.9,37.7 -9.8,36.7 -13.7,43.9 -21.4,40.7 -19.0,32.9 -23.1,30.2 -29.5,35.3 -35.3,29.5 -30.1,23.2 -32.9,19.1 -40.7,21.4 -43.9,13.7 -36.7,9.9 -37.7,5.0 -45.8,4.1 -45.8,-4.1 -37.7,-4.9 -36.7,-9.8 -43.9,-13.7 -40.7,-21.4 -32.9,-19.0 -30.2,-23.1 -35.3,-29.5 -29.5,-35.3 -23.2,-30.1 -19.1,-32.9 -21.4,-40.7 -13.7,-43.9 -9.9,-36.7 -5.0,-37.7 -4.1,-45.8 4.1,-45.8 4.9,-37.7 9.8,-36.7 13.7,-43.9 21.4,-40.7 19.0,-32.9 23.1,-30.2 29.5,-35.3 35.3,-29.5 30.1,-23.2 32.9,-19.1 40.7,-21.4 43.9,-13.7 36.7,-9.9 37.7,-5.0" class="dente"/><circle r="33" class="corona"/><circle r="24" class="cuore"/></svg><span>VIA</span></button>
       </div>
+      <div class="dk-braccio dx"></div>
     </div>
     <div id="log" class="log-cassetto"></div>
     <div id="risultato" class="overlay"></div>
@@ -176,6 +184,7 @@
 <script src="data_nemici.js"></script>
 <script src="data_capitoli.js"></script>
 <script src="data_scene.js"></script>
+<script src="data_battute.js"></script>
 <script src="tutorial.js"></script>
 <script src="musica.js"></script>
 <script src="ui.js"></script>
