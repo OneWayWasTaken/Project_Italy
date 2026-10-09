@@ -9,7 +9,7 @@
   const $ = (s, r) => (r || document).querySelector(s);
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 
-  A.apri = function () { E.UI.mostra('archivio'); A.disegna(); };
+  A.apri = function () { if (!A.sel) A.sel = Object.keys(E.Save.data.roster)[0]; E.UI.mostra('archivio'); A.disegna(); };
   A.disegna = function () {
     const S = E.Save;
     $$tab();
@@ -23,7 +23,7 @@
   function voci(corpo, S) {
     const lay = el('div', 'a-layout'), g = el('div', 'sq-griglia a-griglia'), det = el('aside', 'sq-dettaglio a-dettaglio');
     Object.values(E.VOCI).sort((a, b) => a.epoca - b.epoca).forEach(v => {
-      const ho = S.possiede(v.id), c = el('div', 'sq-card' + (ho ? '' : ' sconosciuta') + (A.sel === v.id ? ' sel' : ''));
+      const ho = S.possiede(v.id), c = el('div', 'sq-card r' + v.rarita + (ho ? '' : ' sconosciuta') + (A.sel === v.id ? ' sel' : '')); c.style.setProperty('--ac', E.AFFINITA[v.aff].colore);
       c.appendChild(E.UI.ritratto(v));
       c.appendChild(el('div', 'n', ho ? v.breve : '???'));
       c.appendChild(el('div', 'm', ho ? `<span style="color:${E.AFFINITA[v.aff].colore}">${E.AFFINITA[v.aff].simbolo} ${E.AFFINITA[v.aff].nome}</span> · Cap. ${E.CAPITOLI[v.epoca - 1].num}` : 'Non ancora evocata'));

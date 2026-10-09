@@ -443,7 +443,7 @@
       $('#sq-incontro').parentElement.style.display = opts.nascondiIncontro ? 'none' : '';
       const g = $('#sq-griglia'); g.innerHTML = '';
       Object.values(E.VOCI).filter(v => pool.includes(v.id)).sort((a, b) => a.epoca - b.epoca).forEach(v => {
-        const c = el('div', 'sq-card'); c.dataset.id = v.id; c.dataset.aff = v.aff;
+        const c = el('div', 'sq-card r' + v.rarita); c.dataset.id = v.id; c.dataset.aff = v.aff; c.style.setProperty('--ac', E.AFFINITA[v.aff].colore);
         c.appendChild(UI.ritratto(v));
         c.appendChild(el('div', 'n', v.breve));
         c.appendChild(el('div', 'm', `<span style="color:${E.AFFINITA[v.aff].colore}">${E.AFFINITA[v.aff].simbolo} ${E.AFFINITA[v.aff].nome}</span> · Cap. ${E.CAPITOLI[v.epoca - 1].num}`));
