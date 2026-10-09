@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="figure.css">
 <link rel="stylesheet" href="battaglia.css">
+<link rel="stylesheet" href="gacha.css">
 </head>
 <body>
 <div id="app">
@@ -123,12 +124,19 @@
     <div id="vn-scelte" class="vn-scelte"></div>
   </section>
 
-  <!-- EVOCAZIONI (gacha) -->
+  <!-- EVOCAZIONI (gacha): banner con illustrazione, garanzia, evocazioni ×1/×10 con animazione -->
   <section id="scr-gacha" class="screen">
-    <header class="barra"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Evocazioni</h2><span id="g-valute" class="valute"></span></header>
-    <div class="g-layout"><nav id="g-banner" class="g-banner"></nav>
-      <div class="g-scena"><div id="g-vetrina" class="g-vetrina"></div><div id="g-info" class="g-info"></div></div></div>
-    <footer class="barra"><button id="g-tassi" class="btn piccolo">Tassi e regole</button><button id="g-x1" class="btn grande">Evoca ×1 · 1 ❂</button><button id="g-x10" class="btn grande">Evoca ×10 · 10 ❂</button></footer>
+    <div id="g-sfondo"></div>
+    <header class="barra trasparente"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Evocazioni</h2><span id="g-valute" class="valute"></span></header>
+    <div class="g-layout">
+      <nav id="g-banner" class="g-banner"></nav>
+      <div class="g-scena"><div id="g-vetrina" class="g-vetrina"></div><div id="g-info" class="g-info"></div></div>
+    </div>
+    <footer class="g-piede">
+      <div class="g-piede-sx"><button id="g-tassi" class="btn piccolo">Tassi</button><button id="g-storico" class="btn piccolo">Storico</button><button id="g-scambio" class="btn piccolo">Scambio</button></div>
+      <button id="g-x1" class="btn g-evoca"><span>Evoca ×1</span><small>❂ 1</small></button>
+      <button id="g-x10" class="btn grande g-evoca"><span>Evoca ×10</span><small>❂ 10 · ★4 garantita</small></button>
+    </footer>
     <div id="g-risultato" class="overlay"></div>
   </section>
 

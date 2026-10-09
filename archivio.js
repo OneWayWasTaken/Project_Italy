@@ -35,9 +35,12 @@
     lay.append(g, det); corpo.appendChild(lay);
     dettaglio(det, S);
   }
-  function dettaglio(det, S) {
-    const id = A.sel; if (!id) { det.appendChild(el('p', 'vuoto', 'Scegli una Voce per vederne i dettagli.')); return; }
-    const v = E.VOCI[id], ho = S.possiede(id), a = E.AFFINITA[v.aff];
+  /** Scheda di una Voce in una finestra (usata dalle Evocazioni): mostra tutto anche se non posseduta. */
+  A.scheda = function (id) { const d = el('div', 'a-scheda-modale sq-dettaglio'); dettaglio(d, E.Save, id, true); E.UI.modale(d); };
+  function dettaglio(det, S, idForzato, anteprima) {
+    const id = idForzato || A.sel; if (!id) { det.appendChild(el('p', 'vuoto', 'Scegli una Voce per vederne i dettagli.')); return; }
+    const v = E.VOCI[id], ho = S.possiede(id) || anteprima, a = E.AFFINITA[v.aff];
+    if (anteprima && !S.possiede(id)) det.appendChild(el('div', 'a-non-posseduta', 'Non ancora nel tuo Archivio'));
     if (!ho) { det.appendChild(el('h3', '', '???')); det.appendChild(el('p', 'vuoto', `Una Voce di ${a.nome}, del capitolo ${E.CAPITOLI[v.epoca - 1].num}. Si ottiene con le Evocazioni o completando capitoli della campagna.`)); return; }
     const lv = S.livello(id), fw = el('div', 'det-fig'), fig = E.Arte.figura(id); fw.appendChild(fig); det.appendChild(fw);
     det.appendChild(el('h3', '', v.nome));
