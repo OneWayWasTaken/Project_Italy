@@ -38,18 +38,23 @@
     E.CAPITOLI.forEach((c, i) => {
       const n = i + 1, sbloccato = n <= d.progresso.sbloccato, fatto = d.progresso.completati.includes(n), inCorso = d.run && d.run.cap === n;
       const card = el('div', 'c-card' + (sbloccato ? '' : ' bloccato') + (fatto ? ' fatto' : '') + (inCorso ? ' in-corso' : ''));
-      card.style.setProperty('--ac', E.Arte.palette(i).bordo);
+      card.style.setProperty('--ac', E.Arte.palette(i).bordo); card.style.animationDelay = (i * 0.05) + 's';
+      // illustrazione: paesaggio dell'epoca + l'Eco del boss (in sagoma se il capitolo è bloccato)
+      const arte = el('div', 'c-arte', E.Arte.sfondo(i)); arte.appendChild(el('div', 'c-num', c.num));
+      if (c.boss && E.ARTE[c.boss]) { const bw = el('div', 'c-boss'); bw.appendChild(E.Arte.figura(c.boss)); arte.appendChild(bw); }
+      card.appendChild(arte);
+      const corpo = el('div', 'c-corpo'); card.appendChild(corpo);
       const volti = el('div', 'c-volti'); c.voci.forEach(id => volti.appendChild(E.UI.ritratto(E.VOCI[id])));
-      card.appendChild(volti);
+      corpo.appendChild(volti);
       const mem = d.flag['memoria' + n];
-      card.appendChild(el('div', 'c-testo', `<div class="c-num">Capitolo ${c.num}</div><h3>${c.epoca}</h3><div class="c-eco">${c.eco}</div><p>${c.descr}</p>` +
+      corpo.appendChild(el('div', 'c-testo', `<h3>${c.epoca}</h3><div class="c-eco">${c.eco}</div><p>${c.descr}</p>` +
         `<div class="c-stato">${!sbloccato ? '🔒 Completa il capitolo precedente' : inCorso ? '● Spedizione in corso' : fatto ? '★ Completato' + (mem ? ' · memoria: ' + mem : '') : 'Disponibile'}</div>`));
       const bx = el('div', 'c-btn');
       if (sbloccato) {
         if (inCorso) { const b1 = el('button', 'btn grande', 'Continua'); b1.onclick = () => K.riprendi(); const b2 = el('button', 'btn piccolo', 'Ricomincia'); b2.onclick = () => { if (confirm('Ricominciare il capitolo? La spedizione in corso andrà persa.')) { d.run = null; S().save(); K.apriCapitolo(n); } }; bx.append(b1, b2); }
         else { const b = el('button', 'btn grande', fatto ? 'Rigioca' : 'Inizia'); b.onclick = () => { if (d.run && !confirm('Hai una spedizione in corso in un altro capitolo: iniziare questo la annulla. Continuare?')) return; d.run = null; K.apriCapitolo(n); }; bx.appendChild(b); }
       }
-      card.appendChild(bx); g.appendChild(card);
+      corpo.appendChild(bx); g.appendChild(card);
     });
   };
 
@@ -100,6 +105,7 @@
     const d = S().data, run = d.run, c = capo();
     E.UI.mostra('mappa');
     E.Arte.applicaPalette($('#scr-mappa'), run.cap - 1);
+    $('#m-sfondo').innerHTML = E.Arte.sfondo(run.cap - 1);
     $('#m-titolo').innerHTML = `<small>Capitolo ${c.num}</small> ${c.epoca} — ${c.eco}`;
     $('#m-valute').innerHTML = `<span class="val sigilli">❂ ${d.valute.sigilli}</span><span class="val denari">◎ ${d.valute.denari}</span>`;
     // strati e nodi
@@ -137,9 +143,10 @@
     for (let si = 0; si < cols.length - 1; si++) {
       const A = cols[si].querySelectorAll('.m-nodo').length, B = cols[si + 1].querySelectorAll('.m-nodo').length;
       for (let a = 0; a < A; a++) for (let b = 0; b < B; b++) {
-        const p = pos(si, a), q = pos(si + 1, b), l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l.setAttribute('x1', p[0]); l.setAttribute('y1', p[1]); l.setAttribute('x2', q[0]); l.setAttribute('y2', q[1]);
-        const sul = run.scelti[si] === a && (run.scelti[si + 1] === b || (si + 1 === run.strato)); l.setAttribute('class', sul ? 'attivo' : '');
+        const p = pos(si, a), q = pos(si + 1, b), l = document.createElementNS('http://www.w3.org/2000/svg', 'path'), mx = (p[0] + q[0]) / 2;
+        l.setAttribute('d', `M${p[0]} ${p[1]} C${mx} ${p[1]} ${mx} ${q[1]} ${q[0]} ${q[1]}`);
+        const preso = run.scelti[si] === a && run.scelti[si + 1] === b, prossimo = run.scelti[si] === a && si + 1 === run.strato;
+        l.setAttribute('class', preso ? 'attivo' : prossimo ? 'prossimo' : '');
         svg.appendChild(l);
       }
     }

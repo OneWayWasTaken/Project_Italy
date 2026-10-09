@@ -484,19 +484,23 @@
   /** Scena animata dietro il menu principale: la squadra salvata contro un Eco, tutti con la loro idle. */
   UI.menuScena = function (save) {
     const c = $('#menu-scena'); if (!c || !E.Arte) return;
-    const p = E.Arte.applicaPalette(c, 0);
+    const prog = save.progresso || { sbloccato: 1 }, cap = clamp((prog.sbloccato || 1) - 1, 0, 6);
+    const p = E.Arte.applicaPalette(c, cap);
     c.innerHTML = '<div class="ms-bg"></div><div class="ms-floor"><div class="arena-disco"></div></div>';
-    $('.ms-bg', c).innerHTML = E.Arte.sfondo(0);
-    const alleati = (save.squadra && save.squadra.length ? save.squadra : ['scipione', 'spartaco', 'perpetua', 'leonardo']).slice(0, 4);
-    const pos = [[8, 70], [17, 88], [4, 94], [22, 78]];
-    const nem = [['annibale', 86, 88], ['eco_cartaginese', 76, 76], ['legionario', 95, 74]];
-    const add = (id, x, y, enemy) => {
-      const d = document.createElement('div'); d.className = 'ms-pg' + (enemy ? ' nem' : ''); d.style.left = x + '%'; d.style.top = y + '%'; d.style.zIndex = Math.round(y);
-      if (E.ARTE[id] && E.ARTE[id].scala) d.style.setProperty('--sc', E.ARTE[id].scala);
-      d.appendChild(E.Arte.figura(id)); c.appendChild(d);
-    };
-    alleati.forEach((id, i) => add(id, pos[i][0], pos[i][1], false));
-    nem.forEach(n => add(n[0], n[1], n[2], true));
+    $('.ms-bg', c).innerHTML = E.Arte.sfondo(cap);
+    const capo = E.CAPITOLI[cap]; const mb = $('#mb-cap'); if (mb && capo) mb.textContent = (save.run ? 'Spedizione in corso · ' : '') + 'Capitolo ' + capo.num + ' · ' + capo.epoca;
+    const mv = $('#menu-valute'); if (mv && save.valute) mv.innerHTML = `<span class="val sigilli">❂ ${save.valute.sigilli}</span><span class="val denari">◎ ${save.valute.denari}</span>`;
+    const alleati = (save.squadra && save.squadra.length ? save.squadra : ['scipione', 'spartaco', 'perpetua', 'leonardo']).filter(id => E.ARTE[id]).slice(0, 4);
+    const pos = [[62, 80], [76, 72], [70, 96], [86, 88]];
+    const anim = ['grido', 'invocazione', 'vittoria', 'benedizione', 'turbine', 'salto'];
+    alleati.forEach((id, i) => {
+      const d = document.createElement('div'); d.className = 'ms-pg'; d.style.left = pos[i][0] + '%'; d.style.top = pos[i][1] + '%'; d.style.zIndex = Math.round(pos[i][1]);
+      if (E.ARTE[id].scala) d.style.setProperty('--sc', E.ARTE[id].scala);
+      const f = E.Arte.figura(id); d.appendChild(f); c.appendChild(d);
+      // tocco: il personaggio reagisce con una delle sue mosse
+      d.onclick = () => { const sk = (E.VOCI[id] && E.VOCI[id].skills) || []; const mosse = sk.map(s => E.ANIM_SKILL[s]).filter(Boolean).concat(['grido']); const a = mosse[Math.floor(Math.random() * mosse.length)] || anim[0];
+        E.Arte.anima(f, a === 'vittoria' ? 'grido' : a, 1); Snd.init(); Snd.sfx('ui'); };
+    });
     if (UI.Fx) UI.Fx.ambiente = p.polvere;
   };
 

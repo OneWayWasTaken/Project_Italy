@@ -29,23 +29,30 @@
   </defs></svg>
   <canvas id="fx"></canvas>
 
-  <!-- MENU -->
+  <!-- MENU: titolo e voci a sinistra, la squadra viva a destra (tocca un personaggio) -->
   <section id="scr-menu" class="screen active">
     <div id="menu-scena"></div>
-    <div class="titolo">
-      <h1>ECHI D'ITALIA</h1>
-      <p class="sub">Il Custode ascolta ciò che la storia ha taciuto</p>
+    <div class="menu-sx">
+      <div class="titolo"><div class="t-orn">✦ ✦ ✦</div><h1>Echi<span>d'Italia</span></h1><p class="sub">Il Custode ascolta ciò che la storia ha taciuto</p></div>
+      <nav class="menu-btns">
+        <button class="btn mb grande" data-azione="campagna"><span class="ic">⚔</span><span><b>Campagna</b><small id="mb-cap">Capitolo I · Roma repubblicana</small></span></button>
+        <div class="riga">
+          <button class="btn mb" data-azione="gacha"><span class="ic">❂</span><span><b>Evocazioni</b><small>Nuove Voci</small></span></button>
+          <button class="btn mb" data-azione="archivio"><span class="ic">❖</span><span><b>Archivio</b><small>Voci e Codex</small></span></button>
+        </div>
+        <div class="riga">
+          <button class="btn mb" data-azione="nuova-prova"><span class="ic">⚑</span><span><b>Battaglia libera</b><small>Scontri di prova</small></span></button>
+          <button class="btn mb" data-azione="tutorial"><span class="ic">✎</span><span><b>Tutorial</b><small>Guida interattiva</small></span></button>
+        </div>
+        <div class="riga">
+          <button class="btn mb" data-azione="manuale"><span class="ic">?</span><span><b>Come si gioca</b><small>Tutte le regole</small></span></button>
+          <button class="btn mb" data-azione="opzioni"><span class="ic">⚙</span><span><b>Opzioni</b><small>Suono, velocità…</small></span></button>
+        </div>
+      </nav>
     </div>
-    <div class="menu-btns">
-      <button class="btn grande" data-azione="campagna">Campagna</button>
-      <button class="btn" data-azione="gacha">Evocazioni</button>
-      <button class="btn" data-azione="archivio">Archivio</button>
-      <button class="btn" data-azione="nuova-prova">Battaglia libera</button>
-      <button class="btn" data-azione="tutorial">Tutorial guidato</button>
-      <button class="btn" data-azione="manuale">Come si gioca</button>
-      <button class="btn" data-azione="opzioni">Opzioni</button>
-    </div>
-    <p class="nota-fase" id="nota-versione">Echi d'Italia · v1.0 · campagna, evocazioni e archivio</p>
+    <div class="menu-valute valute" id="menu-valute"></div>
+    <div class="ms-tocca">tocca un personaggio</div>
+    <p class="nota-fase" id="nota-versione">Echi d'Italia · v2.0</p>
   </section>
 
   <!-- SELEZIONE SQUADRA -->
@@ -109,6 +116,7 @@
 
   <!-- MAPPA A NODI (dungeon) -->
   <section id="scr-mappa" class="screen">
+    <div id="m-sfondo"></div>
     <header class="barra"><button class="btn piccolo" id="m-esci">← Capitoli</button><h2 id="m-titolo"></h2><span id="m-valute" class="valute"></span></header>
     <div id="m-mappa" class="m-mappa"></div>
     <div class="m-fondo"><div id="m-squadra" class="m-squadra"></div><div id="m-oggetti" class="m-oggetti"></div></div>
