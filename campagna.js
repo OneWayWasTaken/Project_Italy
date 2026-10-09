@@ -31,32 +31,7 @@
   /* ===================================================================== */
   /* Hub dei capitoli                                                      */
   /* ===================================================================== */
-  K.hub = function () {
-    E.UI.mostra('campagna');
-    const d = S().data, g = $('#c-griglia'); g.innerHTML = '';
-    $('#c-valute').innerHTML = `<span class="val sigilli">❂ ${d.valute.sigilli}</span><span class="val denari">◎ ${d.valute.denari}</span>`;
-    E.CAPITOLI.forEach((c, i) => {
-      const n = i + 1, sbloccato = n <= d.progresso.sbloccato, fatto = d.progresso.completati.includes(n), inCorso = d.run && d.run.cap === n;
-      const card = el('div', 'c-card' + (sbloccato ? '' : ' bloccato') + (fatto ? ' fatto' : '') + (inCorso ? ' in-corso' : ''));
-      card.style.setProperty('--ac', E.Arte.palette(i).bordo); card.style.animationDelay = (i * 0.05) + 's';
-      // illustrazione: paesaggio dell'epoca + l'Eco del boss (in sagoma se il capitolo è bloccato)
-      const arte = el('div', 'c-arte', E.Arte.sfondo(i)); arte.appendChild(el('div', 'c-num', c.num));
-      if (c.boss && E.ARTE[c.boss]) { const bw = el('div', 'c-boss'); bw.appendChild(E.Arte.figura(c.boss)); arte.appendChild(bw); }
-      card.appendChild(arte);
-      const corpo = el('div', 'c-corpo'); card.appendChild(corpo);
-      const volti = el('div', 'c-volti'); c.voci.forEach(id => volti.appendChild(E.UI.ritratto(E.VOCI[id])));
-      corpo.appendChild(volti);
-      const mem = d.flag['memoria' + n];
-      corpo.appendChild(el('div', 'c-testo', `<h3>${c.epoca}</h3><div class="c-eco">${c.eco}</div><p>${c.descr}</p>` +
-        `<div class="c-stato">${!sbloccato ? '🔒 Completa il capitolo precedente' : inCorso ? '● Spedizione in corso' : fatto ? '★ Completato' + (mem ? ' · memoria: ' + mem : '') : 'Disponibile'}</div>`));
-      const bx = el('div', 'c-btn');
-      if (sbloccato) {
-        if (inCorso) { const b1 = el('button', 'btn grande', 'Continua'); b1.onclick = () => K.riprendi(); const b2 = el('button', 'btn piccolo', 'Ricomincia'); b2.onclick = () => { if (confirm('Ricominciare il capitolo? La spedizione in corso andrà persa.')) { d.run = null; S().save(); K.apriCapitolo(n); } }; bx.append(b1, b2); }
-        else { const b = el('button', 'btn grande', fatto ? 'Rigioca' : 'Inizia'); b.onclick = () => { if (d.run && !confirm('Hai una spedizione in corso in un altro capitolo: iniziare questo la annulla. Continuare?')) return; d.run = null; K.apriCapitolo(n); }; bx.appendChild(b); }
-      }
-      corpo.appendChild(bx); g.appendChild(card);
-    });
-  };
+  K.hub = function () { E.UI.mostra('campagna'); E.Hub.viaggio(); };   // la mappa d'Italia è in hub.js
 
   /* ===================================================================== */
   /* Avvio capitolo                                                        */
@@ -256,7 +231,7 @@
         { testo: 'Ritenta', cls: 'grande', fn: () => { d.run = prima; S().save(); K.battaglia(nodo); } },
         { testo: 'Abbandona capitolo', fn: () => { d.run = null; S().save(); K.hub(); } }] };
     }
-    d.stats.vittorie++;
+    d.stats.vittorie++; if (E.Hub) E.Hub.esperienza(25);
     run.stati = Object.assign({}, run.stati, E.Combat.statoFinale(B));
     const caduti = Object.keys(E.Combat.statoFinale(B)).filter(id => E.Combat.statoFinale(B)[id].caduto);
     let den = 0, sig = 0;
@@ -283,6 +258,7 @@
       S().aggiungi('denari', r.denari); S().aggiungi('sigilli', r.sigilli);
       [r.voce, r.voce2, r.voce3].filter(Boolean).forEach(id => { const x = S().aggiungiVoce(id); nuove.push({ id, nuova: x.nuova, lv: x.lv }); });
     } else { S().aggiungi('denari', Math.round(r.denari / 2)); S().aggiungi('sigilli', 3); }
+    if (E.Hub) E.Hub.esperienza(primo ? 150 : 40);
     d.run = null; S().save();
     const m = el('div', 'ricompensa-cap');
     m.innerHTML = `<h3>★ Capitolo ${c.num} completato</h3><p>${primo ? `Ricompense: <b>◎ ${r.denari}</b> · <b>❂ ${r.sigilli}</b>` : `Ripetizione: <b>◎ ${Math.round(r.denari / 2)}</b> · <b>❂ 3</b>`}</p>` +

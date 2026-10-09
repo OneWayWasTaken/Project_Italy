@@ -342,6 +342,7 @@
   };
   UI.mostra = function (nome) {
     $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + nome));
+    if (E.Hub && E.Hub.mostra) E.Hub.mostra(nome);
     // musica di sottofondo per schermata (la battaglia sceglie da sé battaglia/boss)
     const temi = { menu: 'menu', squadra: 'menu', archivio: 'menu', campagna: 'mappa', mappa: 'mappa', storia: 'storia', gacha: 'gacha' };
     const run = E.Save && E.Save.data && E.Save.data.run;
@@ -445,115 +446,10 @@
   /* ===================================================================== */
   /* Selezione squadra                                                     */
   /* ===================================================================== */
-  UI.squadra = {
-    sel: [], ctx: null, filtro: null,
-    init(ctx, opts) {
-      this.ctx = ctx; const save = ctx.save; this.filtro = null; this.opts = opts = opts || {};
-      const pool = opts.pool || Object.keys(E.VOCI);
-      this.pool = pool;
-      this.sel = (save.squadra || []).filter(id => E.VOCI[id] && pool.includes(id)).slice(0, C.SQUADRA_MAX);
-      if (this.sel.length < C.SQUADRA_MAX) pool.forEach(id => { if (this.sel.length < C.SQUADRA_MAX && !this.sel.includes(id)) this.sel.push(id); });
-      $('#scr-squadra .barra h2').textContent = opts.titolo || 'Scegli 4 Voci';
-      $('#sq-via').textContent = opts.testoVia || 'Combatti';
-      $('#sq-incontro').parentElement.style.display = opts.nascondiIncontro ? 'none' : '';
-      const g = $('#sq-griglia'); g.innerHTML = '';
-      Object.values(E.VOCI).filter(v => pool.includes(v.id)).sort((a, b) => a.epoca - b.epoca).forEach(v => {
-        const c = el('div', 'sq-card r' + v.rarita); c.dataset.id = v.id; c.dataset.aff = v.aff; c.style.setProperty('--ac', E.AFFINITA[v.aff].colore);
-        c.appendChild(UI.ritratto(v));
-        c.appendChild(el('div', 'n', v.breve));
-        c.appendChild(el('div', 'm', `<span style="color:${E.AFFINITA[v.aff].colore}">${E.AFFINITA[v.aff].simbolo} ${E.AFFINITA[v.aff].nome}</span> · Cap. ${E.CAPITOLI[v.epoca - 1].num}`));
-        c.appendChild(el('div', 'stelle', '★'.repeat(v.rarita)));
-        const lvl = E.Save && E.Save.livello ? E.Save.livello(v.id) : 0; if (opts.pool && lvl) c.appendChild(el('div', 'eco-lv', 'Eco ' + lvl));
-        c.onclick = () => { Snd.sfx('ui'); this.toggle(v.id); };
-        g.appendChild(c);
-      });
-      // filtri per affinità
-      const f = $('#sq-filtri'); f.innerHTML = '';
-      const chip = (txt, aff, col) => { const b = el('button', 'chip-filtro' + (aff === this.filtro ? ' on' : ''), txt); if (col) b.style.setProperty('--ac', col); b.dataset.aff = aff || ''; b.onclick = () => { this.filtro = aff || null; this.applicaFiltro(); }; f.appendChild(b); };
-      chip('Tutte', null); E.AFFINITA_ORDINE.forEach(a => chip(E.AFFINITA[a].simbolo + ' ' + E.AFFINITA[a].nome, a, E.AFFINITA[a].colore));
-      const s = $('#sq-incontro'); s.innerHTML = '';
-      Object.values(E.INCONTRI).filter(i => !i.tutorial).forEach(i => { const o = el('option', '', i.nome); o.value = i.id; s.appendChild(o); });
-      s.value = save.incontro && E.INCONTRI[save.incontro] ? save.incontro : 'pattuglia';
-      $('#sq-via').onclick = () => (opts.onVia ? opts.onVia(this.sel.slice()) : ctx.onAvvia(this.sel.slice(), s.value));
-      $('#sq-affinita').onclick = () => UI.tabellaAffinita();
-      $('#sq-consigliata').onclick = () => { this.sel = ['scipione', 'spartaco', 'perpetua', 'leonardo'].filter(id => pool.includes(id)); pool.forEach(id => { if (this.sel.length < C.SQUADRA_MAX && !this.sel.includes(id)) this.sel.push(id); }); this.salva(); this.aggiorna(); this.dettaglio(this.sel[0]); };
-      $('#sq-casuale').onclick = () => {
-        const tutte = pool.slice().sort(() => Math.random() - 0.5), sc = [], usate = new Set();
-        tutte.forEach(id => { if (sc.length < C.SQUADRA_MAX && !usate.has(E.VOCI[id].aff)) { sc.push(id); usate.add(E.VOCI[id].aff); } });
-        tutte.forEach(id => { if (sc.length < C.SQUADRA_MAX && !sc.includes(id)) sc.push(id); });
-        this.sel = sc; this.salva(); this.aggiorna(); this.dettaglio(sc[0]);
-      };
-      this.aggiorna(); this.dettaglio(this.sel[0] || pool[0]);
-    },
-    applicaFiltro() {
-      $$('.chip-filtro').forEach(b => b.classList.toggle('on', (b.dataset.aff || null) === this.filtro));
-      $$('.sq-card').forEach(c => c.classList.toggle('nascosta', !!this.filtro && c.dataset.aff !== this.filtro));
-    },
-    salva() { this.ctx.save.squadra = this.sel.slice(); this.ctx.persist(); },
-    toggle(id) {
-      const i = this.sel.indexOf(id);
-      if (i >= 0) this.sel.splice(i, 1);
-      else if (this.sel.length < C.SQUADRA_MAX) this.sel.push(id);
-      this.dettaglio(id); this.aggiorna(); this.salva();
-    },
-    aggiorna() {
-      $$('.sq-card').forEach(c => c.classList.toggle('sel', this.sel.includes(c.dataset.id)));
-      $('#sq-conta').textContent = this.sel.length + '/' + C.SQUADRA_MAX;
-      $('#sq-via').disabled = this.sel.length !== C.SQUADRA_MAX;
-      // anteprima della squadra con Concordie e copertura delle affinità
-      const t = $('#sq-team'); t.innerHTML = '';
-      for (let i = 0; i < C.SQUADRA_MAX; i++) {
-        const id = this.sel[i], slot = el('div', 'slot' + (id ? ' pieno' : ''));
-        if (id) { slot.appendChild(UI.ritratto(E.VOCI[id])); slot.appendChild(el('span', 'nm', E.VOCI[id].breve)); slot.title = 'Rimuovi'; slot.onclick = () => this.toggle(id); }
-        else slot.appendChild(el('span', 'vuoto-slot', '+'));
-        t.appendChild(slot);
-      }
-      const affs = this.sel.map(id => E.VOCI[id].aff), info = el('div', 'team-info');
-      const conc = E.CONCORDIE.filter(([a, b]) => affs.includes(a) && affs.includes(b));
-      info.innerHTML = (conc.length ? conc.map(c => `<span class="badge-conc">Concordia ${E.AFFINITA[c[0]].simbolo}${E.AFFINITA[c[1]].simbolo}</span>`).join('') : '<span class="badge-no">Nessuna Concordia</span>') +
-        `<span class="badge-aff">${new Set(affs).size} affinità</span>`;
-      t.appendChild(info);
-    },
-    dettaglio(id) {
-      const v = E.VOCI[id], d = $('#sq-dettaglio'); d.innerHTML = '';
-      const a = E.AFFINITA[v.aff];
-      const fw = el('div', 'det-fig'); if (E.Arte) fw.appendChild(E.Arte.figura(id)); d.appendChild(fw);
-      d.appendChild(el('h3', '', v.nome));
-      d.appendChild(el('small', '', `${E.CAPITOLI[v.epoca - 1].epoca} · ${v.ruolo} · <span style="color:${a.colore}">${a.simbolo} ${a.nome}</span> · ${'★'.repeat(v.rarita)}`));
-      d.appendChild(el('p', '', `PV <b>${v.pv}</b> · Velocità <b>${v.vel[0]}–${v.vel[1]}</b> · Forte contro <b style="color:${E.AFFINITA[E.AFFINITA_ORDINE[(E.AFFINITA_ORDINE.indexOf(v.aff) + 1) % 6]].colore}">${E.AFFINITA[E.AFFINITA_ORDINE[(E.AFFINITA_ORDINE.indexOf(v.aff) + 1) % 6]].nome}</b>`));
-      d.appendChild(el('div', 'skill-box', `<b>Passiva — ${v.passiva.nome}</b><small>${v.passiva.desc}</small>`));
-      v.skills.forEach(sid => {
-        const s = E.SKILL[sid];
-        d.appendChild(el('div', 'skill-box', `<b>${s.nome}</b> <span style="color:var(--oro)">◆${s.costo}</span>
-          <small>${s.monete} monete · PB ${s.pb} · PM +${s.pm} · ${E.AFFINITA[s.aff].nome} · attacco «${(E.ANIM_SKILL && E.ANIM_SKILL[sid]) || 'base'}»</small>
-          <small>${E.descrizioneSkill(s).join('<br>') || '—'}</small>`));
-      });
-      d.appendChild(el('small', 'vuoto', 'Voce romanzata: carattere e abilità sono inventati; nomi e fatti storici no.'));
-    }
-  };
+  // UI.squadra (composizione della squadra) è in hub.js
 
   /** Scena animata dietro il menu principale: la squadra salvata contro un Eco, tutti con la loro idle. */
-  UI.menuScena = function (save) {
-    const c = $('#menu-scena'); if (!c || !E.Arte) return;
-    const prog = save.progresso || { sbloccato: 1 }, cap = clamp((prog.sbloccato || 1) - 1, 0, 6);
-    const p = E.Arte.applicaPalette(c, cap);
-    c.innerHTML = '<div class="ms-bg"></div><div class="ms-floor"><div class="arena-disco"></div></div>';
-    $('.ms-bg', c).innerHTML = E.Arte.sfondo(cap);
-    const capo = E.CAPITOLI[cap]; const mb = $('#mb-cap'); if (mb && capo) mb.textContent = (save.run ? 'Spedizione in corso · ' : '') + 'Capitolo ' + capo.num + ' · ' + capo.epoca;
-    const mv = $('#menu-valute'); if (mv && save.valute) mv.innerHTML = `<span class="val sigilli">❂ ${save.valute.sigilli}</span><span class="val denari">◎ ${save.valute.denari}</span>`;
-    const alleati = (save.squadra && save.squadra.length ? save.squadra : ['scipione', 'spartaco', 'perpetua', 'leonardo']).filter(id => E.ARTE[id]).slice(0, 4);
-    const pos = [[62, 80], [76, 72], [70, 96], [86, 88]];
-    const anim = ['grido', 'invocazione', 'vittoria', 'benedizione', 'turbine', 'salto'];
-    alleati.forEach((id, i) => {
-      const d = document.createElement('div'); d.className = 'ms-pg'; d.style.left = pos[i][0] + '%'; d.style.top = pos[i][1] + '%'; d.style.zIndex = Math.round(pos[i][1]);
-      if (E.ARTE[id].scala) d.style.setProperty('--sc', E.ARTE[id].scala);
-      const f = E.Arte.figura(id); d.appendChild(f); c.appendChild(d);
-      // tocco: il personaggio reagisce con una delle sue mosse
-      d.onclick = () => { const sk = (E.VOCI[id] && E.VOCI[id].skills) || []; const mosse = sk.map(s => E.ANIM_SKILL[s]).filter(Boolean).concat(['grido']); const a = mosse[Math.floor(Math.random() * mosse.length)] || anim[0];
-        E.Arte.anima(f, a === 'vittoria' ? 'grido' : a, 1); Snd.init(); Snd.sfx('ui'); };
-    });
-    if (UI.Fx) UI.Fx.ambiente = p.polvere;
-  };
+  UI.menuScena = function () { if (E.Hub) E.Hub.atrio(); };   // l'Atrio è in hub.js
 
   /* ===================================================================== */
   /* Battaglia                                                             */

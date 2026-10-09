@@ -23,7 +23,8 @@
         gacha: { pity: {}, evocazioni: 0 },
         progresso: { completati: [], sbloccato: 1 },// capitoli completati / massimo capitolo giocabile
         codex: {},                                  // schede sbloccate
-        run: null                                   // spedizione (dungeon) in corso: vedi campagna.js
+        run: null,                                  // spedizione (dungeon) in corso: vedi campagna.js
+        xp: 0                                       // esperienza del Custode (livello nell'HUD)
       };
     },
     load() {
@@ -81,13 +82,13 @@
       avviaTutorial: () => avviaBattaglia(E.INCONTRI.tutorial.squadra, 'tutorial', { tutorial: true }),
       onMenu: () => { E.UI.mostra('menu'); if (E.UI.menuScena) E.UI.menuScena(save); },
       onSquadra: () => { E.UI.squadra.init(ctx); E.UI.mostra('squadra'); },
-      onFine(esito) { if (esito === 'vittoria') save.stats.vittorie++; else save.stats.sconfitte++; persist(); }
+      onFine(esito) { if (esito === 'vittoria') { save.stats.vittorie++; E.Hub.esperienza(12); } else save.stats.sconfitte++; persist(); }
     };
 
     E.UI.init(ctx);
-    E.Story.init(ctx); E.Campagna.init(ctx);
+    E.Story.init(ctx); E.Campagna.init(ctx); E.Hub.init(ctx);
     document.getElementById('m-esci').onclick = () => E.Campagna.hub();
-    E.UI.menuScena(save);
+    E.UI.mostra('menu'); E.UI.menuScena(save);
     if (E.Musica) E.Musica.tema('menu', Math.max(0, (save.progresso.sbloccato || 1) - 1));
     // Primo avvio: propone il tutorial (con possibilità di saltarlo del tutto)
     if (save.tutorial === undefined) {

@@ -60,12 +60,14 @@
       out.push(res);
     }
     d.gacha.pity[banner.id] = pity; d.gacha.evocazioni = (d.gacha.evocazioni || 0) + n;
+    d.gacha.frammenti = d.gacha.frammenti || {}; d.gacha.frammenti[banner.id] = (d.gacha.frammenti[banner.id] || 0) + n;
     // storico (ultime 80 evocazioni, la più recente per prima)
     d.gacha.storia = (out.map(r => ({ id: r.id, r: r.rarita, b: banner.id, t: Date.now() })).reverse().concat(d.gacha.storia || [])).slice(0, 80);
     return { ok: true, risultati: out, banner: banner.id };
   };
   /** Scambio: Denari → Sigilli (dà uno scopo ai Denari accumulati). */
   G.CAMBIO = 120;
+  G.FRAMMENTI = 100;
   G.scambia = function (S, n) { if (!S.spendi('denari', G.CAMBIO * n)) return false; S.aggiungi('sigilli', n); S.save(); return true; };
   /** Evocazioni rimaste prima della ★5 garantita. */
   G.alla_garanzia = function (S, bannerId) { return Math.max(1, E.GACHA.PITY_HARD - ((S.data.gacha.pity || {})[bannerId] || 0)); };
@@ -98,12 +100,14 @@
       const ev = b.evidenza.length ? b.evidenza : ['scipione', 'leonardo'];
       const x = el('button', 'g-tab' + (b.id === B.id ? ' on' : ''));
       x.style.setProperty('--ac', b.colore);
-      const mini = el('div', 'g-tab-mini'); ev.slice(0, 2).forEach(id => mini.appendChild(E.UI.ritratto(E.VOCI[id])));
-      x.appendChild(mini); x.appendChild(el('div', 'g-tab-t', `<b>${b.nome}</b><small>${b.evidenza.length ? 'In evidenza' : 'Standard'}</small>`));
+      x.appendChild(el('div', 'gt-sf', E.Arte.sfondo(E.VOCI[ev[0]].epoca - 1)));
+      ev.slice(0, 2).forEach((id, j) => { const w = el('div', 'gt-fig'); w.style.right = (4 + j * 22) + '%'; w.appendChild(E.Arte.figura(id)); x.appendChild(w); });
+      x.appendChild(el('div', 'g-tab-t', `<small>${b.evidenza.length ? 'Evocazione in evidenza' : 'Evocazione standard'}</small><b class="scritta">${b.nome}</b>`));
       x.onclick = () => { if (G.ui.banner !== b.id) { E.UI.Snd.sfx('ui'); G.ui.banner = b.id; G.ui.disegna(); } }; nav.appendChild(x);
     });
     // Vetrina: le Voci in evidenza in grande, su piedistalli, con nome e rarità
     const v = $('#g-vetrina'); v.innerHTML = '';
+    $('.g-scena').style.backgroundImage = 'none'; $('#g-sfondo').querySelector('.g-velo').insertAdjacentHTML('beforebegin', `<div class="g-epoca">${E.Arte.sfondo(B.evidenza.length ? E.VOCI[B.evidenza[0]].epoca - 1 : 0)}</div>`);
     const ev = B.evidenza.length ? B.evidenza : ['scipione', 'leonardo', 'garibaldi', 'perlasca'];
     ev.forEach((id, i) => {
       const V = E.VOCI[id], a = E.AFFINITA[V.aff];
@@ -118,8 +122,20 @@
     const rest = G.alla_garanzia(S, B.id), pity = (S.data.gacha.pity || {})[B.id] || 0;
     $('#g-info').innerHTML = `<div class="g-titolo">${B.nome}</div><div class="g-desc">${B.desc}</div>
       <div class="g-pity"><span>★5 garantita entro <b>${rest}</b> evocazioni</span><div class="g-pity-barra"><i style="width:${Math.min(100, pity / g.PITY_HARD * 100)}%"></i><u style="left:${g.PITY_SOFT / g.PITY_HARD * 100}%" data-tip="Da qui la probabilità di ★5 cresce a ogni evocazione"></u></div></div>
+      <div class="g-frammenti" data-tip="Ogni evocazione su questo banner dà 1 Frammento d'Eco. Con ${G.FRAMMENTI} Frammenti scegli una Voce in evidenza (o, nel banner standard, una ★5 a scelta).">Frammenti d'Eco <b>${(S.data.gacha.frammenti || {})[B.id] || 0}/${G.FRAMMENTI}</b><button class="btn piccolo" id="g-fr-scambia" ${((S.data.gacha.frammenti || {})[B.id] || 0) < G.FRAMMENTI ? 'disabled' : ''}>Scambia ▸</button></div>
       <div class="g-nota">${B.evidenza.length ? 'Nelle estrazioni ★4/★5 una Voce su due è tra quelle in evidenza.' : 'Banner standard: tutte le Voci con la stessa probabilità.'} · Evocazioni totali: ${S.data.gacha.evocazioni || 0}</div>`;
+    const bf = $('#g-fr-scambia'); if (bf) bf.onclick = () => G.ui.scambiaFrammenti(B);
     $('#g-x1').disabled = S.data.valute.sigilli < g.COSTO_1; $('#g-x10').disabled = S.data.valute.sigilli < g.COSTO_10;
+  };
+  /** Scambio dei Frammenti d'Eco: scegli una Voce (in evidenza, o una ★5 nel banner standard). */
+  G.ui.scambiaFrammenti = function (B) {
+    const S = E.Save, lista = B.evidenza.length ? B.evidenza : Object.values(E.VOCI).filter(v => v.rarita === 5).map(v => v.id);
+    const d = el('div'); d.innerHTML = `<h3>Scambio dei Frammenti</h3><p>Spendi ${G.FRAMMENTI} Frammenti d'Eco per una di queste Voci (se l'hai già, sale di un livello Eco).</p>`;
+    const gr = el('div', 'sq-griglia'); gr.style.gridTemplateColumns = 'repeat(auto-fill,minmax(100px,1fr))';
+    lista.forEach(id => { const v = E.VOCI[id], c = el('div', 'sq-card r' + v.rarita); c.style.setProperty('--ac', E.AFFINITA[v.aff].colore); c.appendChild(E.UI.ritratto(v)); c.appendChild(el('div', 'n', v.breve)); c.appendChild(el('div', 'stelle', '★'.repeat(v.rarita)));
+      c.onclick = () => { const f = S.data.gacha.frammenti; if ((f[B.id] || 0) < G.FRAMMENTI) return; f[B.id] -= G.FRAMMENTI; const r = S.aggiungiVoce(id); if (r.max) S.aggiungi('denari', 100); S.save(); $('#modale').classList.remove('on'); E.UI.Snd.sfx('vittoria'); G.ui.disegna(); E.UI.modale(el('p', '', `<b>${v.breve}</b> ${r.nuova ? 'entra nel tuo Archivio!' : r.max ? 'è già al massimo: ricevi 100 Denari.' : 'sale al livello Eco ' + r.lv + '.'}`)); };
+      gr.appendChild(c); });
+    d.appendChild(gr); E.UI.modale(d);
   };
   G.ui.tassi = function () {
     const g = E.GACHA, d = el('div');

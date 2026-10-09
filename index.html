@@ -14,11 +14,12 @@
 <title>Echi d'Italia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800;900&family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Alegreya+Sans:wght@400;500;700;800;900&family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="figure.css">
 <link rel="stylesheet" href="battaglia.css">
 <link rel="stylesheet" href="gacha.css">
+<link rel="stylesheet" href="tema.css">
 </head>
 <body>
 <div id="app">
@@ -27,49 +28,56 @@
     <linearGradient id="gVert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></linearGradient>
     <radialGradient id="gTesta" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".36"/></radialGradient>
   </defs></svg>
+  <div id="bacheca"></div>
   <canvas id="fx"></canvas>
-
-  <!-- MENU: titolo e voci a sinistra, la squadra viva a destra (tocca un personaggio) -->
-  <section id="scr-menu" class="screen active">
-    <div id="menu-scena"></div>
-    <div class="menu-sx">
-      <div class="titolo"><div class="t-orn">✦ ✦ ✦</div><h1>Echi<span>d'Italia</span></h1><p class="sub">Il Custode ascolta ciò che la storia ha taciuto</p></div>
-      <nav class="menu-btns">
-        <button class="btn mb grande" data-azione="campagna"><span class="ic">⚔</span><span><b>Campagna</b><small id="mb-cap">Capitolo I · Roma repubblicana</small></span></button>
-        <div class="riga">
-          <button class="btn mb" data-azione="gacha"><span class="ic">❂</span><span><b>Evocazioni</b><small>Nuove Voci</small></span></button>
-          <button class="btn mb" data-azione="archivio"><span class="ic">❖</span><span><b>Archivio</b><small>Voci e Codex</small></span></button>
-        </div>
-        <div class="riga">
-          <button class="btn mb" data-azione="nuova-prova"><span class="ic">⚑</span><span><b>Battaglia libera</b><small>Scontri di prova</small></span></button>
-          <button class="btn mb" data-azione="tutorial"><span class="ic">✎</span><span><b>Tutorial</b><small>Guida interattiva</small></span></button>
-        </div>
-        <div class="riga">
-          <button class="btn mb" data-azione="manuale"><span class="ic">?</span><span><b>Come si gioca</b><small>Tutte le regole</small></span></button>
-          <button class="btn mb" data-azione="opzioni"><span class="ic">⚙</span><span><b>Opzioni</b><small>Suono, velocità…</small></span></button>
-        </div>
-      </nav>
+  <div id="hud">
+    <div class="hud-sx telaio">
+      <div class="hud-id"><small id="hud-num">N° 000000</small><b><i>LV</i><span id="hud-lv">01</span></b></div>
+      <div class="hud-cap" id="hud-cap"></div>
+      <div class="hud-ris"><div class="r sig"><span class="ic">❂</span><span id="hud-sig">0</span></div><div class="r den"><span class="ic">◎</span><span id="hud-den">0</span></div><div class="r xpb"><i id="hud-xpb"></i><span id="hud-xp">0 / 100</span></div></div>
     </div>
-    <div class="menu-valute valute" id="menu-valute"></div>
-    <div class="ms-tocca">tocca un personaggio</div>
-    <p class="nota-fase" id="nota-versione">Echi d'Italia · v2.0</p>
+    <nav class="hud-nav" id="hud-nav"></nav>
+  </div>
+
+  <!-- ATRIO (schermata iniziale): vetrina con la Voce guida, capitoli, banner e icone -->
+  <section id="scr-menu" class="screen active">
+    <div class="at-vetrina telaio rosso">
+      <div class="at-testa"><span class="lv" id="at-lv"></span><span class="id" id="at-id"></span><span class="marchio">ECHI D'ITALIA</span></div>
+      <div class="at-scena" id="menu-scena" title="Tocca la Voce"></div>
+    </div>
+    <div class="at-colonna telaio" id="at-capitoli"><div class="at-motto">ASCOLTA L'ECO · RESTITUISCI LA STORIA</div></div>
+    <div class="at-dx">
+      <div class="at-icone">
+        <button class="at-ic" data-azione="manuale" title="Come si gioca">?</button>
+        <button class="at-ic" data-azione="tutorial" title="Tutorial">✎</button>
+        <button class="at-ic" data-azione="opzioni" title="Opzioni">⚙</button>
+      </div>
+      <div id="at-banner" class="at-dx" style="flex:1"></div>
+    </div>
+    <p class="nota-fase" id="nota-versione" style="display:none">Echi d'Italia · v3.0</p>
   </section>
 
-  <!-- SELEZIONE SQUADRA -->
+  <!-- VOCI: composizione della squadra -->
   <section id="scr-squadra" class="screen">
-    <header class="barra"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Scegli 4 Voci</h2><span id="sq-conta">0/4</span></header>
-    <div class="sq-filtri" id="sq-filtri"></div>
-    <div class="squadra-layout">
-      <div id="sq-griglia" class="sq-griglia"></div>
-      <aside id="sq-dettaglio" class="sq-dettaglio"></aside>
+    <aside class="vs-sx">
+      <div class="vs-capo telaio"><span class="piastra">Voce guida</span><div class="vs-capo-fig" id="vs-capo"></div><small id="vs-capo-n"></small></div>
+      <div class="vs-squadre telaio" id="vs-squadre"></div>
+    </aside>
+    <div class="vs-centro telaio">
+      <div class="vs-testa"><div class="vs-nome"><b id="vs-titolo">Squadra</b><button id="vs-rinomina" title="Rinomina">✎</button><span id="sq-conta" class="piastra scura">0/4</span></div><div class="vs-filtri" id="sq-filtri"></div></div>
+      <div class="vs-griglia" id="sq-griglia"></div>
     </div>
-    <div class="sq-team" id="sq-team"></div>
-    <footer class="barra">
-      <button id="sq-consigliata" class="btn piccolo">Consigliata</button><button id="sq-casuale" class="btn piccolo">Casuale</button>
-      <label>Incontro <select id="sq-incontro"></select></label>
-      <button id="sq-affinita" class="btn piccolo">Tabella affinità</button>
-      <button id="sq-via" class="btn grande" disabled>Combatti</button>
-    </footer>
+    <aside class="vs-dx">
+      <div class="vs-aff telaio"><div class="titolo-aff">AFFINITÀ | SKILL</div><ul id="vs-aff"></ul><div class="conc" id="vs-conc"></div></div>
+      <div class="vs-azioni">
+        <button id="sq-dettagli" class="btn">Scheda della Voce</button>
+        <button id="sq-consigliata" class="btn piccolo">Consigliata</button>
+        <button id="sq-casuale" class="btn piccolo">Casuale</button>
+        <label id="sq-inc-wrap"><select id="sq-incontro"></select></label>
+        <button id="sq-affinita" class="btn piccolo">Tabella affinità</button>
+        <button id="sq-via" class="btn grande" disabled>Combatti</button>
+      </div>
+    </aside>
   </section>
 
   <!-- BATTAGLIA: arena a tutto schermo, barra superiore, dock in basso (Voci + skill + comandi) -->
@@ -113,6 +121,8 @@
   <section id="scr-campagna" class="screen">
     <header class="barra"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Campagna</h2><span id="c-valute" class="valute"></span></header>
     <div id="c-griglia" class="c-griglia"></div>
+    <div class="vg-modi" id="vg-modi"></div>
+    <div class="vg-mappa telaio" id="vg-mappa"></div>
   </section>
 
   <!-- MAPPA A NODI (dungeon) -->
@@ -138,8 +148,8 @@
     <div id="g-sfondo"></div>
     <header class="barra trasparente"><button class="btn piccolo" data-azione="menu">← Menu</button><h2>Evocazioni</h2><span id="g-valute" class="valute"></span></header>
     <div class="g-layout">
-      <nav id="g-banner" class="g-banner"></nav>
-      <div class="g-scena"><div id="g-vetrina" class="g-vetrina"></div><div id="g-info" class="g-info"></div></div>
+      <nav id="g-banner" class="g-banner telaio"></nav>
+      <div class="g-scena telaio"><div id="g-vetrina" class="g-vetrina"></div><div id="g-info" class="g-info"></div></div>
     </div>
     <footer class="g-piede">
       <div class="g-piede-sx"><button id="g-tassi" class="btn piccolo">Tassi</button><button id="g-storico" class="btn piccolo">Storico</button><button id="g-scambio" class="btn piccolo">Scambio</button></div>
@@ -173,6 +183,7 @@
 <script src="gacha.js"></script>
 <script src="campagna.js"></script>
 <script src="archivio.js"></script>
+<script src="hub.js"></script>
 <script src="main.js"></script>
 </body>
 </html>
