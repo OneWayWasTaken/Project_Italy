@@ -261,7 +261,7 @@
   function dadoMax(B, unitId) {
     return Math.max(0, ...B.azioni.filter(a => a.u === unitId).map(a => a.dado));
   }
-  function prepara(B, u, s, az, rival) {
+  function prepara(B, u, s, az, rival, simula) {
     const rel = E.rel(s.aff, rival.aff);
     let pb = s.pb, pm = s.pm + rel + u.bonusPM + u.bonusPMlv, molt = 1, monete = s.monete;
     if (s.monetePiuSeCed && rival.ced > 0) monete += s.monetePiuSeCed;
@@ -271,7 +271,7 @@
     if (s.pbPer) {
       const n = u.stati[s.pbPer.s] || 0;
       pb += n * s.pbPer.k;
-      if (s.pbPer.consuma && n) addStato(B, u, s.pbPer.s, -Math.ceil(n * s.pbPer.consuma));
+      if (s.pbPer.consuma && n && !simula) addStato(B, u, s.pbPer.s, -Math.ceil(n * s.pbPer.consuma));
     }
     if (s.pmPerStato) pm += Math.min(s.pmPerStato.max, (u.stati[s.pmPerStato.s] || 0) * s.pmPerStato.k);
     const rd = dadoMax(B, rival.id);
@@ -279,12 +279,12 @@
     if (s.pbPerVel) pb += s.pbPerVel * Math.max(0, az.dado - rd);
     if (s.moltSeStato) {
       const n = rival.stati[s.moltSeStato.s] || 0;
-      if (n >= s.moltSeStato.min) { molt *= s.moltSeStato.molt; if (s.moltSeStato.consuma) addStato(B, rival, s.moltSeStato.s, -n); }
+      if (n >= s.moltSeStato.min) { molt *= s.moltSeStato.molt; if (s.moltSeStato.consuma && !simula) addStato(B, rival, s.moltSeStato.s, -n); }
     }
     if (s.moltPerStato) {
       const n = rival.stati[s.moltPerStato.s] || 0;
       molt *= 1 + s.moltPerStato.per * n;
-      if (s.moltPerStato.consuma && n) addStato(B, rival, s.moltPerStato.s, -n);
+      if (s.moltPerStato.consuma && n && !simula) addStato(B, rival, s.moltPerStato.s, -n);
     }
     // Passive
     const p = u.passiva;
@@ -294,6 +294,7 @@
       case 'pm_dado_min': if (az.dado >= p.min) pm += 1; break;
       case 'moneta_se_piu_veloce': if (az.dado === Math.max(...B.azioni.map(a => a.dado))) monete += 1; break;
       case 'taccuino':
+        if (simula) { if (u.appunti >= p.soglia) monete += 1; break; }
         if (u.appunti >= p.soglia) { monete += 1; u.appunti = 0; u.usate = []; ev(B, { t: 'msg', msg: u.breve + ' consulta il Taccuino: +1 moneta!' }); }
         if (!u.usate.includes(s.id)) { u.usate.push(s.id); u.appunti++; }
         break;
@@ -474,6 +475,38 @@
     if (!a || u.lato !== 'a' || u.panico) return false;
     a.skill = u.skills[skillIdx]; a.bers = bersId;
     return true;
+  };
+
+  /**
+   * Anteprima per la UI (nessun effetto sulla battaglia): per l'azione pianificata di `unitId` dice
+   * contro quale azione avversaria finirà in scontro, le potenze minime/massime e la probabilità di
+   * vincere lo scontro (stima Monte Carlo con le stesse regole di scontro()).
+   */
+  Combat.anteprima = function (B, unitId, skillId, bersId) {
+    const a = B.azioni.find(x => x.u === unitId); if (!a) return null;
+    const u = get(B, unitId), T = get(B, bersId || a.bers), s = E.SKILL[skillId || a.skill];
+    if (!T || !T.vivo || !s) return null;
+    const az = { u: unitId, dado: a.dado, skill: s.id, bers: T.id };
+    const p = prepara(B, u, s, az, T, true);
+    const res = { min: p.pb, max: p.pb + p.monete * p.pm, monete: p.monete, rel: p.rel, scontro: false, vittoria: null, rivale: null };
+    const libere = T.ced === 0 ? B.azioni.filter(x => x.u === T.id && !x.annullata && x.skill) : [];
+    const dif = libere.find(x => x.bers === unitId) || libere.sort((x, y) => y.dado - x.dado)[0];
+    if (!dif) return res;
+    // L'avversario risponde solo se agisce dopo di noi o se ci ha scelto come bersaglio.
+    if (!(dif.bers === unitId || a.dado >= dif.dado)) return res;
+    const sR = E.SKILL[dif.skill], pR = prepara(B, T, sR, dif, u, true);
+    const chA = Combat.chanceTesta(u), chB = Combat.chanceTesta(T);
+    let vinte = 0; const N = 600;
+    for (let k = 0; k < N; k++) {
+      let cA = p.monete, cB = pR.monete, ignA = hasPass(u, 'prima_moneta_ignorata'), ignB = hasPass(T, 'prima_moneta_ignorata'), r = 0;
+      while (cA > 0 && cB > 0 && r++ < 40) {
+        let tA = 0, tB = 0; for (let i = 0; i < cA; i++) if (Math.random() < chA) tA++; for (let i = 0; i < cB; i++) if (Math.random() < chB) tB++;
+        const pa = p.pb + tA * p.pm, pb = pR.pb + tB * pR.pm;
+        if (pa > pb) { if (ignB) ignB = false; else cB--; } else if (pb > pa) { if (ignA) ignA = false; else cA--; }
+      }
+      if (cA > 0 && cB <= 0) vinte++;
+    }
+    return Object.assign(res, { scontro: true, vittoria: vinte / N, rivale: { id: T.id, skill: sR.id, min: pR.pb, max: pR.pb + pR.monete * pR.pm, monete: pR.monete } });
   };
   Combat.costoPiano = B => B.azioni.filter(a => get(B, a.u).lato === 'a' && !a.annullata).reduce((t, a) => t + E.SKILL[a.skill].costo, 0);
   Combat.pianoValido = B => Combat.costoPiano(B) <= B.ardore;

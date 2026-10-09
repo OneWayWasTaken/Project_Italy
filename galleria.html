@@ -20,21 +20,17 @@
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <linearGradient id="gOmbra" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></linearGradient>
-  <linearGradient id="gVert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".34"/></linearGradient>
-  <radialGradient id="gTesta" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".36"/></radialGradient>
-</defs></svg>
 <h1>Galleria dei personaggi · anteprima di modelli e animazioni</h1>
 <div class="barra-g" id="barra"></div>
 <div class="griglia" id="griglia"></div>
 <script src="data.js"></script>
 <script src="art.js"></script>
+<script src="data_nemici.js"></script>
 <script>
   const E = window.Echi, A = E.Arte, g = document.getElementById('griglia'), b = document.getElementById('barra');
   const figs = [];
   Object.keys(E.ARTE).forEach(id => {
-    const d = E.VOCI[id] || E.NEMICI[id];
+    const d = E.VOCI[id] || E.NEMICI[id] || (E.ATTORI && E.ATTORI[id]) || { breve: id };
     const c = document.createElement('div'); c.className = 'cella' + (E.NEMICI[id] ? ' nem' : '');
     const f = A.figura(id); c.appendChild(f); figs.push(f);
     const n = document.createElement('div'); n.className = 'n'; n.innerHTML = (d.breve || d.nome) + '<small>' + (E.ARTE[id].idle || '') + '</small>'; c.appendChild(n);

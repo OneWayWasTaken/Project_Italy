@@ -70,7 +70,7 @@
   /* Motore effetti su canvas                                              */
   /* ===================================================================== */
   const Fx = UI.Fx = {
-    cv: null, ctx: null, W: 0, H: 0, dpr: 1, parts: [], lines: [], rings: [], flashes: [], proiettili: [], pilastri: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
+    cv: null, ctx: null, W: 0, H: 0, dpr: 1, forme: [], velo: [], flares: [], parts: [], lines: [], rings: [], flashes: [], proiettili: [], pilastri: [], puffs: [], urti: [], tagli: [], emettitori: {}, motes: [], ambiente: null, frozen: 0, last: 0,
     init() {
       this.cv = $('#fx'); this.ctx = this.cv.getContext('2d');
       const res = () => {
@@ -122,6 +122,72 @@
         });
       });
     },
+    /* ---------- Particelle "a forma": gocce, schegge, fumo, piume, stelle, braci, ingranaggi ---------- */
+    forma(p) { p.life = 0; p.rot = p.rot || rnd(0, 6.28); p.vr = p.vr == null ? rnd(-8, 8) : p.vr; this.forme.push(p); },
+    /** Impatto tematico per affinità: ogni affinità ha la sua "materia". */
+    impattoAff(aff, x, y, forza, ang) {
+      forza = forza || 1; const n = Math.round(8 + 10 * forza), dir = ang == null ? 0 : ang;
+      const cono = () => dir + rnd(-1.1, 1.1);
+      switch (aff) {
+        case 'sangue': for (let i = 0; i < n; i++) { const a = cono(), v = rnd(140, 460) * forza; this.forma({ t: 'goccia', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, g: 900, max: rnd(0.4, 0.8), r: rnd(1.6, 3.6), c: Math.random() < 0.7 ? '#b01e30' : '#e0455a' }); } break;
+        case 'ordine': for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(120, 380) * forza; this.forma({ t: 'scheggia', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, g: 600, max: rnd(0.35, 0.7), r: rnd(3, 6), c: Math.random() < 0.5 ? '#cfe0f0' : '#7d93ab' }); }
+          this.esagono(x, y, 40 + 30 * forza, '#b4c4d5'); break;
+        case 'astuzia': for (let i = 0; i < 6 + 4 * forza; i++) this.forma({ t: 'fumo', x: x + rnd(-14, 14), y: y + rnd(-14, 14), vx: rnd(-60, 60), vy: rnd(-50, 10), g: -20, max: rnd(0.6, 1), r: rnd(10, 18), c: '60,30,90' });
+          for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(80, 260) * forza; this.forma({ t: 'brace', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 0, max: rnd(0.3, 0.6), r: rnd(1.5, 2.6), c: '#c9a0ff' }); } break;
+        case 'ingegno': for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(80, 340) * forza; this.forma({ t: 'brace', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 100, g: -60, max: rnd(0.5, 1), r: rnd(1.6, 3.2), c: Math.random() < 0.5 ? '#ffb04a' : '#ff6a2a' }); }
+          for (let i = 0; i < 2 + forza; i++) { const a = rnd(0, 6.28), v = rnd(100, 260); this.forma({ t: 'ingranaggio', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 140, g: 700, max: rnd(0.6, 0.9), r: rnd(4, 7), c: '#d9a43a' }); }
+          for (let i = 0; i < 4; i++) this.forma({ t: 'fumo', x: x + rnd(-10, 10), y: y + rnd(-6, 6), vx: rnd(-30, 30), vy: rnd(-60, -20), g: -30, max: rnd(0.6, 0.9), r: rnd(9, 15), c: '70,50,40' }); break;
+        case 'fede': for (let i = 0; i < 6 + 3 * forza; i++) this.forma({ t: 'piuma', x: x + rnd(-20, 20), y: y + rnd(-26, 6), vx: rnd(-40, 40), vy: rnd(-90, -30), g: 60, max: rnd(0.9, 1.4), r: rnd(5, 8), c: '#eef6ff', vr: rnd(-3, 3) });
+          this.flare(x, y, '#cfe6ff', 46 + 26 * forza); break;
+        default: for (let i = 0; i < 4 + 3 * forza; i++) { const a = rnd(0, 6.28), v = rnd(140, 420) * forza; this.forma({ t: 'stella', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, g: 300, max: rnd(0.4, 0.75), r: rnd(3, 6), c: Math.random() < 0.5 ? '#fff3c4' : '#e0b43a' }); }
+          this.flare(x, y, '#ffe27a', 50 + 30 * forza);
+      }
+    },
+    /** Stella a quattro punte (bagliore d'impatto / scontro). */
+    flare(x, y, colore, r) { this.flares.push({ x, y, c: colore, r: r || 60, t: 0, max: 0.32 }); },
+    /** Esagono di "scudo" che si frantuma (Ordine). */
+    esagono(x, y, r, c) { this.flares.push({ x, y, c, r, t: 0, max: 0.4, esa: true }); },
+    /** Linee di velocità a tutto schermo che convergono su (x,y): colpi pesanti. */
+    velocita(x, y, colore) { this.velo.push({ x, y, c: colore || '#fff', t: 0, max: 0.32, seme: Math.random() * 1000 }); },
+    /** La figura si dissolve in particelle (sconfitta). */
+    dissolvi(x, y, w, h, colore, eco) {
+      for (let i = 0; i < 46; i++) this.forma({ t: eco ? 'brace' : 'scheggia', x: x + rnd(-w * 0.3, w * 0.3), y: y + rnd(-h * 0.45, h * 0.45), vx: rnd(-40, 40), vy: rnd(-160, -40), g: -40, max: rnd(0.7, 1.4), r: rnd(1.6, 3.4), c: Math.random() < 0.5 ? colore : '#fff' });
+      for (let i = 0; i < 6; i++) this.forma({ t: 'fumo', x: x + rnd(-w * 0.3, w * 0.3), y: y + rnd(-h * 0.2, h * 0.4), vx: rnd(-20, 20), vy: rnd(-40, -10), g: -10, max: rnd(0.8, 1.3), r: rnd(12, 22), c: eco ? '50,30,70' : '40,36,44' });
+    },
+    disegnaForme(g, dt) {
+      this.forme = this.forme.filter(p => (p.life += dt) < p.max);
+      // il fumo usa la composizione normale, il resto è additivo
+      g.globalCompositeOperation = 'source-over';
+      this.forme.forEach(p => { if (p.t !== 'fumo' && p.t !== 'goccia') return; this.muovi(p, dt); const k = p.life / p.max;
+        if (p.t === 'fumo') { const r = p.r * (1 + 1.6 * k), gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r); gr.addColorStop(0, 'rgba(' + p.c + ',' + 0.55 * (1 - k) + ')'); gr.addColorStop(1, 'rgba(' + p.c + ',0)'); g.globalAlpha = 1; g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, r, 0, 7); g.fill(); }
+        else { g.globalAlpha = 1 - k * 0.6; g.fillStyle = p.c; g.beginPath(); const sp = Math.min(3, Math.hypot(p.vx, p.vy) / 140); g.ellipse(p.x, p.y, p.r * (1 + sp * 0.5), p.r, Math.atan2(p.vy, p.vx), 0, 7); g.fill(); } });
+      g.globalCompositeOperation = 'lighter';
+      this.forme.forEach(p => { if (p.t === 'fumo' || p.t === 'goccia') return; this.muovi(p, dt); const k = p.life / p.max; g.globalAlpha = Math.max(0, 1 - k); g.fillStyle = p.c; g.strokeStyle = p.c;
+        g.save(); g.translate(p.x, p.y); g.rotate(p.rot);
+        switch (p.t) {
+          case 'scheggia': g.beginPath(); g.moveTo(-p.r, -p.r * 0.3); g.lineTo(p.r, 0); g.lineTo(-p.r * 0.4, p.r * 0.5); g.closePath(); g.fill(); break;
+          case 'piuma': g.globalAlpha *= 0.9; g.beginPath(); g.ellipse(0, 0, p.r, p.r * 0.32, 0, 0, 7); g.fill(); g.strokeStyle = '#9fc4f0'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-p.r, 0); g.lineTo(p.r, 0); g.stroke(); break;
+          case 'stella': { const r = p.r * (1 - k * 0.5); g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * 0.3 : r; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill(); break; }
+          case 'ingranaggio': g.lineWidth = 2; g.beginPath(); g.arc(0, 0, p.r * 0.6, 0, 7); g.stroke(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.fillRect(Math.cos(a) * p.r * 0.75 - 1.4, Math.sin(a) * p.r * 0.75 - 1.4, 2.8, 2.8); } break;
+          default: { const gr = g.createRadialGradient(0, 0, 0, 0, 0, p.r * 2.4); gr.addColorStop(0, p.c); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, p.r * 2.4, 0, 7); g.fill(); }
+        }
+        g.restore(); });
+      // bagliori a stella / esagoni
+      this.flares = this.flares.filter(f => (f.t += dt) < f.max);
+      this.flares.forEach(f => { const k = f.t / f.max, e = 1 - Math.pow(1 - k, 3);
+        g.save(); g.translate(f.x, f.y); g.globalAlpha = 1 - k;
+        if (f.esa) { g.strokeStyle = f.c; g.lineWidth = 3 * (1 - k) + 1; const r = f.r * (0.6 + 0.6 * e); g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(Math.cos(a) * r, Math.sin(a) * r * 0.9); } g.closePath(); g.stroke(); }
+        else { const r = f.r * (0.4 + e); g.fillStyle = f.c; g.rotate(0.3); g.beginPath(); g.moveTo(-r, 0); g.quadraticCurveTo(0, 0, 0, -r * 0.16); g.quadraticCurveTo(0, 0, r, 0); g.quadraticCurveTo(0, 0, 0, r * 0.16); g.quadraticCurveTo(0, 0, -r, 0); g.fill();
+          g.beginPath(); g.moveTo(0, -r * 0.7); g.quadraticCurveTo(0, 0, r * 0.12, 0); g.quadraticCurveTo(0, 0, 0, r * 0.7); g.quadraticCurveTo(0, 0, -r * 0.12, 0); g.quadraticCurveTo(0, 0, 0, -r * 0.7); g.fill();
+          const gr = g.createRadialGradient(0, 0, 0, 0, 0, r * 0.5); gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r * 0.5, 0, 7); g.fill(); }
+        g.restore(); });
+      // linee di velocità
+      this.velo = this.velo.filter(v => (v.t += dt) < v.max);
+      this.velo.forEach(v => { const k = v.t / v.max, R = Math.hypot(this.W, this.H); g.strokeStyle = v.c;
+        for (let i = 0; i < 40; i++) { const a = (i / 40) * 6.283 + Math.sin(v.seme + i * 7.1) * 0.07, r0 = R * (0.22 + 0.25 * Math.abs(Math.sin(v.seme + i))) * (1 - k * 0.4), r1 = R * 0.75;
+          g.globalAlpha = (1 - k) * 0.5; g.lineWidth = 1 + (i % 3); g.beginPath(); g.moveTo(v.x + Math.cos(a) * r0, v.y + Math.sin(a) * r0); g.lineTo(v.x + Math.cos(a) * r1, v.y + Math.sin(a) * r1); g.stroke(); } });
+    },
+    muovi(p, dt) { p.vy += (p.g || 0) * dt; p.vx *= 0.985; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; if (p.t === 'piuma') p.vx += Math.sin(p.life * 6) * 60 * dt; },
     ring(x, y, colore, r) { this.rings.push({ x, y, c: colore, t: 0, max: 0.45, r: r || 90 }); },
     flash(colore, alpha) { this.flashes.push({ c: colore, a: alpha || 0.35, t: 0, max: 0.35 }); },
     /** Proiettile luminoso da a verso b in `dur` secondi (colpi a distanza). */
@@ -152,6 +218,7 @@
         g.globalAlpha = 1; g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, r, 0, 7); g.fill();
       });
       g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+      this.disegnaForme(g, dt);
       // onde d'urto sul pavimento
       this.urti = this.urti.filter(r => (r.t += dt) < r.max);
       this.urti.forEach(r => { const k = r.t / r.max; g.globalAlpha = (1 - k) * 0.9; g.strokeStyle = r.c; g.lineWidth = 5 * (1 - k) + 1; g.beginPath(); g.ellipse(r.x, r.y, 10 + r.r * k, (10 + r.r * k) * 0.32, 0, 0, 7); g.stroke(); });
@@ -438,11 +505,11 @@
   /* ===================================================================== */
   /** Formazioni sul palcoscenico: posizione dei PIEDI (x%, y%) per numero di unità. */
   const FORM = {
-    a: { 1: [[28, 80]], 2: [[22, 66], [38, 88]], 3: [[15, 62], [33, 74], [15, 91]], 4: [[12, 62], [30, 68], [14, 85], [33, 94]] },
-    n: { 1: [[76, 82]], 2: [[78, 66], [62, 88]], 3: [[85, 62], [67, 74], [85, 91]], 4: [[88, 62], [70, 68], [86, 85], [67, 94]] }
+    a: { 1: [[26, 86]], 2: [[19, 74], [33, 92]], 3: [[11, 76], [25, 92], [32, 68]], 4: [[9, 76], [22, 66], [26, 93], [39, 82]] },
+    n: { 1: [[74, 86]], 2: [[81, 74], [67, 92]], 3: [[89, 76], [75, 92], [68, 68]], 4: [[91, 76], [78, 66], [74, 93], [61, 82]] }
   };
   /** Scala di prospettiva: chi sta più indietro (y minore) è più piccolo. */
-  const profondita = y => clamp(0.8 + (y - 56) / 40 * 0.3, 0.78, 1.12);
+  const profondita = y => clamp(0.82 + (y - 64) / 30 * 0.24, 0.8, 1.08);
 
   const Bat = UI.battaglia = {
     B: null, V: {}, els: {}, dadi: {}, sel: null, fase: 'idle', velBase: 1, skip: false, ctx: null, cl: null, linea: null, ardoreV: 0,
@@ -466,7 +533,7 @@
       Combat().snapshot(B).forEach(u => this.aggiungiCarta(u));
       this.layout();
       this.ardoreV = B.ardore; this.mostraArdore();
-      this.aggiornaVel(); $('#btn-audio').textContent = 'Suono: ' + (Snd.on ? 'sì' : 'no');
+      this.aggiornaVel(); $('#btn-audio').textContent = Snd.on ? '♪' : '✕'; $('#log').classList.remove('on');
       this.log('Il Custode entra nell\'Eco…', 'imp');
       if (E.Tutorial) { if (ctx.tutorial) E.Tutorial.inizia(ctx); else E.Tutorial.attivo = false; }
       this.cicloTurno(B.eventiIniziali);
@@ -477,10 +544,11 @@
       this.V[u.id] = u;
       const def = u.lato === 'a' ? E.VOCI[u.def] : E.NEMICI[u.def];
       const spec = E.ARTE && E.ARTE[u.def] || {};
-      const c = el('div', 'unit ' + (u.lato === 'a' ? 'alleato' : 'nemico')); c.dataset.id = u.id;
-      c.style.setProperty('--ac', E.AFFINITA[u.aff].colore);
-      const rit = UI.ritratto(def);
       const a = E.AFFINITA[u.aff];
+      // Carta nel dock (solo alleati): ritratto, nome, PV, Sanità, dadi
+      const c = el('div', 'unit ' + (u.lato === 'a' ? 'alleato' : 'nemico')); c.dataset.id = u.id;
+      c.style.setProperty('--ac', a.colore);
+      const rit = UI.ritratto(def);
       const info = el('div', 'info');
       info.innerHTML = `<div class="nome"><span class="aff" style="color:${a.colore}">${a.simbolo}</span>${u.breve}</div>
         <div class="barra-pv"><div class="ritardo"></div><div class="pieno"></div><div class="num"></div></div>
@@ -489,24 +557,30 @@
       c.append(rit, info);
       const dadi = el('div', 'dadi'); c.appendChild(dadi);
       c.onclick = () => this.clickCarta(u.id);
-      $(u.lato === 'a' ? '#col-alleati' : '#col-nemici').appendChild(c);
-      // Figura sul palcoscenico
+      if (u.lato === 'a') $('#col-alleati').appendChild(c);
+      // Figura sul palcoscenico + targhetta sopra la testa (segue la figura quando scatta)
       const pg = el('div', 'pg ' + (u.lato === 'a' ? 'alleato' : 'nemico') + (spec.figura === 'elefante' ? ' quadrupede' : '')); pg.dataset.id = u.id;
       pg.style.setProperty('--sc', spec.scala || 1);
       const mov = el('div', 'pg-mov'), fig = E.Arte ? E.Arte.figura(u.def) : el('div', 'fig');
-      const aure = el('div', 'pg-aure'), hp = el('div', 'pg-hp', '<i></i>');
-      mov.append(el('div', 'pg-ombra'), aure, fig, hp);      // ombra, aure e barra PV seguono la figura quando scatta
+      const aure = el('div', 'pg-aure');
+      const targa = el('div', 'targa'); targa.style.setProperty('--ac', a.colore);
+      targa.innerHTML = `<div class="dadi"></div><div class="t-riga"><span class="t-aff">${a.simbolo}</span><span class="t-nome">${u.breve}</span></div>
+        <div class="t-pv"><b></b><i></i></div><div class="t-san"><i></i></div><div class="t-chips"></div><div class="t-int"></div>`;
+      targa.dataset.tip = `<b>${def.nome || u.breve}</b><br>${a.simbolo} ${a.nome}${def.ruolo ? ' · ' + def.ruolo : ''}`;
+      mov.append(el('div', 'pg-ombra'), aure, fig, targa);
       pg.append(mov);
       pg.onclick = () => this.clickCarta(u.id);
       $('#cam').appendChild(pg);
+      fig.classList.add('entra'); setTimeout(() => fig.classList.remove('entra'), 1000);
       this.els[u.id] = { card: c, rit, ritardo: $('.ritardo', c), pieno: $('.pieno', c), num: $('.barra-pv .num', c), san: $('.barra-sanita .riempi', c),
-        sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.intenzioni', c), dadi, tag: null, pg, mov, fig, pgTag: null, aure, hpBar: $('i', hp), hpWrap: hp };
+        sanNum: $('.barra-sanita .num', c), chips: $('.chips', c), intent: $('.t-int', targa), dadi, tag: null, pg, mov, fig, pgTag: null, aure,
+        targa, tPv: $('.t-pv i', targa), tPvR: $('.t-pv b', targa), tSan: $('.t-san i', targa), tChips: $('.t-chips', targa), tDadi: $('.dadi', targa) };
       this.render(u.id);
     },
     /** Posiziona le figure secondo le formazioni e ridimensiona in base al palcoscenico. */
     layout() {
       const st = $('#stage'); if (!st) return;
-      st.style.setProperty('--fh', clamp(st.clientHeight * 0.37, 54, 220) + 'px');
+      const cam = $('#cam'); st.style.setProperty('--fh', clamp(cam.clientHeight * 0.32, 48, 220) + 'px');
       ['a', 'n'].forEach(l => {
         const lista = Object.values(this.V).filter(u => u.lato === l);
         const slots = FORM[l][clamp(lista.length, 1, 4)];
@@ -528,9 +602,11 @@
       e.san.style.width = w + '%'; e.san.style.left = (u.sanita >= 0 ? 50 : 50 - w) + '%';
       e.san.style.background = u.sanita >= 0 ? 'linear-gradient(90deg,#6aa8ff,#9fd0ff)' : 'linear-gradient(270deg,#a97be0,#d1a3ff)';
       e.sanNum.textContent = u.sanita;
-      e.chips.innerHTML = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" data-tip="<b>${d.nome} ${u.stati[s]}</b><br>${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
-      e.hpBar.style.width = pct + '%'; e.hpBar.style.background = u.lato === 'a' ? 'linear-gradient(#7be0a4,#2f9a62)' : 'linear-gradient(#f0707a,#b02a3a)';
-      e.hpWrap.style.opacity = u.vivo ? 1 : 0;
+      const chips = Object.keys(u.stati).map(s => { const d = E.STATI[s]; return `<span class="chip" style="color:${d.colore}" data-tip="<b>${d.nome} ${u.stati[s]}</b><br>${d.desc}">${d.icona}${u.stati[s]}</span>`; }).join('');
+      e.chips.innerHTML = chips; e.tChips.innerHTML = chips;
+      e.tPv.style.width = pct + '%'; e.tPvR.style.width = pct + '%';
+      e.tSan.style.width = w + '%'; e.tSan.style.left = (u.sanita >= 0 ? 50 : 50 - w) + '%'; e.tSan.style.background = u.sanita >= 0 ? '#9fd0ff' : '#d1a3ff';
+      e.targa.dataset.tip = e.targa.dataset.tip.split('<br><small>')[0] + `<br><small>PV ${Math.ceil(u.pv)}/${u.pvMax} · Sanità ${u.sanita}</small>`;
       // aure degli stati (CSS) + particelle continue (Fx)
       Object.keys(E.STATI).forEach(st => {
         const k = 'aura-' + st, ex = e.aure.querySelector('.' + k);
@@ -549,8 +625,8 @@
       if (tag) { e.tag = el('div', 'tag ' + tag[1], tag[0]); e.card.appendChild(e.tag); e.pgTag = el('div', 'pg-tag ' + tag[1], tag[0]); e.pg.appendChild(e.pgTag); }
     },
     renderDadi(id, anima) {
-      const e = this.els[id]; if (!e) return; e.dadi.innerHTML = '';
-      (this.dadi[id] || []).forEach(d => { const x = el('div', 'dado' + (anima ? ' rolla' : ''), d); x.dataset.tip = '<b>Dado di velocità: ' + d + '</b><br>Chi ha il numero più alto agisce per primo e sceglie chi affrontare.'; e.dadi.appendChild(x); });
+      const e = this.els[id]; if (!e) return; e.dadi.innerHTML = ''; e.tDadi.innerHTML = '';
+      (this.dadi[id] || []).forEach(d => [e.dadi, e.tDadi].forEach(box => { const x = el('div', 'dado' + (anima ? ' rolla' : ''), d); x.dataset.tip = '<b>Dado di velocità: ' + d + '</b><br>Chi ha il numero più alto agisce per primo e sceglie chi affrontare.'; box.appendChild(x); }));
     },
     mostraArdore() {
       const B = this.B, costo = this.fase === 'pianifica' ? Combat().costoPiano(B) : 0, tot = this.ardoreV;
@@ -588,7 +664,7 @@
       this.fase = 'pianifica'; this.skip = false;
       const prima = Object.keys(this.V).filter(id => this.V[id].lato === 'a' && this.V[id].vivo && B.azioni.some(a => a.u === id))[0];
       this.sel = this.sel && B.azioni.some(a => a.u === this.sel) && this.V[this.sel].vivo ? this.sel : prima;
-      this.aggiornaPiano();
+      this.aggiornaPiano(); setTimeout(() => { if (this.fase === 'pianifica') this.disegnaFrecce(); }, 450);
       this.log('— Pianifica: scegli skill e bersagli, poi Esegui turno —');
       if (E.Tutorial && E.Tutorial.attivo) E.Tutorial.pianifica(B.turno, this);
       return new Promise(res => { this._pronto = res; });
@@ -600,7 +676,8 @@
       if (E.Tutorial) E.Tutorial.notifica('esegui');
       this.fase = 'riproduzione'; $('#btn-esegui').disabled = true; $('#btn-affondo').style.display = 'none';
       $$('.unit, .pg').forEach(c => c.classList.remove('sel', 'bersaglio-di-sel', 'bersagliabile'));
-      Object.keys(this.els).forEach(id => { this.els[id].intent.innerHTML = ''; });
+      Object.keys(this.els).forEach(id => { this.els[id].intent.textContent = ''; });
+      $('#scr-battaglia').classList.remove('pianifica'); this.disegnaFrecce();
       this.disegnaSkills();
       const r = this._pronto; this._pronto = null; r && r();
     },
@@ -663,25 +740,53 @@
     disponibile(a) { return this.B.ardore - (Combat().costoPiano(this.B) - E.SKILL[a.skill].costo); },
     aggiornaPiano() {
       const B = this.B;
+      $('#scr-battaglia').classList.toggle('pianifica', this.fase === 'pianifica');
       Object.keys(this.els).forEach(id => {
         const e = this.els[id], u = this.V[id];
         [e.card, e.pg].forEach(x => { x.classList.toggle('sel', id === this.sel); x.classList.remove('bersaglio-di-sel'); x.classList.toggle('bersagliabile', u.lato === 'n' && u.vivo && !!this.sel); });
-        e.intent.innerHTML = '';
-        B.azioni.filter(a => a.u === id && !a.annullata && a.skill).forEach(a => {
-          const s = E.SKILL[a.skill], t = this.V[a.bers];
-          e.intent.appendChild(el('div', 'intenzione ' + (u.lato === 'a' ? 'alleata' : ''), `${s.nome} → ${t ? t.breve : '?'}`));
-        });
-        if (B.affondo && B.affondo.u === id) e.intent.appendChild(el('div', 'intenzione alleata', `AFFONDO → ${this.V[B.affondo.bers].breve}`));
+        const az = B.azioni.filter(a => a.u === id && !a.annullata && a.skill).map(a => `${E.SKILL[a.skill].nome} → ${this.V[a.bers] ? this.V[a.bers].breve : '?'}`);
+        if (B.affondo && B.affondo.u === id) az.push(`AFFONDO → ${this.V[B.affondo.bers].breve}`);
+        e.intent.textContent = this.fase === 'pianifica' ? az.join(' · ') : '';
       });
       const act = B.azioni.find(a => a.u === this.sel);
       if (act) { const t = this.els[act.bers]; if (t) { t.card.classList.add('bersaglio-di-sel'); t.pg.classList.add('bersaglio-di-sel'); } }
       // Pulsante Affondo: visibile solo con nemici in Cedimento
       const ab = $('#btn-affondo'), ced = Combat().bersagliAffondo(B);
-      ab.style.display = ced.length ? '' : 'none';
+      ab.style.display = ced.length && this.fase === 'pianifica' ? '' : 'none';
       ab.classList.toggle('attivo', !!B.affondo);
-      ab.textContent = B.affondo ? 'Affondo ✔' : 'Affondo';
-      this.disegnaSkills(); this.mostraArdore();
+      ab.textContent = B.affondo ? 'Affondo ✔' : 'Affondo!';
+      this.disegnaSkills(); this.mostraArdore(); this.disegnaFrecce();
       $('#btn-esegui').disabled = this.fase !== 'pianifica' || !Combat().pianoValido(B);
+    },
+    /** Frecce sul palcoscenico: piani delle Voci (colore della skill) e intenzioni dei nemici (rosse tratteggiate). */
+    disegnaFrecce() {
+      const svg = $('#frecce'); if (!svg) return;
+      if (this.fase !== 'pianifica') { svg.innerHTML = ''; return; }
+      const cam = $('#cam').getBoundingClientRect(), B = this.B;
+      const centro = id => { const r = this.els[id].fig.getBoundingClientRect(); return { x: r.left + r.width / 2 - cam.left, y: r.top + r.height * 0.42 - cam.top }; };
+      let h = '';
+      const freccia = (da, a, col, cls, et, idx) => {
+        const p = centro(da), q = centro(a), mx = (p.x + q.x) / 2, dy = Math.abs(q.x - p.x) * 0.22 + 18, my = Math.min(p.y, q.y) - dy - idx * 10;
+        // il tratto si ferma prima della figura bersaglio; la punta è un triangolo orientato
+        const t = 0.92, ex = (1 - t) * (1 - t) * p.x + 2 * (1 - t) * t * mx + t * t * q.x, ey = (1 - t) * (1 - t) * p.y + 2 * (1 - t) * t * my + t * t * q.y;
+        const ang = Math.atan2(ey - (my + (ey - my) * 0.6), ex - (mx + (ex - mx) * 0.6));
+        const pt = (r, da) => `${(ex + Math.cos(ang + da) * r).toFixed(1)},${(ey + Math.sin(ang + da) * r).toFixed(1)}`;
+        h += `<path class="fr ${cls}" style="--c:${col}" stroke="${col}" d="M${p.x.toFixed(1)} ${p.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}"/>`;
+        h += `<polygon points="${pt(9, 0)} ${pt(8, 2.5)} ${pt(8, -2.5)}" fill="${col}" style="filter:drop-shadow(0 0 4px ${col})"/>`;
+        if (et) { const w = et.length * 6.4 + 12, lx = mx, ly = (p.y + 2 * my + q.y) / 4; h += `<g class="fr-et"><rect x="${(lx - w / 2).toFixed(1)}" y="${(ly - 9).toFixed(1)}" width="${w.toFixed(1)}" height="17" rx="8" stroke="${col}"/><text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle">${et}</text></g>`; }
+      };
+      const conta = {};
+      B.azioni.forEach(a => {
+        const u = this.V[a.u]; if (!u || !u.vivo || a.annullata || !a.skill || !this.V[a.bers] || !this.V[a.bers].vivo) return;
+        const k = a.u + '>' + a.bers; conta[k] = (conta[k] || 0) + 1;
+        if (u.lato === 'n') freccia(a.u, a.bers, '#ff5a6e', 'nem', '', conta[k] - 1);
+        else {
+          const pr = Combat().anteprima(B, a.u), col = E.AFFINITA[E.SKILL[a.skill].aff].colore;
+          const et = pr && pr.scontro ? Math.round(pr.vittoria * 100) + '%' : pr ? 'libero' : '';
+          freccia(a.u, a.bers, col, 'all' + (a.u === this.sel ? ' sel' : ''), a.u === this.sel ? et : '', conta[k] - 1);
+        }
+      });
+      svg.innerHTML = h;
     },
     disegnaSkills() {
       const box = $('#skills'); box.innerHTML = '';
@@ -690,15 +795,22 @@
       if (!a) { box.appendChild(el('div', 'vuoto', u.breve + ' non può agire in questo turno.')); return; }
       const bers = B.byId[a.bers];
       u.skills.forEach((sid, idx) => {
-        const s = E.SKILL[sid], rel = bers ? E.rel(s.aff, bers.aff) : 0;
+        const s = E.SKILL[sid], af = E.AFFINITA[s.aff];
+        const pr = bers ? Combat().anteprima(B, this.sel, sid, a.bers) : null, rel = pr ? pr.rel : 0;
         const b = el('button', 'skill-btn' + (a.skill === sid ? ' sel' : ''));
-        b.style.setProperty('--ac', E.AFFINITA[s.aff].colore);
+        b.style.setProperty('--ac', af.colore); b.dataset.sim = af.simbolo;
         b.disabled = u.panico || s.costo > this.disponibile(a) && a.skill !== sid;
-        const af = E.AFFINITA[s.aff];
-        b.innerHTML = `<div class="t"><span>${idx + 1}. ${s.nome}</span><span class="costo">◆${s.costo}</span></div>
-          <div class="num"><span style="color:${af.colore}">${af.simbolo}</span> <span class="pips">${'●'.repeat(s.monete)}</span> PB ${s.pb} · PM +${s.pm}
-          ${rel > 0 ? '<span class="rel vant">▲ vantaggio</span>' : rel < 0 ? '<span class="rel svant">▼ svantaggio</span>' : ''}</div>
-          <div class="d">${E.descrizioneSkill(s).join(' · ')}</div>`;
+        const pips = '<span class="pip"></span>'.repeat(pr ? pr.monete : s.monete);
+        let prev = '';
+        if (pr && pr.scontro) {
+          const v = Math.round(pr.vittoria * 100), rs = E.SKILL[pr.rivale.skill];
+          prev = `<div class="prev" data-tip="<b>Scontro previsto</b><br>contro ${rs.nome} (${pr.rivale.min}–${pr.rivale.max})<br>Probabilità di vincerlo: ${v}%"><span>${v}%</span><span class="barra"><i style="width:${v}%"></i></span><span style="color:var(--testo2)">${pr.rivale.min}–${pr.rivale.max}</span></div>`;
+        } else if (pr) prev = '<div class="prev libero">Colpo libero</div>';
+        b.innerHTML = `<div class="t"><span>${s.nome}</span><span class="costo${s.costo ? '' : ' zero'}">${s.costo ? '◆' + s.costo : '0'}</span></div>
+          <div class="num"><span style="color:${af.colore}">${af.simbolo}</span><span class="pips">${pips}</span><span class="pot">${pr ? pr.min + '–' + pr.max : s.pb + '+' + s.pm}</span>
+          ${rel > 0 ? '<span class="rel vant">▲</span>' : rel < 0 ? '<span class="rel svant">▼</span>' : ''}</div>
+          <div class="d">${E.descrizioneSkill(s).join(' · ') || '&nbsp;'}</div>${prev}`;
+        b.dataset.tip = `<b>${s.nome}</b> · ${af.nome}<br>${s.monete} monete · PB ${s.pb} · PM +${s.pm}${s.costo ? ' · costa ' + s.costo + ' Ardore' : ''}<br>${E.descrizioneSkill(s).join('<br>')}`;
         b.onclick = () => this.scegliSkill(idx);
         box.appendChild(b);
       });
@@ -715,7 +827,7 @@
       Snd.sfx(B.esito);
       const alleati = B.unita.filter(x => x.lato === 'a' && !x.npc), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
       let righe = '';
-      alleati.forEach(x => { const st = this.stat[x.id], v = this.V[x.id]; righe += `<tr class="${v.vivo ? '' : 'caduto'}"><td>${x === mvp && st.danno ? '★ ' : ''}${x.breve}${v.vivo ? '' : ' ✝'}</td><td>${st.danno}</td><td>${st.colpi}</td><td>${st.max}</td><td>${st.subito}</td></tr>`; });
+      alleati.forEach(x => { const st = this.stat[x.id], v = this.V[x.id]; righe += `<tr class="${v.vivo ? '' : 'caduto'}${x === mvp && st.danno ? ' mvp' : ''}"><td>${x === mvp && st.danno ? '★ ' : ''}${x.breve}${v.vivo ? '' : ' ✝'}</td><td>${st.danno}</td><td>${st.colpi}</td><td>${st.max}</td><td>${st.subito}</td></tr>`; });
       r.innerHTML = `<h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p class="sub">${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} · ${B.turno} turni</p>
         <table class="tab-risultato"><tr><th>Voce</th><th>Danni</th><th>Colpi</th><th>Max</th><th>Subiti</th></tr>${righe}</table><div class="risultato-extra"></div>`;
       const bx = el('div', 'risultato-btn');
@@ -765,7 +877,7 @@
     numero(id, testo, cls, dy) {
       if (!this.els[id]) return;
       const p = this.pos(id), n = el('div', 'num-fly ' + (cls || ''), testo);
-      n.style.left = (p.x + rnd(-18, 18)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px'; n.style.setProperty('--dx', rnd(-46, 46) + 'px');
+      n.style.left = clamp(p.x + rnd(-18, 18), cls === 'testo' ? 90 : 20, root.innerWidth - (cls === 'testo' ? 90 : 20)) + 'px'; n.style.top = (p.y - p.h * 0.3 + (dy || 0) + rnd(-8, 8)) + 'px'; n.style.setProperty('--dx', rnd(-46, 46) + 'px');
       $('#app').appendChild(n); setTimeout(() => n.remove(), 1200);
     },
     shake(elem, amp, dur) {
@@ -776,10 +888,15 @@
     async hitStop(ms) {
       if (this.skip) return;
       ms = ms / this.velBase;
-      const run = document.getAnimations().filter(a => a.playState === 'running');
-      run.forEach(a => a.pause()); Fx.congela(ms);
+      // Le animazioni CSS si fermano con una classe (animation-play-state): metterle in pausa via API le
+      // "staccherebbe" dal CSS e la posa finale resterebbe appiccicata alla figura. Solo le animazioni
+      // create da script (Element.animate) si fermano con pause()/play().
+      const app = $('#app');
+      const run = document.getAnimations().filter(a => a.playState === 'running' && !(root.CSSAnimation && a instanceof root.CSSAnimation));
+      app.classList.add('congelato'); run.forEach(a => a.pause()); Fx.congela(ms);
       await new Promise(r => setTimeout(r, ms));
-      run.forEach(a => { try { a.play(); } catch (x) { /* animazione già conclusa */ } });
+      app.classList.remove('congelato');
+      run.forEach(a => { try { if (a.playState === 'paused') a.play(); } catch (x) { /* animazione già conclusa */ } });
     },
     banner(testo) {
       const b = el('div', 'banner', testo); $('#app').appendChild(b); setTimeout(() => b.remove(), 1700);
@@ -819,6 +936,7 @@
     async avanza(att, bers, A) {
       const fa = this.piedi(att), fb = this.piedi(bers), pa = this.pos(att);
       const dist = (A && A.dist) || 'vicino';
+      if (dist === 'sul_posto') return;
       const stop = dist === 'lontano' ? Math.max(pa.w * 2.8, 100) : dist === 'medio' ? Math.max(pa.w * 2.0, 80) : dist === 'carica' ? Math.max(pa.w * 0.7, 30) : Math.max(pa.w * 0.9, 38);
       const lato = Math.sign(fa.x - fb.x) || 1;                       // da che parte del bersaglio si trova
       const tx = fb.x + lato * stop, dx = Math.abs(fa.x - fb.x) < stop ? 0 : tx - fa.x;
@@ -867,7 +985,7 @@
       const d = 1.15 / this.vel, w = el('div', 'cutin');
       w.style.setProperty('--ac', ac); w.style.setProperty('--d', d + 's');
       w.innerHTML = '<div class="banda"><div class="strisce"></div></div>';
-      const r = UI.ritratto(def, 'cut'); w.appendChild(r);
+      const cf = el('div', 'cut-fig'); if (E.Arte) { const f = E.Arte.figura(u.def); if (u.lato === 'n') f.querySelector('.fig-in') && (f.querySelector('.fig-in').style.transform = 'scaleX(-1)'); cf.appendChild(f); E.Arte.anima(f, this.stile(attId, skillId), 0.9); } w.appendChild(cf);
       w.appendChild(el('div', 'cut-aff', E.AFFINITA[s.aff].simbolo));
       w.appendChild(el('div', 'cut-nome', s.nome));
       w.appendChild(el('div', 'cut-chi', u.breve));
@@ -946,7 +1064,9 @@
           const u = this.V[e.id]; u.vivo = false; u.pv = 0;
           const p = this.pos(e.id); Fx.sparks(p.x, p.y, 50, u.colore, 1.2); Fx.ring(p.x, p.y, u.colore, 130);
           this.log(e.msg, 'imp'); Snd.sfx('morte');
-          this.anima(e.id, 'morte'); this.render(e.id); await this.sleep(500); break;
+          if (u.lato === 'n') { Fx.velocita(p.x, p.y, u.colore); Fx.flash('#fff', 0.35); await this.hitStop(220); }
+          this.anima(e.id, 'morte'); setTimeout(() => Fx.dissolvi(p.x, p.y, p.w, p.h, u.colore || '#fff', u.lato === 'n'), 500 / this.vel);
+          this.render(e.id); await this.sleep(700); break;
         }
         case 'panico': {
           this.V[e.id].panico = true; this.render(e.id); this.log(e.msg, 'imp'); this.numero(e.id, 'PANICO!', 'testo', -30); await this.sleep(300); break;
@@ -1000,7 +1120,7 @@
       const pa = this.anima(cl.a.id, cl.sa), pb = this.anima(cl.b.id, cl.sb);
       const imp = Math.min(E.Arte.IMPATTO[cl.sa] * E.Arte.DURATA[cl.sa], E.Arte.IMPATTO[cl.sb] * E.Arte.DURATA[cl.sb]);
       await this.sleep(imp * 1000);
-      Fx.sparks(mx, my, 30, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); Fx.urto(mx, Math.max(this.piedi(cl.a.id).y, this.piedi(cl.b.id).y), 110, '#ffd75e'); this.shake($('#cam'), 3, 200); Snd.sfx('clash');
+      Fx.sparks(mx, my, 30, '#ffd75e', 1); Fx.ring(mx, my, '#ffd75e', 90); Fx.flare(mx, my, '#fff3c4', 110); Fx.urto(mx, Math.max(this.piedi(cl.a.id).y, this.piedi(cl.b.id).y), 110, '#ffd75e'); this.shake($('#cam'), 3, 200); Snd.sfx('clash');
       await this.hitStop(60);
       await Promise.all([pa, pb]);
       if (e.v) {
@@ -1059,7 +1179,9 @@
       Fx.ring(p.x, p.y, colore, 60 + e.danno);
       const fp = this.piedi(e.bers);
       this.effettoImpatto(A.fx, p, fp, ang, colore, e.danno);
+      Fx.impattoAff(s.aff || att.aff, p.x, p.y, clamp(e.danno / 18, 0.6, 2.2), ang);
       if (forte) { Fx.flash(colore, 0.2); Fx.urto(fp.x, fp.y, 70 + e.danno, colore); Fx.polvere(fp.x, fp.y, 4, 0.9); }
+      if (e.danno >= 30 || (e.rel === 1 && e.danno >= 20)) Fx.velocita(p.x, p.y, '#fff');
       // contraccolpo: il bersaglio viene spinto indietro e ritorna con un rimbalzo
       { const kb = clamp(6 + e.danno * 0.6, 8, 30) * (Math.cos(ang) >= 0 ? 1 : -1);
         this.els[e.bers].fig.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${kb}px)`, offset: 0.25 }, { transform: `translateX(${-kb * 0.2}px)`, offset: 0.6 }, { transform: 'translateX(0)' }], { duration: 420 / this.vel, easing: 'ease-out' }); }
@@ -1118,9 +1240,10 @@
     $$('#comandi .vel button').forEach(b => { b.onclick = () => Bat.setVel(+b.dataset.vel); });
     $('#btn-audio').onclick = () => {
       Snd.init(); Snd.on = !Snd.on; ctx.save.opzioni.audio = Snd.on; ctx.persist();
-      $('#btn-audio').textContent = 'Suono: ' + (Snd.on ? 'sì' : 'no');
+      $('#btn-audio').textContent = Snd.on ? '♪' : '✕';
     };
-    root.addEventListener('resize', () => { if (Bat.B) Bat.layout(); });
+    $('#btn-log').onclick = () => { $('#log').classList.toggle('on'); };
+    root.addEventListener('resize', () => { if (Bat.B) { Bat.layout(); setTimeout(() => Bat.disegnaFrecce(), 600); } });
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && $('#scr-battaglia').classList.contains('active') && !$('#modale').classList.contains('on')) { Bat.menuPausa(); return; }
       if (!$('#scr-battaglia').classList.contains('active') || Bat.fase !== 'pianifica' || Bat.bloccato()) return;

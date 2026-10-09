@@ -98,7 +98,7 @@
     ia: ['ne_fiaccola', 'ne_canto', 'ne_fiaccola'], soglie: [0.66, 0.33], colore: AFF('gloria'), sigla: 'N',
     regole: [{ da: 2, a: 'alleati', stato: 'bruciatura', n: 1, crescente: 3, testo: 'Il Grande Incendio divora il campo: tutti bruciano.' }],
     fasi: [{ soglia: 0.5, azioni: 3, ia: ['ne_incendio', 'ne_canto', 'ne_fiaccola'], stati: { splendore: 6 }, sanitaAlleati: -6, testo: 'Nerone si crede un dio: il rogo lo esalta!' }] };
-  E.ARTE.nerone = { eco: true, glow: '#ff8a3d', idle: 'regale', corpo: 'g', scala: 1.25, pelle: '#c09a7a', capelli: { stile: 'riccio', colore: '#c0a050', barba: 'pizzo' }, abito: { tipo: 'veste_lunga', c1: '#a03a2a', c2: '#e0b43a' }, mantello: '#6a1a1a', testa: { tipo: 'alloro', c1: '#c0a040' }, arma: 'torcia', attacco: 'sweep' };
+  E.ARTE.nerone = { eco: true, glow: '#ff8a3d', idle: 'regale', corpo: 'g', scala: 1.25, pelle: '#c09a7a', capelli: { stile: 'riccio', colore: '#c0a050', barba: 'pizzo' }, abito: { tipo: 'manto_imperiale', c1: '#8a1f4a', c2: '#e0b43a' }, mantello: '#c0401a', testa: { tipo: 'alloro', c1: '#c0a040' }, arma: 'torcia', attacco: 'sweep' };
 
   // III — Ezzelino da Romano (Sangue)
   sk('ez_catena', 'Catena del Tiranno', 'sangue', 3, 4, 3, [{ on: 'hit', stato: 'sanguinamento', n: 2, to: 'target' }], 'sweep');
@@ -118,7 +118,7 @@
     ia: ['sv_predica', 'sv_falo', 'sv_predica'], soglie: [0.66, 0.33], colore: AFF('fede'), sigla: 'S',
     regole: [{ da: 1, a: 'alleati', rimuovi: 'splendore', testo: 'Il Falò delle Vanità cancella ogni splendore.' }],
     fasi: [{ soglia: 0.66, sanitaAlleati: -5, testo: 'La folla grida: «Pentitevi!»' }, { soglia: 0.33, azioni: 3, ia: ['sv_anatema', 'sv_falo', 'sv_predica'], stati: { voto: 4 }, testo: 'Savonarola arde di fervore: il suo Voto si moltiplica!' }] };
-  E.ARTE.savonarola = { eco: true, glow: '#ffb04a', idle: 'regale', corpo: 'm', scala: 1.2, pelle: '#b09a8a', abito: { tipo: 'veste_lunga', c1: '#e8e2d0', c2: '#2a2a2e' }, mantello: '#2a2a2e', testa: { tipo: 'cappuccio', c1: '#e8e2d0' }, arma: 'libro', attacco: 'invocazione' };
+  E.ARTE.savonarola = { eco: true, glow: '#ffb04a', idle: 'regale', corpo: 'm', scala: 1.2, pelle: '#b09a8a', abito: { tipo: 'saio', c1: '#e8e2d0', c2: '#2a2a2e' }, mantello: '#2a2a2e', testa: { tipo: 'cappuccio', c1: '#2a2a2e' }, arma: 'libro', attacco: 'invocazione' };
 
   // V — Josef Radetzky (Ordine)
   sk('ra_linea', 'Linea Immobile', 'ordine', 3, 5, 3, [{ on: 'use', stato: 'formazione', n: 1, to: 'self' }], 'colpo_scudo');

@@ -12,8 +12,12 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Echi d'Italia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700;800;900&family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="figure.css">
+<link rel="stylesheet" href="battaglia.css">
 </head>
 <body>
 <div id="app">
@@ -60,34 +64,39 @@
     </footer>
   </section>
 
-  <!-- BATTAGLIA -->
+  <!-- BATTAGLIA: arena a tutto schermo, barra superiore, dock in basso (Voci + skill + comandi) -->
   <section id="scr-battaglia" class="screen">
-    <div id="campo">
-      <div id="col-alleati" class="colonna"></div>
-      <div id="stage">
-        <div id="cam">
-          <div id="stage-bg"></div>
-          <div id="stage-floor"><div class="arena-disco"></div></div>
-        </div>
-        <div id="luce"></div><div id="vignetta"></div>
-        <button id="btn-menu" class="btn piccolo" title="Pausa (Esc)">☰</button>
-        <div id="turno-info"><span id="turno-n">Turno 1</span> <span id="ardore">Ardore 3</span></div>
-        <div id="clash"></div>
+    <div id="stage">
+      <div id="cam">
+        <div id="stage-bg"></div>
+        <div id="stage-floor"><div class="arena-disco"></div></div>
+        <svg id="frecce" aria-hidden="true"></svg>
       </div>
-      <div id="col-nemici" class="colonna"></div>
+      <div id="luce"></div><div id="vignetta"></div>
+      <div id="col-nemici" aria-hidden="true"></div>
+      <div id="clash"></div>
     </div>
-    <div id="pannello">
+    <header id="b-top">
+      <button id="btn-menu" class="btn icona" title="Pausa (Esc)">❚❚</button>
+      <div id="turno-info"><span id="turno-n">Turno 1</span></div>
+      <div id="ardore"></div>
+      <div class="b-top-dx">
+        <div class="vel">
+          <button class="btn piccolo" data-vel="1">×1</button><button class="btn piccolo" data-vel="2">×2</button><button class="btn piccolo" data-vel="4">×4</button><button class="btn piccolo" data-vel="0" title="Salta le animazioni di questo turno">⏭</button>
+        </div>
+        <button id="btn-log" class="btn piccolo icona" title="Registro del combattimento">☰</button>
+        <button id="btn-audio" class="btn piccolo icona" title="Suono">♪</button>
+      </div>
+    </header>
+    <div id="b-dock">
+      <div id="col-alleati"></div>
       <div id="skills"></div>
       <div id="comandi">
-        <div class="vel">
-          <button class="btn piccolo" data-vel="1">×1</button><button class="btn piccolo" data-vel="2">×2</button><button class="btn piccolo" data-vel="4">×4</button><button class="btn piccolo" data-vel="0" title="Salta animazioni">Salta</button>
-        </div>
         <button id="btn-affondo" class="btn" style="display:none" title="Azione di squadra gratuita su un nemico in Cedimento (tasto A)">Affondo</button>
-        <button id="btn-esegui" class="btn grande" disabled>Esegui turno</button>
-        <button id="btn-audio" class="btn piccolo">Suono: sì</button>
+        <button id="btn-esegui" class="btn grande" disabled><span>Esegui</span><small>turno</small></button>
       </div>
-      <div id="log"></div>
     </div>
+    <div id="log" class="log-cassetto"></div>
     <div id="risultato" class="overlay"></div>
   </section>
 
