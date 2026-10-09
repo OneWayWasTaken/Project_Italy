@@ -1,0 +1,155 @@
+/* ============================================================================
+ * minimal.css — aspetto pulito e minimale per menu e schermate (caricato per ultimo)
+ *   Regole: superfici scure e piatte, un filo chiaro come bordo, raggi piccoli.
+ *   L'oro solo per ciò che è attivo o per l'azione principale. Niente rivetti, bagliori o contorni spessi.
+ * ========================================================================== */
+:root {
+  --m-bg: #0e0c11; --m-sup: rgba(20, 17, 24, .86); --m-sup2: rgba(30, 26, 35, .92); --m-filo: rgba(255, 236, 200, .10); --m-filo2: rgba(255, 236, 200, .2);
+  --m-oro: #e3c47e; --m-oro2: #b8995a; --m-testo: #ece4d6; --m-testo2: #9c9284; --m-r: 6px;
+  --hud-h: 66px;
+}
+#app { background: radial-gradient(ellipse at 50% 30%, #1d1922 0%, var(--m-bg) 70%); }
+body.hub #bacheca { opacity: .35; filter: saturate(.5); }
+
+/* ----- Testi ----- */
+.scritta, .scritta.bianca { -webkit-text-stroke: 0; text-shadow: 0 1px 2px #0009; font-weight: 600; letter-spacing: .02em; }
+.scritta { color: var(--m-testo); }
+
+/* ----- Pannelli: niente ottone ----- */
+.telaio, .telaio.rosso, .at-colonna.telaio, #scr-gacha .g-scena.telaio {
+  border: 1px solid var(--m-filo); border-radius: 10px; background: var(--m-sup); box-shadow: 0 12px 32px #0007; }
+.telaio::before { display: none; }
+.piastra { background: none; box-shadow: none; color: var(--m-testo2); text-shadow: none; font-weight: 500; font-size: 11px; letter-spacing: .18em; padding: 2px 4px; text-transform: uppercase; }
+.piastra.scura { background: none; box-shadow: none; }
+
+/* ----- Pulsanti ----- */
+.btn { background: var(--m-sup2); border: 1px solid var(--m-filo2); box-shadow: none; color: var(--m-testo); border-radius: var(--m-r); }
+.btn:hover:not(:disabled) { border-color: var(--m-oro2); box-shadow: none; background: #2a2430; }
+.btn.grande { background: var(--m-oro); color: #1a1408; border: 0; box-shadow: 0 4px 14px #0006; text-shadow: none; font-weight: 600; letter-spacing: .1em; }
+.btn.grande:hover:not(:disabled) { background: #f0d496; box-shadow: 0 4px 18px #0008; filter: none; }
+.btn.rosso { background: #b03a2e; border: 0; box-shadow: none; text-shadow: none; }
+.chip-filtro, .vs-filtri .chip-filtro { background: transparent; border: 1px solid var(--m-filo2); border-radius: 999px; color: var(--m-testo2); }
+.chip-filtro.on, .vs-filtri .chip-filtro.on { background: var(--m-oro); color: #1a1408; border-color: var(--m-oro); }
+
+/* ----- Barre in alto ----- */
+.barra { background: transparent; border-bottom: 1px solid var(--m-filo); box-shadow: none; }
+.barra h2 { -webkit-text-stroke: 0; text-shadow: none; color: var(--m-testo); font-weight: 500; letter-spacing: .22em; font-size: 17px; }
+
+/* ----- Barra inferiore (HUD): sottile, senza cornici ----- */
+#hud { padding: 0 16px 8px; align-items: center; }
+.hud-sx { border: 0; background: transparent; box-shadow: none; padding: 0; gap: 14px; height: auto; }
+.hud-id small { font-size: 9px; color: var(--m-testo2); }
+.hud-id b { font-size: 28px; font-weight: 500; text-shadow: none; }
+.hud-id b i { font-size: 11px; }
+.hud-xp { width: 3px; background: #ffffff14; box-shadow: none; margin: 4px 0; }
+.hud-xp i { background: var(--m-oro); }
+.hud-cap { display: none; }
+.hud-ris { gap: 3px 12px; }
+.hud-ris .r { background: transparent; box-shadow: none; padding: 0; min-width: 0; font-size: 15px; font-weight: 500; gap: 6px; }
+.hud-ris .r .ic { width: 16px; height: 16px; font-size: 9px; }
+.hud-ris .r.xpb { height: 3px; background: #ffffff14; border-radius: 2px; }
+.hud-ris .r.xpb i { background: var(--m-oro); box-shadow: none; }
+.hud-ris .r.xpb span { display: none; }
+.hud-nav { background: rgba(14, 12, 17, .82); box-shadow: none; border: 1px solid var(--m-filo); border-radius: 999px; padding: 4px; gap: 2px; backdrop-filter: blur(6px); }
+.tasto { width: auto; min-width: 86px; height: 44px; flex-direction: row; gap: 7px; padding: 0 16px; border-radius: 999px; background: transparent; box-shadow: none; color: var(--m-testo2); }
+.tasto svg { width: 20px; height: 18px; stroke-width: 2; filter: none; }
+.tasto b { -webkit-text-stroke: 0; font-size: 13px; font-weight: 500; letter-spacing: .08em; }
+.tasto:hover { color: var(--m-testo); transform: none; background: #ffffff0a; }
+.tasto.on { color: #1a1408; background: var(--m-oro); box-shadow: none; transform: none; }
+.tasto.on svg { filter: none; }
+
+/* ----- Atrio ----- */
+.at-testa .marchio, .at-sigillo { opacity: .5; }
+.at-cap { box-shadow: none; border: 1px solid var(--m-filo); border-radius: var(--m-r); margin-right: 14px; }
+.at-cap b, .at-cap small { -webkit-text-stroke: 0; text-shadow: 0 1px 3px #000; }
+.at-cap small { color: var(--m-oro); }
+.at-motto { opacity: .35; }
+.at-ic { clip-path: none; border-radius: 50%; width: 38px; height: 38px; font-size: 16px; background: var(--m-sup2); box-shadow: none; border: 1px solid var(--m-filo2); color: var(--m-testo2); }
+.at-ic:hover { color: var(--m-oro); filter: none; border-color: var(--m-oro2); }
+.at-banner { box-shadow: none; border: 1px solid var(--m-filo); border-radius: 10px; }
+.at-banner:hover { transform: none; border-color: var(--m-oro2); filter: brightness(1.06); }
+.at-banner .tt small { color: var(--m-oro); letter-spacing: .2em; }
+.at-frase { background: linear-gradient(0deg, #000a, #0000); }
+
+/* ----- Voci (squadra) ----- */
+.vs-sq { background: transparent; box-shadow: none; border: 1px solid transparent; color: var(--m-testo2); font-weight: 500; text-align: left; padding: 8px 12px; }
+.vs-sq:hover { color: var(--m-testo); background: #ffffff08; }
+.vs-sq.on { color: var(--m-oro); box-shadow: none; border-color: var(--m-filo2); background: #ffffff08; }
+.vs-nome { background: transparent; box-shadow: none; border-bottom: 1px solid var(--m-filo); border-radius: 0; padding: 4px 2px; }
+.vs-nome b { font-weight: 500; }
+.vs-griglia { background: transparent; box-shadow: none; }
+.carta-voce { box-shadow: 0 0 0 1px var(--m-filo); border-radius: 8px; background: radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--ac) 28%, #1c1822), #0f0d13 80%); }
+.carta-voce:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--m-filo2); }
+.carta-voce.sel { box-shadow: 0 0 0 2px var(--m-oro), 0 8px 18px #0008; }
+.carta-voce.sel::before { box-shadow: none; }
+.carta-voce .cv-ord { -webkit-text-stroke: 0; color: #ffffff30; }
+.carta-voce .cv-aff { box-shadow: none; }
+.vs-aff .titolo-aff { background: none; color: var(--m-testo2); letter-spacing: .18em; font-weight: 500; }
+
+/* ----- Viaggio ----- */
+.vg-modo, .vg-modo.on, .vg-modo.speciale { box-shadow: none; border: 1px solid var(--m-filo); border-radius: 10px; }
+.vg-modo:hover { transform: none; border-color: var(--m-filo2); }
+.vg-modo.on { border-color: var(--m-oro); box-shadow: 0 0 0 1px var(--m-oro); }
+.vg-modo b { font-weight: 600; }
+.vg-modo small { color: var(--m-oro); }
+.mappa-svg .regione { fill: rgba(227, 196, 126, .07); stroke: rgba(227, 196, 126, .55); stroke-width: 1; filter: none; }
+.mappa-svg .griglia line { opacity: .35; }
+.vg-info .vg-etic { background: none; box-shadow: none; border-bottom: 1px solid var(--m-filo); }
+.vg-info .vg-etic .num { background: none; color: var(--m-oro); box-shadow: none; border: 1px solid var(--m-oro2); }
+
+/* ----- Evocazioni ----- */
+#scr-gacha .g-tab { box-shadow: 0 0 0 1px var(--m-filo); border-radius: 8px; }
+#scr-gacha .g-tab.on { box-shadow: 0 0 0 2px var(--m-oro); }
+#scr-gacha .g-tab .g-tab-t small { color: var(--m-oro); }
+.g-evoca span { opacity: .75; }
+
+/* ----- Archivio ----- */
+#scr-archivio .a-corpo { border-color: var(--m-filo); }
+
+/* ----- Storia ----- */
+#vn-box { border: 1px solid var(--m-filo2); background: rgba(12, 10, 14, .9); box-shadow: 0 10px 30px #0008; border-radius: 10px; }
+#vn-nome { box-shadow: none; border-radius: 4px; }
+.vn-opz { background: rgba(20, 17, 24, .92); border: 1px solid var(--m-filo2); border-left: 3px solid var(--m-oro); }
+
+/* ----- Finestre ----- */
+.pannello-modale { border: 1px solid var(--m-filo2); box-shadow: 0 20px 50px #000a; border-radius: 10px; }
+
+/* ----- Telefono ----- */
+@media (max-height: 520px) {
+  :root { --hud-h: 46px; }
+  .tasto { height: 32px; min-width: 0; padding: 0 10px; gap: 5px; }
+  .tasto svg { width: 15px; height: 14px; }
+  .tasto b { font-size: 10px; }
+  .hud-id b { font-size: 20px; }
+  .hud-ris .r { font-size: 11px; }
+  .hud-ris .r .ic { width: 12px; height: 12px; font-size: 7px; }
+  .at-ic { width: 30px; height: 30px; font-size: 13px; }
+}
+
+/* ----- Archivio ----- */
+#scr-archivio .a-corpo { border: 1px solid var(--m-filo); background: var(--m-sup); box-shadow: 0 12px 32px #0007; border-radius: 10px; }
+.sq-card { box-shadow: none !important; border: 1px solid var(--m-filo) !important; background: rgba(255, 255, 255, .025) !important; border-radius: 8px !important; }
+.sq-card:hover { border-color: var(--m-filo2) !important; transform: translateY(-2px); }
+.sq-card.sel { border-color: var(--m-oro) !important; box-shadow: 0 0 0 1px var(--m-oro) !important; }
+.sq-card.sconosciuta { opacity: .45; }
+.sq-dettaglio { background: transparent; border-left: 1px solid var(--m-filo); }
+.sq-dettaglio .skill-box { background: rgba(255, 255, 255, .03); border: 1px solid var(--m-filo); border-left: 2px solid var(--m-oro2); }
+.a-tab, #scr-archivio .sq-filtri .btn { border-radius: 999px; }
+
+/* ----- Evocazioni ----- */
+#scr-gacha .g-titolo { -webkit-text-stroke: 0; color: var(--m-testo); text-shadow: 0 2px 10px #000a; font-weight: 600; font-size: clamp(22px, 3vw, 36px); letter-spacing: .04em; }
+#scr-gacha .g-piede { background: transparent; }
+.g-evoca { border-radius: 8px; }
+#g-x10:not(:disabled) { animation: none; }
+#scr-gacha .g-frammenti { background: none; box-shadow: none; border: 1px solid var(--m-filo); }
+
+/* ----- Atrio: via motto verticale e timbro ----- */
+.at-motto, .at-sigillo { display: none; }
+
+/* ----- Mappa del viaggio ----- */
+.mappa-svg .tappa text { fill: var(--m-oro); stroke: #0e0c11; stroke-width: 2.5px; font-weight: 500; }
+.mappa-svg .tappa .lbl { fill: var(--m-testo2); }
+.mappa-svg .tappa circle.pt { fill: #0e0c11; stroke: var(--m-oro); stroke-width: 1.6; }
+.mappa-svg .tappa.fatto circle.pt { fill: var(--m-oro); }
+.mappa-svg .tappa.sel circle.alone { stroke: var(--m-oro); }
+#scr-mappa .m-nodo { border-width: 2px; border-color: var(--m-filo2); box-shadow: 0 8px 18px #0008; }

@@ -288,7 +288,7 @@
       const n = i + 1, ok = n <= d.progresso.sbloccato, fatto = d.progresso.completati.includes(n), [x, y] = pt[i];
       svg += `<g class="tappa${ok ? '' : ' bloccato'}${fatto ? ' fatto' : ''}${n === sel ? ' sel' : ''}" data-n="${n}"><circle class="alone" cx="${x}" cy="${y}" r="13"/><circle class="pt" cx="${x}" cy="${y}" r="6"/><text x="${x + 10}" y="${y - 6}">${c.num}</text><text class="lbl" x="${x + 10}" y="${y + 8}">${TAPPE[i][2].toUpperCase()}</text></g>`;
     });
-    svg += `<g transform="translate(${MAPPA.W - 50} ${MAPPA.H - 60})" stroke="#ff4a3a" fill="none" opacity=".8"><circle r="26"/><path d="M0 -24 L5 0 L0 24 L-5 0 Z" fill="#ff4a3a55"/><text y="-30" text-anchor="middle" fill="#ff4a3a" stroke="none" font-size="11" font-family="Oswald">N</text></g></svg>`;
+    svg += `<g transform="translate(${MAPPA.W - 50} ${MAPPA.H - 60})" stroke="#e3c47e" fill="none" opacity=".45"><circle r="26"/><path d="M0 -24 L5 0 L0 24 L-5 0 Z" fill="#e3c47e33"/><text y="-30" text-anchor="middle" fill="#e3c47e" stroke="none" font-size="11" font-family="Oswald">N</text></g></svg>`;
     m.innerHTML = svg;
     $$('.tappa', m).forEach(g => { g.onclick = () => { E.UI.Snd.init(); E.UI.Snd.sfx('ui'); H.capSel = +g.dataset.n; H.viaggio(); }; });
     // pannello del capitolo scelto

@@ -321,7 +321,10 @@
   /* ---------- Armi e oggetti in mano (impugnatura in (0,0), puntano in basso lungo +y) ---------- */
   const ARMI = {
     gladio: () => ({ svg: `<rect x="-2" y="-5" width="4" height="8" rx="1" fill="#5a3a22" ${OUT}/><path d="M-6 2.5 L6 2.5 L5 5.5 L-5 5.5 Z" fill="#b8923a" ${OUT}/><path d="M-2.6 5.5 L2.6 5.5 L2.8 30 L0 36 L-2.8 30 Z" fill="#dfe6ee" ${OUT}/><path d="M0 6 L0 33" stroke="#9aa4b2" stroke-width=".8"/><circle cy="-5.5" r="2" fill="#b8923a" ${OUT}/>`, lampo: 0, punta: 36 }),
-    sciabola: () => ({ svg: `<path d="M-2 -5 L2 -5 L2 3 L-2 3 Z" fill="#3a2a1a" ${OUT}/><path d="M-5 2 Q-7 -6 -1 -7" stroke="#b8923a" stroke-width="1.6" fill="none"/><rect x="-5.5" y="2" width="11" height="3" rx="1" fill="#b8923a" ${OUT}/><path d="M-2.6 5 Q11 17 7.4 42 L2 40.6 Q4.4 19 -.2 6.4 Z" fill="#dfe6ee" ${OUT}/><path d="M0.6 7 Q7.6 18 5 38" stroke="#fff" stroke-width=".7" fill="none" opacity=".8"/>`, lampo: 0, punta: 40 }),
+    sciabola: () => ({ svg: `<path d="M-1 -7 Q-8 -2 -4.6 4.4" stroke="#1b1422" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M-1 -7 Q-8 -2 -4.6 4.4" stroke="#d0a848" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <rect x="-1.9" y="-6" width="3.8" height="9" rx="1.2" fill="#3a2a1a" ${OUT}/><path d="M-1.9 -3.6 L1.9 -2.4 M-1.9 -.6 L1.9 .6" stroke="#6a4a2a" stroke-width=".8"/><circle cy="-7" r="2.1" fill="#d0a848" ${OUT}/>
+        <path d="M2.4 5.2 Q3.4 26 6.6 45 L5.8 48.4 Q-.6 28 -2.6 5.2 Z" fill="#e4eaf2" ${OUT}/><path d="M1 7.4 Q2.2 26 5 42" stroke="#98a2b0" stroke-width=".9" fill="none"/><path d="M-1.6 8 Q-.2 27 4.8 45" stroke="#fff" stroke-width=".8" fill="none" opacity=".85"/>
+        <rect x="-5.4" y="2.4" width="10.8" height="3" rx="1.2" fill="#d0a848" ${OUT}/>`, lampo: 0, punta: 48 }),
     lancia: () => ({ svg: `<rect x="-1.5" y="-28" width="3" height="88" rx="1" fill="#7a5a32" ${OUT}/><path d="M-1.5 -10 L1.5 -10 M-1.5 -6 L1.5 -6" stroke="#3a2a1a" stroke-width="1"/><path d="M-4.6 58 L0 78 L4.6 58 Q0 62 -4.6 58 Z" fill="#dfe6ee" ${OUT}/><path d="M-3 58 L-3 62 L3 62 L3 58" fill="#b8923a" ${OUT}/>`, lampo: 0, punta: 78 }),
     bastone: () => ({ svg: `<rect x="-1.8" y="-22" width="3.6" height="68" rx="1.6" fill="#6a4a2a" ${OUT}/><path d="M-1.8 -14 Q2 -10 -1.8 -6 M-1.8 20 Q2 24 -1.8 28" stroke="#4a321a" stroke-width=".9" fill="none"/><circle cy="-22" r="3" fill="#7a5a32" ${OUT}/>`, lampo: 0, punta: 46 }),
     archibugio: () => ({ svg: `<path d="M-5.4 -19 L5.4 -19 L4.2 -13 L-4.2 -13 Z" fill="#4a2e16" ${OUT}/><path d="M-4.2 -13 L4.2 -13 L3.4 9 L-3.4 9 Z" fill="#8a5a2c" ${OUT}/><path d="M-4.2 -13 L-3.4 9" stroke="#5a3a1a" stroke-width="1.2"/>
@@ -333,11 +336,15 @@
         <rect x="-1.6" y="23" width="3.2" height="3.4" fill="#2a2a34" ${OUT}/><rect x="-.6" y="21" width="1.2" height="2" fill="#9a9aa8"/>
         <path d="M3 4 Q8.4 5.6 3 11" stroke="#1b1422" stroke-width="2.2" fill="none"/><path d="M3 4 Q8.4 5.6 3 11" stroke="#6a6a78" stroke-width="1" fill="none"/><path d="M3 6 L5 8" stroke="#1b1422" stroke-width="1.2"/>
         <path d="M-3 -1 L-5.4 -3 L-4.6 -.4" fill="#3a3a46" ${OUT}/>`, lampo: 27, punta: 26 }),
-    falco: () => ({ svg: `<rect x="-5.5" y="-3" width="11" height="9" rx="3" fill="#6a4a2a" ${OUT}/>
-        <path d="M-10 6 Q-2 -6 11 5 Q5 13 0 15 Q-7 13 -10 6 Z" fill="#8a6038" ${OUT}/><path d="M-10 6 Q-15 0 -18 -6 Q-10 -2 -4 2 Z" fill="#6a4628" ${OUT}/>
-        <path d="M-6 9 Q0 3 6 9" stroke="#e0cfa0" stroke-width="1.6" fill="none"/><circle cx="4" cy="4" r="1.6" fill="#ffd75e" stroke="#1b1422" stroke-width=".6"/><path d="M8 4.6 L12 6 L8 7.4 Z" fill="#d9a43a" ${OUT}/>
-        <path d="M-2 15 L-4 23 L4 23 L2 15 Z" fill="#6a4a2a" ${OUT}/>`, lampo: 0, punta: 14 }),
-    libro: (c1) => ({ svg: `<rect x="-7" y="1" width="14" height="18" rx="1.5" fill="${c1 || '#7a3030'}" ${OUT}/><rect x="-5.2" y="3" width="10.4" height="14" fill="#efe6cc"/><path d="M-3 7 L3 7 M-3 10 L3 10 M-3 13 L2 13" stroke="#8a7a5a" stroke-width=".7"/>`, lampo: 0, punta: 18 }),
+    falco: () => ({ rot: 52, svg: `<path d="M-6.5 -1 Q0 -4.5 6.5 -1 L6 4 Q0 6 -6 4 Z" fill="#6a4a2a" ${OUT}/><path d="M-6 1.4 L6 1.4" stroke="#3a2a1a" stroke-width=".9"/>
+        <path d="M-2 -3 L-3.4 -1.6 M1 -3 L.4 -1.4 M2.6 -3 L3.6 -1.4" stroke="#e0b040" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M-9 -1 Q-12 -6 -14 -9 L-10 -8.6 Q-7 -6 -5 -4.6 Z" fill="#5a3c22" ${OUT}/>
+        <path d="M-6 -4 Q-7 -15 1 -19 Q8 -20 9 -13 Q8 -6 2 -3.4 Q-3 -2.6 -6 -4 Z" fill="#9a6a3a" ${OUT}/>
+        <path d="M-5 -6 Q-4 -14 2 -16 Q-1 -10 0 -4 Z" fill="#6a4628" ${OUT}/><path d="M-3.4 -8 L-.6 -9 M-3 -11 L-.2 -11.6" stroke="#3a2614" stroke-width=".7"/>
+        <path d="M2.6 -12 Q5 -9 7.6 -11.6" stroke="#efe0b8" stroke-width="2" fill="none"/>
+        <circle cx="4.8" cy="-15.6" r="1.6" fill="#ffd75e" stroke="#1b1422" stroke-width=".7"/><circle cx="5.1" cy="-15.6" r=".6" fill="#1b1422"/>
+        <path d="M8.6 -15.6 L12 -14 Q10.6 -12.4 8.6 -12.8 Z" fill="#e0a838" ${OUT}/>`, lampo: 0, punta: 0 }),
+    libro: (c1) => ({ rot: 38, svg: `<rect x="-7" y="1" width="14" height="18" rx="1.5" fill="${c1 || '#7a3030'}" ${OUT}/><rect x="-5.2" y="3" width="10.4" height="14" fill="#efe6cc"/><path d="M-3 7 L3 7 M-3 10 L3 10 M-3 13 L2 13" stroke="#8a7a5a" stroke-width=".7"/>`, lampo: 0, punta: 18 }),
     compasso: () => ({ svg: `<path d="M-1.2 3 L-8 40 M1.2 3 L8 40" stroke="#1b1422" stroke-width="4.2" stroke-linecap="round"/><path d="M-1.2 3 L-8 40 M1.2 3 L8 40" stroke="#d8b450" stroke-width="2.4" stroke-linecap="round"/>
         <path d="M-8 40 L-8.6 45 M8 40 L8.6 45" stroke="#c9ccd6" stroke-width="1.6" stroke-linecap="round"/><path d="M-5.6 24 Q0 27 5.6 24" stroke="#8a6a2a" stroke-width="1.4" fill="none"/>
         <circle cx="0" cy="3" r="3.8" fill="#e0c060" ${OUT}/><circle cx="0" cy="3" r="1.3" fill="#7a5a1a"/><rect x="-1.6" y="-7" width="3.2" height="7" rx="1.2" fill="#c9a040" ${OUT}/>`, lampo: 0, punta: 45 }),
@@ -349,11 +356,13 @@
         <path d="M0 15 L0 40" stroke="#1b1422" stroke-width="2.6"/><path d="M0 15 L0 40" stroke="#c8b48a" stroke-width="1.2"/><path d="M-2.2 39 L0 45 L2.2 39 Z" fill="#dfe6ee" ${OUT}/><path d="M-1.6 15 L0 18 L1.6 15" fill="#b02a2a"/>
         <rect x="-3.4" y="30" width="6.8" height="3" rx="1" fill="#c9a040" ${OUT}/>`, lampo: 0, punta: 45 }),
     rotolo: () => ({ svg: `<rect x="-4.5" y="-2" width="9" height="26" rx="4" fill="#ece4c8" ${OUT}/><path d="M-2 4 L2 4 M-2 8 L2 8 M-2 12 L2 12 M-2 16 L1 16" stroke="#8a7a5a" stroke-width=".7"/><rect x="-5.6" y="-3" width="11.2" height="4.4" rx="2" fill="#8a5a2a" ${OUT}/><rect x="-5.6" y="20" width="11.2" height="4.4" rx="2" fill="#8a5a2a" ${OUT}/>`, lampo: 0, punta: 24 }),
-    lettera: () => ({ svg: `<rect x="-8.5" y="2" width="17" height="12" rx=".8" fill="#f4eedc" ${OUT}/><path d="M-8.5 2 L0 9.5 L8.5 2" fill="none" stroke="#1b1422" stroke-width="1"/><circle cx="0" cy="9.5" r="2" fill="#b02a2a" stroke="#1b1422" stroke-width=".6"/>`, lampo: 0, punta: 14 }),
-    cartella: () => ({ svg: `<path d="M-3 -1 Q0 -4 3 -1" stroke="#3a2a1a" stroke-width="1.6" fill="none"/><rect x="-9" y="1" width="18" height="21" rx="2" fill="#8a6a3a" ${OUT}/><rect x="-9" y="8" width="18" height="3" fill="#5a4222"/><rect x="-1.5" y="7.5" width="3" height="4" fill="#d9b44a" stroke="#1b1422" stroke-width=".6"/>`, lampo: 0, punta: 22 }),
+    lettera: () => ({ rot: 38, svg: `<rect x="-8.5" y="2" width="17" height="12" rx=".8" fill="#f4eedc" ${OUT}/><path d="M-8.5 2 L0 9.5 L8.5 2" fill="none" stroke="#1b1422" stroke-width="1"/><circle cx="0" cy="9.5" r="2" fill="#b02a2a" stroke="#1b1422" stroke-width=".6"/>`, lampo: 0, punta: 14 }),
+    cartella: () => ({ rot: 52, svg: `<path d="M-3 -1 Q0 -4 3 -1" stroke="#3a2a1a" stroke-width="1.6" fill="none"/><rect x="-9" y="1" width="18" height="21" rx="2" fill="#8a6a3a" ${OUT}/><rect x="-9" y="8" width="18" height="3" fill="#5a4222"/><rect x="-1.5" y="7.5" width="3" height="4" fill="#d9b44a" stroke="#1b1422" stroke-width=".6"/>`, lampo: 0, punta: 22 }),
     palma: () => ({ svg: `<path d="M0 -12 L0 32" stroke="#5a7a2a" stroke-width="2"/>${[4, 11, 18, 25].map(y => `<path d="M0 ${y} Q-11 ${y - 4} -13 ${y - 13} Q-3 ${y - 8} 0 ${y} M0 ${y} Q11 ${y - 4} 13 ${y - 13} Q3 ${y - 8} 0 ${y}" fill="#86b04e" ${OUT}/>`).join('')}`, lampo: 0, punta: 32 }),
-    torcia: () => ({ svg: `<rect x="-2" y="-6" width="4" height="28" rx="1.5" fill="#6a4a2a" ${OUT}/><path d="M-3 20 L3 20 L3.6 26 L-3.6 26 Z" fill="#4a3a2a" ${OUT}/>
-        <path class="fiamma" d="M0 25 Q-9 36 -2 49 Q-1 42 2 40 Q3 45 1 50 Q9 38 0 25 Z" fill="#ff8a3d" ${OUT}/><path d="M0 30 Q-4 38 0 45 Q4 38 0 30 Z" fill="#ffe27a"/>`, lampo: 0, punta: 46 }),
+    torcia: () => ({ rot: 52, svg: `<rect x="-2.2" y="-24" width="4.4" height="34" rx="1.6" fill="#6a4a2a" ${OUT}/><path d="M-2.2 -2 L2.2 -1 M-2.2 2 L2.2 3" stroke="#3a2a1a" stroke-width=".8"/>
+        <path d="M-3.6 -22 L3.6 -22 L4.2 -28 L-4.2 -28 Z" fill="#4a3a2a" ${OUT}/><path d="M-4.2 -26 L4.2 -26" stroke="#8a6a3a" stroke-width="1"/>
+        <g class="fiamma"><path d="M0 -27 Q-10 -36 -2 -50 Q-1 -43 2 -41 Q3 -46 1 -52 Q10 -38 0 -27 Z" fill="#ff8a3d" ${OUT}/><path d="M0 -29 Q-4.6 -36 0 -44 Q4.6 -36 0 -29 Z" fill="#ffe27a"/></g>
+        <circle cx="0" cy="-38" r="13" fill="#ffb04a" opacity=".16"/>`, lampo: 0, punta: 10 }),
     spada: () => ({ svg: `<rect x="-1.8" y="-6" width="3.6" height="9" fill="#3a2a1a" ${OUT}/><circle cy="-7" r="2.4" fill="#b8923a" ${OUT}/><rect x="-7.5" y="3" width="15" height="3.4" rx="1.2" fill="#b8923a" ${OUT}/><path d="M-2.6 6.4 L2.6 6.4 L2.6 42 L0 48 L-2.6 42 Z" fill="#dfe6ee" ${OUT}/><path d="M0 7 L0 44" stroke="#9aa4b2" stroke-width=".8"/>`, lampo: 0, punta: 48 }),
     mazza: () => ({ svg: `<rect x="-1.8" y="-8" width="3.6" height="31" rx="1.4" fill="#6a4a2a" ${OUT}/><circle cx="0" cy="27" r="7.5" fill="#5a5a66" ${OUT}/><circle cx="0" cy="27" r="7.5" fill="url(#gMetal)"/><path d="M-7.5 27 L-11 27 M7.5 27 L11 27 M0 34.5 L0 38 M0 19.5 L0 16 M-5.3 21.7 L-7.8 19.2 M5.3 32.3 L7.8 34.8" stroke="#5a5a66" stroke-width="3" stroke-linecap="round"/>`, lampo: 0, punta: 36 }),
     fucile: () => ({ svg: `<path d="M-5 -19 L5 -19 L3.4 -2 L-3.4 -2 Z" fill="#5e3c1e" ${OUT}/><path d="M-5 -19 L5 -19" stroke="#2a1a0c" stroke-width="2.4"/><path d="M-3.4 -2 L3.4 -2 L2.6 28 L-2.6 28 Z" fill="#7a4e26" ${OUT}/>
@@ -361,7 +370,7 @@
         <path d="M2.6 0 L7.4 2.6" stroke="#1b1422" stroke-width="2.6" stroke-linecap="round"/><path d="M2.6 0 L7.4 2.6" stroke="#9a9aa8" stroke-width="1.2" stroke-linecap="round"/><circle cx="7.6" cy="2.8" r="1.8" fill="#6a6a78" ${OUT}/>
         <path d="M-3.4 -10 Q-9 10 -2.6 26" stroke="#3a2a1a" stroke-width="1.2" fill="none"/>
         <path d="M-1.6 47 L1.6 47 L.6 63 L0 65 L-.6 63 Z" fill="#dfe6ee" ${OUT}/>`, lampo: 48, punta: 65 }),
-    lanterna: () => ({ svg: `<path d="M0 -2 L0 6" stroke="#8a6a2a" stroke-width="1.6"/><rect x="-5.5" y="6" width="11" height="14" rx="2" fill="#3a2f20" ${OUT}/><rect x="-3.8" y="8" width="7.6" height="10" fill="#ffd75e"/><circle cx="0" cy="13" r="11" fill="#ffd75e" opacity=".22"/>`, lampo: 0, punta: 20 }),
+    lanterna: () => ({ rot: 52, svg: `<path d="M0 -2 L0 6" stroke="#8a6a2a" stroke-width="1.6"/><rect x="-5.5" y="6" width="11" height="14" rx="2" fill="#3a2f20" ${OUT}/><rect x="-3.8" y="8" width="7.6" height="10" fill="#ffd75e"/><circle cx="0" cy="13" r="11" fill="#ffd75e" opacity=".22"/>`, lampo: 0, punta: 20 }),
     ruota: () => ({ svg: `<circle cx="0" cy="13" r="13" fill="none" stroke="#1b1422" stroke-width="3.4"/><circle cx="0" cy="13" r="13" fill="none" stroke="#c9ccd6" stroke-width="1.6"/><circle cx="0" cy="13" r="2" fill="#8a8a94" ${OUT}/><path d="M0 0 L0 26 M-13 13 L13 13 M-9.2 3.8 L9.2 22.2 M9.2 3.8 L-9.2 22.2" stroke="#9a9ca8" stroke-width=".8"/>`, lampo: 0, punta: 26 })
   };  Arte.ARMI = ARMI;   // esposto per la galleria
 
@@ -570,7 +579,7 @@
     const collo = `${forma(`M56 44 L65 44 L65.4 57 L55.6 57 Z`, pelle)}<path d="M55.8 47 Q60.5 52.6 65.2 47 L65.3 51.6 Q60.5 54.6 55.7 51.6 Z" fill="${pelleOmbra}" opacity=".55"/>`;
     const torsoSvg = treQuarti(`${collo}${A.svg}${accessorio(spec.accessorio, spec.accessorioC || '#f0ece0', d)}`);
 
-    const armaPezzo = arma ? pezzo(vb, 'f-arma', xR, Y.mano, `<g transform="translate(${xR},${Y.mano})">${arma.svg}${lampo}</g>`) : '';
+    const armaPezzo = arma ? pezzo(vb, 'f-arma', xR, Y.mano, `<g transform="translate(${xR},${Y.mano})${arma.rot ? ' rotate(' + arma.rot + ')' : ''}">${arma.svg}${lampo}</g>`) : '';   // rot: oggetti portati (falco, cartella…) dritti nella posa di riposo
     const ombraA = (x1, y1, y2, w1, w2) => `<path d="${seg(x1, y1, x1, y2, w1, w2)}" fill="#140a1e" opacity=".2"/>`;
     // braccio lontano (a, destra, con l'arma): dietro al busto, in ombra
     const braccioA = pezzo(vb, 'f-braccio-a', xR, Y.spalla, omero(xR, manica) + ombraA(xR, Y.spalla - 1.5, Y.gomito, d.ga * 1.12, d.ga * 0.86),
