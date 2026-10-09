@@ -688,6 +688,8 @@
     async cicloTurno(evIniziali) {
       const B = this.B, S = this.sessione, viva = () => S === this.sessione;      // la sessione cambia se si abbandona o si ricomincia
       try {
+        await this.intro();
+        if (!viva()) return;
         if (evIniziali && evIniziali.length) await this.riproduci(evIniziali);
         while (!B.esito && viva()) {
           Combat().iniziaTurno(B);
@@ -701,6 +703,21 @@
         if (!viva()) return;
         await this.finale();
       } catch (err) { console.error('Errore nel ciclo di battaglia', err); this.log('Errore interno: ' + err.message, 'imp'); }
+    },
+    /** Apertura della battaglia: per i boss una carta di presentazione a tutto schermo (si salta con un tocco). */
+    intro() {
+      const boss = Object.values(this.V).find(u => u.boss && u.lato === 'n');
+      if (!boss || this.ctx.tutorial) { this.banner(this.ctx.capitolo != null && E.CAPITOLI[this.ctx.capitolo] ? E.CAPITOLI[this.ctx.capitolo].epoca.toUpperCase() : 'BATTAGLIA'); return this.sleep(600); }
+      const def = E.NEMICI[boss.def], ac = def.colore || '#c0303f', parti = def.nome.split('—');
+      const w = el('div', 'boss-intro'); w.style.setProperty('--ac', ac);
+      w.innerHTML = `<div class="bi-strisce"></div><div class="bi-fig"></div><div class="bi-testo"><div class="bi-sop">Eco dominante</div><div class="bi-nome">${(parti[0] || def.breve).trim()}</div><div class="bi-sub">${(parti[1] || '').trim()}</div><div class="bi-pv">PV ${boss.pvMax} · ${E.AFFINITA[boss.aff].simbolo} ${E.AFFINITA[boss.aff].nome}</div></div><div class="g-rv-tocca">tocca per iniziare</div>`;
+      const f = E.Arte.figura(boss.def); f.querySelector('.fig-in').style.transform = 'scaleX(-1)'; w.querySelector('.bi-fig').appendChild(f);
+      $('#app').appendChild(w); Fx.flash(ac, 0.4); Snd.sfx('forte'); setTimeout(() => Snd.sfx('ced'), 300);
+      setTimeout(() => E.Arte.anima(f, 'grido', 0.85), 350);
+      return new Promise(res => {
+        let fatto = false; const chiudi = () => { if (fatto) return; fatto = true; w.classList.add('via'); setTimeout(() => { w.remove(); res(); }, 350); };
+        setTimeout(() => { w.onclick = chiudi; }, 500); setTimeout(chiudi, this.skip ? 0 : 2800 / Math.min(2, this.velBase));
+      });
     },
     /** Attende che il giocatore prema "Esegui turno". */
     pianifica() {
@@ -872,7 +889,7 @@
       const alleati = B.unita.filter(x => x.lato === 'a' && !x.npc), mvp = alleati.slice().sort((x, y) => this.stat[y.id].danno - this.stat[x.id].danno)[0];
       let righe = '';
       alleati.forEach(x => { const st = this.stat[x.id], v = this.V[x.id]; righe += `<tr class="${v.vivo ? '' : 'caduto'}${x === mvp && st.danno ? ' mvp' : ''}"><td>${x === mvp && st.danno ? '★ ' : ''}${x.breve}${v.vivo ? '' : ' ✝'}</td><td>${st.danno}</td><td>${st.colpi}</td><td>${st.max}</td><td>${st.subito}</td></tr>`; });
-      r.innerHTML = `<h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p class="sub">${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} · ${B.turno} turni</p>
+      r.innerHTML = `<div class="ris-mvp"></div><h2>${B.esito === 'vittoria' ? 'VITTORIA' : 'SCONFITTA'}</h2><p class="sub">${B.esito === 'vittoria' ? 'L\'Eco si placa.' : 'L\'Eco vi inghiotte… per ora.'} · ${B.turno} turni</p>
         <table class="tab-risultato"><tr><th>Voce</th><th>Danni</th><th>Colpi</th><th>Max</th><th>Subiti</th></tr>${righe}</table><div class="risultato-extra"></div>`;
       const bx = el('div', 'risultato-btn');
       if (this.ctx.fineCampagna) {            // modalità campagna: ricompense e pulsanti decisi dalla campagna
@@ -884,6 +901,7 @@
         bx.append(b1, b2, b3);
       }
       r.appendChild(bx);
+      if (mvp && E.Arte) { const f = E.Arte.figura(mvp.def); $('.ris-mvp', r).appendChild(f); $('.ris-mvp', r).insertAdjacentHTML('beforeend', `<div class="ris-mvp-n">${B.esito === 'vittoria' ? '★ ' + mvp.breve : mvp.breve}</div>`); if (B.esito === 'vittoria') f.classList.add('a-vittoria'); else f.classList.add('ced'); }
       if (!this.ctx.fineCampagna) this.ctx.onFine(B.esito, B);
     },
 

@@ -336,3 +336,29 @@
   .det-fig { height: 110px; }
   .log-cassetto { font-size: 10px; }
 }
+
+/* ----- Presentazione del boss ----- */
+.boss-intro { --ac: #c0303f; position: fixed; inset: 0; z-index: 95; overflow: hidden; cursor: pointer; background: radial-gradient(ellipse at 70% 60%, color-mix(in srgb, var(--ac) 35%, #120a14) 0%, #050307f4 70%); animation: g-rv-in .35s ease-out both; }
+.boss-intro.via { animation: g-rv-out .35s ease-in forwards; }
+@keyframes g-rv-in { from { opacity: 0; transform: scale(1.08); } } @keyframes g-rv-out { to { opacity: 0; transform: scale(.97); } }
+.bi-strisce { position: absolute; left: -10%; right: -10%; top: 50%; height: 46%; transform: translateY(-50%) skewY(-6deg); background: repeating-linear-gradient(100deg, #0000 0 26px, color-mix(in srgb, var(--ac) 22%, transparent) 26px 34px);
+  border-block: 3px solid var(--ac); box-shadow: 0 0 60px var(--ac); animation: bandain .6s cubic-bezier(.2, .9, .2, 1) both, scorri .6s linear infinite; }
+.bi-fig { position: absolute; right: 8%; bottom: 3%; height: 84%; aspect-ratio: 120 / 190; filter: drop-shadow(0 0 30px var(--ac)); animation: g-rv-fig .9s cubic-bezier(.2, .9, .3, 1.1) both; }
+.bi-fig .fig { position: absolute; inset: 0; }
+@keyframes g-rv-fig { from { transform: translateX(40%) scale(1.15); opacity: 0; filter: brightness(4) drop-shadow(0 0 30px var(--ac)); } }
+.bi-testo { position: absolute; left: 7%; top: 50%; transform: translateY(-50%); max-width: 56%; animation: g-rv-t .7s .2s cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes g-rv-t { from { opacity: 0; transform: translate(-60px, -50%); } }
+.bi-sop { font: 800 13px var(--font-ui); letter-spacing: .4em; text-transform: uppercase; color: var(--ac); text-shadow: 0 0 10px var(--ac); }
+.bi-nome { font: 900 clamp(40px, 9vw, 104px)/1 var(--font-titolo); color: #fff; letter-spacing: .04em; text-shadow: 0 0 30px var(--ac), 0 4px 0 #000; margin: 6px 0; }
+.bi-sub { font: italic 22px var(--font); color: var(--testo); }
+.bi-pv { font: 700 13px var(--font-ui); color: var(--testo2); margin-top: 10px; letter-spacing: .12em; }
+.g-rv-tocca { position: absolute; bottom: 4%; right: 5%; font: 12px var(--font-ui); color: var(--testo2); letter-spacing: .2em; text-transform: uppercase; animation: lampeggia .9s infinite alternate; }
+/* ----- MVP nella schermata finale ----- */
+#risultato { flex-direction: column; }
+.ris-mvp { position: absolute; left: 4%; bottom: 6%; height: 62%; aspect-ratio: 120 / 210; pointer-events: none; animation: g-rv-fig .8s cubic-bezier(.2, .9, .3, 1.1) both; }
+.ris-mvp .fig { position: absolute; left: 0; right: 0; top: 0; bottom: 10%; }
+.ris-mvp::after { content: ""; position: absolute; left: -10%; right: -10%; bottom: 8%; height: 8%; border-radius: 50%; background: radial-gradient(ellipse, #e6b94755, #0000 70%); }
+.ris-mvp-n { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font: 700 15px var(--font-titolo); color: var(--oro); letter-spacing: .08em; }
+#risultato.sconfitta .ris-mvp-n { color: var(--testo2); }
+@media (max-height: 520px) { .bi-sub { font-size: 14px; } .bi-pv { font-size: 10px; } .ris-mvp { height: 56%; left: 2%; } .ris-mvp-n { font-size: 11px; } }
+@media (max-width: 900px) { .ris-mvp { opacity: .35; } }
