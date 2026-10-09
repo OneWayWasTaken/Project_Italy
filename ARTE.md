@@ -28,15 +28,24 @@ sprite: {
 ```
 Lo sheet è una griglia di frame di uguale dimensione; le righe sono contate dall'alto.
 
+## Struttura delle figure SVG (v2)
+Ogni figura è fatta di pezzi articolati (`<div>` con il loro SVG, animati dal CSS in `figure.css`):
+`f-tutto > f-mantello · f-capelli-d · f-gamba-a/b (> f-stinco-a/b) · f-torso · f-braccio-b (> f-avambraccio-b) · f-testa (> f-occhi, f-sopracciglia, f-bocca, f-urlo) · f-braccio-a (> f-avambraccio-a > f-arma)`.
+Proporzioni "gacha" (testa grande), ombre cel con bordo netto (`url(#gCel)`, inserito da `Arte.defs()`), braccia e gambe con gomito e ginocchio.
+
 ## Stili d'attacco (SVG)
-`attacco` in `E.ARTE[id]` ∈ `fendente | affondo | sparo | lancio | preghiera`. Una singola skill può forzare uno stile con
-`anim: 'sparo'` nella sua definizione in `E.SKILL`. Durata e momento d'impatto sono in `Arte.DURATA` / `Arte.IMPATTO` (art.js).
+Ogni skill ha la sua animazione in `E.ANIM_SKILL` (data.js) o nel campo `anim` della skill; altrimenti vale `attacco` in `E.ARTE[id]`.
+Stili disponibili (durata, momento d'impatto, distanza ed effetto in `Arte.ANIM`, art.js):
+`fendente sweep doppio affondo lungo salto turbine carica colpo_scudo sparo sparo_rapido sparo_mira lancio lancio_alto benedizione invocazione preghiera raffica contrattacco grido` (+ `ele_carica ele_barrito ele_pestone` per l'elefante).
 
 ## Aggiungere un nuovo personaggio SVG
 1. Aggiungi la Voce in `E.VOCI` (o il nemico in `E.NEMICI`).
 2. Aggiungi `E.ARTE[id]` con gli stessi campi degli altri. Parti disponibili:
-   - abiti: `tunica corazza toga veste_lunga gonna giubba uniforme abito_nero tuta cotta armatura civile`
-   - copricapi: `elmo_romano elmo_cartaginese elmo_medievale alloro corona velo_corona cappello_piuma berretto aviatore fazzoletto fedora basco cappellino_ciclista cappuccio fascia`
+   - abiti: `tunica corazza toga veste_lunga manto_imperiale abito_dama veste_studioso saio gonna giubba uniforme abito_nero tuta cotta armatura civile`
+   - capelli: `corto lungo trecce raccolto riccio calvo coda`
+   - copricapi: `elmo_romano elmo_cartaginese elmo_medievale alloro corona velo_corona cappello_piuma berretto aviatore fazzoletto fedora basco cappellino_ciclista cappuccio cappuccio_aperto bicorno elmetto fascia`
    - armi: `gladio sciabola lancia bastone archibugio pistola falco libro compasso rotolo lettera cartella palma ruota`
    - scudi: `scutum clipeo` · accessori: `catene sciarpa` · viso: `occhiali benda` · barba: `barba pizzo baffi`
    - `eco: true` + `glow` per l'aspetto spettrale dei nemici, `scala` per ingrandire (es. boss 1.3).
+   - volto: `espr` (`fiero sorriso gentile serio severo grinta`), `iride` (colore degli occhi), `eta: 'anziano'` (rughe).
+   - personalità di riposo: `idle` (`fiero regale nervoso sereno curioso dondola sfrontato composto spettro pesante`) + `idleVars` per ritocchi.
