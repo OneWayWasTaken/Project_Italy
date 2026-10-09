@@ -182,7 +182,9 @@
       this.ctx = ctx; this.opts = opts = opts || {}; this.filtro = null;
       const d = ctx.save, pool = this.pool = (opts.pool || Object.keys(d.roster || {}).filter(id => E.VOCI[id])).filter(id => E.VOCI[id]);
       if (!d.squadre) d.squadre = [0, 1, 2, 3, 4].map(i => ({ nome: 'Squadra ' + (i + 1), ids: i === 0 ? (d.squadra || []).slice() : [] }));
-      d.squadraAttiva = d.squadraAttiva || 0;
+      if (!Array.isArray(d.squadre) || d.squadre.length !== 5) d.squadre = [0, 1, 2, 3, 4].map(i => (d.squadre && d.squadre[i]) || { nome: 'Squadra ' + (i + 1), ids: [] });
+      d.squadre.forEach((q, i) => { if (!q || !Array.isArray(q.ids)) d.squadre[i] = { nome: (q && q.nome) || 'Squadra ' + (i + 1), ids: [] }; });
+      d.squadraAttiva = d.squadraAttiva >= 0 && d.squadraAttiva < 5 ? d.squadraAttiva : 0;
       this.sel = (d.squadre[d.squadraAttiva].ids.length ? d.squadre[d.squadraAttiva].ids : d.squadra || []).filter(id => pool.includes(id)).slice(0, C.SQUADRA_MAX);
       if (this.sel.length < C.SQUADRA_MAX && !opts.libera) pool.forEach(id => { if (this.sel.length < C.SQUADRA_MAX && !this.sel.includes(id)) this.sel.push(id); });
       this.det = this.sel[0] || pool[0];

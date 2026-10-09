@@ -153,3 +153,32 @@ body.hub #bacheca { opacity: .35; filter: saturate(.5); }
 .mappa-svg .tappa.fatto circle.pt { fill: var(--m-oro); }
 .mappa-svg .tappa.sel circle.alone { stroke: var(--m-oro); }
 #scr-mappa .m-nodo { border-width: 2px; border-color: var(--m-filo2); box-shadow: 0 8px 18px #0008; }
+
+/* ----- Mappa a nodi del capitolo ----- */
+#scr-mappa .m-nodo { border: 1px solid var(--m-filo2); background: #17141b; box-shadow: 0 6px 16px #0008; color: var(--m-testo2); }
+#scr-mappa .m-nodo::before { border-color: transparent; }
+#scr-mappa .m-nodo.disponibile { background: radial-gradient(circle at 50% 40%, #3a3020, #17141b 75%); border: 1.5px solid var(--m-oro); color: var(--m-oro); animation: m-nodo 2s ease-in-out infinite; }
+@keyframes m-nodo { 50% { box-shadow: 0 0 0 6px rgba(227, 196, 126, .12), 0 6px 16px #0008; } }
+#scr-mappa .m-nodo.futuro { background: #121015; filter: none; opacity: .55; }
+#scr-mappa .m-nodo.scelto { border-color: var(--m-oro); color: var(--m-oro); box-shadow: 0 6px 16px #0008; }
+#scr-mappa .m-nodo.scelto::after { background: var(--m-oro); color: #1a1408; }
+#scr-mappa .m-nodo.t-boss { border-color: #c0503a; color: #e08a72; }
+#scr-mappa .m-nodo.t-boss.disponibile { background: radial-gradient(circle at 50% 40%, #3a1a14, #17141b 75%); border-color: #e0604a; }
+#scr-mappa .m-nodo .l { background: none !important; box-shadow: none !important; border: 0 !important; color: var(--m-testo2); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; font-size: 10px; }
+#scr-mappa .m-nodo.disponibile .l { color: var(--m-oro); }
+#scr-mappa .m-linee svg path { stroke: rgba(255, 236, 200, .12) !important; }
+#scr-mappa .m-linee svg path.attivo, #scr-mappa .m-linee svg path.prossimo { stroke: rgba(227, 196, 126, .55) !important; }
+.m-strato h4, .m-strato .t { color: var(--m-testo2); letter-spacing: .2em; font-weight: 500; }
+@media (max-height: 520px) { #scr-mappa .m-nodo .l { font-size: 7.5px; } }
+@media (max-height: 520px) {
+  .pannello-modale { padding: 12px 16px; max-height: calc(100% - 16px); }
+  .pannello-modale h3 { font-size: 14px; margin-bottom: 6px; }
+  .opz-riga { margin: 4px 0; font-size: 12px; }
+}
+
+/* ----- Storia: più personaggi sullo stesso lato non si accavallano ----- */
+.vn-pg { height: calc(var(--sc, 1) * (56% - var(--i, 0) * 5%)); z-index: calc(5 - var(--i, 0)); }
+.vn-pg.sx { left: calc(6% + var(--i, 0) * 30%); } .vn-pg.dx { right: calc(6% + var(--i, 0) * 30%); }
+.vn-pg.parla { z-index: 6; filter: drop-shadow(0 0 10px rgba(227, 196, 126, .25)); }
+.vn-pg.dim { filter: brightness(.45) saturate(.5); }
+@media (max-height: 520px) { .vn-pg { height: calc(var(--sc, 1) * (54% - var(--i, 0) * 5%)); } }

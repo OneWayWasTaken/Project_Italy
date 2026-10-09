@@ -129,3 +129,20 @@
 #scr-battaglia.culmine #vignetta { background: radial-gradient(ellipse at 50% 55%, #0000 35%, color-mix(in srgb, var(--cul, #fff) 30%, #000000d8) 100%); transition: background .25s; }
 #scr-battaglia.culmine .pg:not(.in-clash):not(.attivo) { opacity: .25; transition: opacity .25s; }
 .num-fly.critico { font-size: calc(var(--nb) * var(--k, 1) * 1.45); color: #fff; text-shadow: 0 3px 0 #0009, 0 0 22px var(--oro, #ffd84a); }
+
+/* ----- Luce di contorno: un filo caldo sul lato rivolto al centro dell'arena (dà volume alle figure) ----- */
+.pg .f-tutto { filter: drop-shadow(1.4px -.5px 0 rgba(255, 228, 176, .5)) drop-shadow(0 0 1px rgba(10, 6, 14, .6)); }
+.pg.nemico .f-tutto { filter: drop-shadow(1.4px -.5px 0 rgba(200, 180, 255, .4)) drop-shadow(0 0 1px rgba(10, 6, 14, .6)); }
+body.lite .pg .f-tutto { filter: none; }
+
+/* ----- Carte skill: niente simbolo doppio, barra della vittoria neutra ----- */
+.skill-btn .num > span:first-child { display: none; }
+.skill-btn .prev .barra { background: #2a2530 !important; box-shadow: none; border-radius: 2px; }
+.skill-btn .prev .barra i { background: linear-gradient(90deg, #4fbf7a, #8affb0) !important; border-radius: 2px; }
+.skill-btn .t span:first-child { font-size: 13.5px; }
+
+/* ----- Scritte a centro schermo (turno, fasi, risonanza): sottili e brevi ----- */
+.banner { top: 30%; font: 500 clamp(18px, 2.6vw, 30px)/1 var(--font-hud); letter-spacing: .4em; color: #f2e8d6; text-shadow: 0 2px 12px #000c; animation: banner-m 1.5s ease both; }
+.banner::before, .banner::after { height: 1px; width: min(260px, 40vw); margin: 8px auto; background: linear-gradient(90deg, #0000, rgba(227, 196, 126, .7), #0000); }
+.banner.risonanza { font-weight: 600; }
+@keyframes banner-m { 0% { opacity: 0; letter-spacing: .7em; } 18% { opacity: 1; letter-spacing: .4em; } 78% { opacity: 1; } 100% { opacity: 0; } }

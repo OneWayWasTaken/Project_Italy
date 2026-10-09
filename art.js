@@ -768,7 +768,12 @@
   Arte.sfondo = function (cap) {
     const p = Arte.palette(cap), c = cap % 7, S = p.sagome;
     const stelle = (n, op) => Array.from({ length: n }, (_, i) => `<circle cx="${(i * 97 + 13) % 520}" cy="${(i * 53) % 80}" r="${0.5 + (i % 3) * 0.4}" fill="#fff" opacity="${(op || 1) * (0.2 + (i % 4) * 0.12)}"/>`).join('');
-    const nuvole = (col, op, y) => [0, 1, 2, 3].map(i => `<ellipse cx="${60 + i * 140 + (i % 2) * 30}" cy="${(y || 30) + (i % 2) * 14}" rx="${46 + (i % 3) * 14}" ry="${6 + (i % 2) * 3}" fill="${col}" opacity="${op}"/>`).join('');
+    // nuvole: strisce affusolate a due strati (niente ovali pieni, che ingranditi sembravano pillole)
+    const nuvole = (col, op, y) => [0, 1, 2, 3, 4].map(i => {
+      const x = 20 + i * 108 + (i % 2) * 26, yy = (y || 30) + (i % 3) * 9 - 6, w = 70 + (i % 3) * 34, h = 3 + (i % 2) * 2.4;
+      return `<path d="M${x} ${yy} Q${x + w * 0.45} ${yy - h * 2.2} ${x + w} ${yy + 0.5} Q${x + w * 0.5} ${yy + h * 0.9} ${x} ${yy} Z" fill="${col}" opacity="${op * (0.55 + (i % 3) * 0.22)}"/>` +
+        `<path d="M${x + w * 0.18} ${yy - h * 0.5} Q${x + w * 0.5} ${yy - h * 1.9} ${x + w * 0.8} ${yy - h * 0.4} Q${x + w * 0.5} ${yy - h * 0.7} ${x + w * 0.18} ${yy - h * 0.5} Z" fill="#fff" opacity="${op * 0.35}"/>`;
+    }).join('');
     const cielo = (c0, c1, c2) => `<defs><linearGradient id="gC${c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c0}"/><stop offset=".65" stop-color="${c1}"/><stop offset="1" stop-color="${c2 || c1}"/></linearGradient>
       <radialGradient id="gS${c}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".25" stop-color="${c2 || c1}" stop-opacity=".5"/><stop offset="1" stop-color="${c2 || c1}" stop-opacity="0"/></radialGradient></defs>
       <rect width="520" height="150" fill="url(#gC${c})"/>`;

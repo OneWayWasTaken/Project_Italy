@@ -64,7 +64,7 @@
     marchio:       { nome: 'Marchio',       icona: '◎', colore: '#a97be0', max: 10, neg: true,  desc: '+5% danni subiti per Marchio; ne consuma 1 per colpo.' },
     formazione:    { nome: 'Formazione',    icona: '▤', colore: '#9fb3c8', max: 20, neg: false, desc: '+1 PM ogni 3 stack (max +3), −5% danni subiti per stack (max 50%). Cala perdendo scontri.' },
     voto:          { nome: 'Voto',          icona: '✚', colore: '#b9d4ff', max: 20, neg: false, desc: 'Ogni stack assorbe 3 danni e dona +1 Sanità.' },
-    splendore:     { nome: 'Splendore',     icona: '☀', colore: '#ffd75e', max: 20, neg: false, desc: '+0,5 PB per stack (max +6), +2 Sanità per scontro vinto. Si dimezza a fine turno.' }
+    splendore:     { nome: 'Splendore',     icona: '☀', colore: '#ffd75e', max: 20, neg: false, desc: '+1 PB ogni 2 stack (max +6), +2 Sanità per scontro vinto. Si dimezza a fine turno.' }
   };
   E.POSITIVI = ['splendore', 'voto', 'formazione'];
   E.NEGATIVI = ['sanguinamento', 'bruciatura', 'marchio'];

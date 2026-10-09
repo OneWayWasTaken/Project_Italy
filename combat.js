@@ -272,7 +272,7 @@
     const rel = E.rel(s.aff, rival.aff);
     let pb = s.pb + (u.lato === 'a' ? bonusRisonanza(Combat.risonanza(B)[s.aff] || 0) : 0), pm = s.pm + rel + u.bonusPM + u.bonusPMlv, molt = 1, monete = s.monete;
     if (s.monetePiuSeCed && rival.ced > 0) monete += s.monetePiuSeCed;
-    pb += Math.min(6, (u.stati.splendore || 0) * 0.5);
+    pb += Math.min(6, Math.floor((u.stati.splendore || 0) / 2));
     pm += Math.min(3, Math.floor((u.stati.formazione || 0) / 3));
     if (u.sanita >= C.SANITA_MAX) pm += 1;                       // Esaltazione
     if (s.pbPer) {

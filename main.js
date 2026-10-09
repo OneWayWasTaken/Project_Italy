@@ -36,6 +36,15 @@
           this.data = Object.assign(base, d);
           ['opzioni', 'stats', 'valute', 'gacha', 'progresso'].forEach(k => { this.data[k] = Object.assign(this.def()[k], d[k] || {}); });
           if (!d.roster || !Object.keys(d.roster).length) this.data.roster = this.def().roster;       // migrazione dalla v1
+          // pulizia: via le Voci che non esistono più, squadra solo con Voci possedute, numeri validi
+          Object.keys(this.data.roster).forEach(id => { if (!E.VOCI[id]) delete this.data.roster[id]; });
+          if (!Object.keys(this.data.roster).length) this.data.roster = this.def().roster;
+          this.data.squadra = (Array.isArray(this.data.squadra) ? this.data.squadra : []).filter((id, i, a) => E.VOCI[id] && this.data.roster[id] && a.indexOf(id) === i).slice(0, 4);
+          if (!this.data.squadra.length) this.data.squadra = this.def().squadra.filter(id => this.data.roster[id]);
+          if (!(this.data.xp >= 0)) this.data.xp = 0;
+          if (!this.data.flag || typeof this.data.flag !== 'object') this.data.flag = {};
+          if (!this.data.codex || typeof this.data.codex !== 'object') this.data.codex = {};
+          if (this.data.run && (typeof this.data.run !== 'object' || !E.CAPITOLI || !E.CAPITOLI[(this.data.run.cap || 1) - 1])) this.data.run = null;
           this.data.v = 2;
           return this.data;
         }

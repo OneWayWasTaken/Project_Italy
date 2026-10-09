@@ -984,7 +984,9 @@
       run.forEach(a => { try { if (a.playState === 'paused') a.play(); } catch (x) { /* animazione già conclusa */ } });
     },
     banner(testo) {
-      const b = el('div', 'banner', testo); $('#app').appendChild(b); setTimeout(() => b.remove(), 1700);
+      // una sola scritta alla volta: la nuova sostituisce quella ancora a schermo (prima si sovrapponevano)
+      $$('.banner').forEach(x => x.remove());
+      const b = el('div', 'banner', testo); $('#app').appendChild(b); setTimeout(() => b.remove(), 1700); return b;
     },
     /** Stile d'attacco di un'unità per una skill (da ARTE o dalla skill stessa). */
     stile(unitId, skillId) {
@@ -1115,7 +1117,7 @@
         case 'dadi':
           this.dadi = e.dadi; Object.keys(e.dadi).forEach(id => this.renderDadi(id, true));
           Snd.sfx('moneta'); await this.sleep(600); break;
-        case 'risonanza': { const A = E.AFFINITA[e.aff]; this.log(e.msg, 'imp'); Fx.flash(A.colore, 0.25); const b = el('div', 'banner risonanza', `RISONANZA ${A.simbolo}×${e.n}`); b.style.color = A.colore; $('#app').appendChild(b); setTimeout(() => b.remove(), 1700); Snd.sfx('forte'); await this.sleep(800); break; }
+        case 'risonanza': { const A = E.AFFINITA[e.aff]; this.log(e.msg, 'imp'); Fx.flash(A.colore, 0.25); const b = this.banner(`RISONANZA ${A.simbolo}×${e.n}`); b.classList.add('risonanza'); b.style.color = A.colore; Snd.sfx('forte'); await this.sleep(800); break; }
         case 'regola': this.log(e.msg, 'imp'); Fx.flash('#a97be0', 0.2); this.banner(e.msg.split(':')[0].slice(0, 28)); await this.sleep(700); break;
         case 'msg': this.log(e.msg); break;
         case 'azione': {
