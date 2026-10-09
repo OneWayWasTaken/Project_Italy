@@ -589,7 +589,8 @@
           p.style.left = s[0] + '%'; p.style.top = s[1] + '%'; p.style.zIndex = Math.round(s[1] * 10);
           p.dataset.z = p.style.zIndex;
           const spec = (E.ARTE && E.ARTE[u.def]) || {};
-          p.style.setProperty('--sc', ((spec.scala || 1) * profondita(s[1])).toFixed(3));
+          p.style.setProperty('--sc', ((spec.scala || 1) * profondita(s[1]) * (u.boss ? 1.28 : 1)).toFixed(3));
+          p.classList.toggle('boss', !!u.boss);
         });
       });
     },
@@ -632,7 +633,9 @@
       const B = this.B, costo = this.fase === 'pianifica' ? Combat().costoPiano(B) : 0, tot = this.ardoreV;
       let h = '<span class="lab">Ardore</span>';
       for (let i = 0; i < C.ARDORE_MAX; i++) h += '<span class="gem ' + (i < tot - costo ? 'on' : i < tot ? 'pend' : '') + '"></span>';
-      $('#ardore').innerHTML = h + '<span class="n">' + tot + (costo ? ' (−' + costo + ')' : '') + '</span>';
+      let rs = '';
+      if (this.fase === 'pianifica') { const r = Combat().risonanza(B); rs = Object.keys(r).filter(k => r[k] >= 3).map(k => `<span class="ris" style="--c:${E.AFFINITA[k].colore}" data-tip="<b>Risonanza ${E.AFFINITA[k].nome} ×${r[k]}</b><br>+${C.RISONANZA[r[k] >= 4 ? 4 : 3]} PB alle skill di ${E.AFFINITA[k].nome} di questo turno">${E.AFFINITA[k].simbolo}×${r[k]}</span>`).join(''); }
+      $('#ardore').innerHTML = h + '<span class="n">' + tot + (costo ? ' (−' + costo + ')' : '') + '</span>' + rs;
     },
     log(msg, cls) {
       const l = $('#log'); const d = el('div', cls || '', msg); l.appendChild(d);
@@ -1004,6 +1007,7 @@
         case 'dadi':
           this.dadi = e.dadi; Object.keys(e.dadi).forEach(id => this.renderDadi(id, true));
           Snd.sfx('moneta'); await this.sleep(600); break;
+        case 'risonanza': { const A = E.AFFINITA[e.aff]; this.log(e.msg, 'imp'); Fx.flash(A.colore, 0.25); const b = el('div', 'banner risonanza', `RISONANZA ${A.simbolo}×${e.n}`); b.style.color = A.colore; $('#app').appendChild(b); setTimeout(() => b.remove(), 1700); Snd.sfx('forte'); await this.sleep(800); break; }
         case 'regola': this.log(e.msg, 'imp'); Fx.flash('#a97be0', 0.2); this.banner(e.msg.split(':')[0].slice(0, 28)); await this.sleep(700); break;
         case 'msg': this.log(e.msg); break;
         case 'azione': {

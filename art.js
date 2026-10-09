@@ -665,16 +665,86 @@
     stageEl.style.setProperty('--bordo-arena', p.bordo); stageEl.style.setProperty('--orizzonte', p.cielo[1]);
     return p;
   };
-  /** Sfondo lontano (cielo, luna, colline, colonne): l'orizzonte sta al 42% dell'altezza, il pavimento è in CSS. */
+  /**
+   * Sfondo lontano di ogni capitolo (cielo + sagome a strati). L'orizzonte sta in basso (y=150): il pavimento è in CSS.
+   * Ogni epoca ha un paesaggio proprio: Canne al tramonto, Roma in fiamme, torri e neve, la cupola di Firenze,
+   * le barricate di Milano, le trincee alpine, una città in rovina di notte.
+   */
   Arte.sfondo = function (cap) {
-    const p = Arte.palette(cap);
-    const colonne = [0, 1, 2, 3, 4, 5].map(i => `<g fill="${p.sagome}" opacity="${0.55 + (i % 2) * 0.25}"><rect x="${40 + i * 88}" y="${62 + (i % 2) * 12}" width="${18 - (i % 2) * 4}" height="${86 - (i % 2) * 12}"/><rect x="${35 + i * 88}" y="${57 + (i % 2) * 12}" width="${28 - (i % 2) * 4}" height="7"/><rect x="${36 + i * 88}" y="${146}" width="${26}" height="4"/></g>`).join('');
-    const stelle = Array.from({ length: 26 }, (_, i) => `<circle cx="${(i * 97) % 520}" cy="${(i * 53) % 90}" r="${0.6 + (i % 3) * 0.4}" fill="#fff" opacity="${0.25 + (i % 4) * 0.12}"/>`).join('');
-    return `<svg viewBox="0 0 520 150" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" class="sfondo-svg">
-      <defs><linearGradient id="gCielo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.cielo[0]}"/><stop offset="1" stop-color="${p.cielo[1]}"/></linearGradient></defs>
-      <rect width="520" height="150" fill="url(#gCielo)"/>${stelle}
-      <circle cx="400" cy="52" r="46" fill="${p.cielo[1]}" opacity=".18"/><circle cx="400" cy="52" r="26" fill="#fff" opacity=".22"/>
-      <path d="M0 118 Q90 78 190 108 T380 100 T520 112 L520 150 L0 150 Z" fill="${p.sagome}" opacity=".7"/>
-      <path d="M0 132 Q120 104 240 128 T520 124 L520 150 L0 150 Z" fill="${p.sagome}" opacity=".95"/>${colonne}</svg>`;
+    const p = Arte.palette(cap), c = cap % 7, S = p.sagome;
+    const stelle = (n, op) => Array.from({ length: n }, (_, i) => `<circle cx="${(i * 97 + 13) % 520}" cy="${(i * 53) % 80}" r="${0.5 + (i % 3) * 0.4}" fill="#fff" opacity="${(op || 1) * (0.2 + (i % 4) * 0.12)}"/>`).join('');
+    const nuvole = (col, op, y) => [0, 1, 2, 3].map(i => `<ellipse cx="${60 + i * 140 + (i % 2) * 30}" cy="${(y || 30) + (i % 2) * 14}" rx="${46 + (i % 3) * 14}" ry="${6 + (i % 2) * 3}" fill="${col}" opacity="${op}"/>`).join('');
+    const cielo = (c0, c1, c2) => `<defs><linearGradient id="gC${c}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c0}"/><stop offset=".65" stop-color="${c1}"/><stop offset="1" stop-color="${c2 || c1}"/></linearGradient>
+      <radialGradient id="gS${c}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".25" stop-color="${c2 || c1}" stop-opacity=".5"/><stop offset="1" stop-color="${c2 || c1}" stop-opacity="0"/></radialGradient></defs>
+      <rect width="520" height="150" fill="url(#gC${c})"/>`;
+    const sole = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r * 3}" fill="url(#gS${c})"/><circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".55"/>`;
+    const colline = (y, col, op, amp) => `<path d="M0 ${y} Q70 ${y - amp} 140 ${y - amp * 0.3} T280 ${y - amp * 0.5} T420 ${y - amp * 0.2} T520 ${y - amp * 0.6} L520 150 L0 150 Z" fill="${col}" opacity="${op}"/>`;
+    let corpo = '';
+    switch (c) {
+      case 0: { // Roma repubblicana — Canne: colline al tramonto, tempio, insegne delle legioni
+        const insegna = (x, h) => `<g fill="${S}"><rect x="${x}" y="${150 - h}" width="2" height="${h}"/><rect x="${x - 6}" y="${150 - h + 6}" width="14" height="10" rx="1"/><path d="M${x - 5} ${150 - h} Q${x + 1} ${150 - h - 9} ${x + 7} ${150 - h} Z"/></g>`;
+        corpo = cielo('#2b1c3a', '#9a4a4a', '#e08a4a') + stelle(14, 0.6) + sole(390, 100, 18) + nuvole('#e8a070', 0.25, 62) +
+          colline(118, S, 0.55, 26) +
+          `<g fill="${S}" opacity=".85"><path d="M60 96 L130 78 L200 96 Z"/><rect x="66" y="96" width="128" height="5"/>${[0, 1, 2, 3, 4, 5].map(i => `<rect x="${72 + i * 22}" y="101" width="7" height="34"/>`).join('')}<rect x="62" y="135" width="136" height="6"/></g>` +
+          colline(134, S, 0.95, 16) + insegna(250, 46) + insegna(300, 40) + insegna(470, 52) + insegna(30, 36);
+        break;
+      }
+      case 1: { // Impero — Roma brucia: anfiteatro, insulae, fumo e bagliore
+        const archi = (x, y, n) => Array.from({ length: n }, (_, i) => `<path d="M${x + i * 13} ${y + 12} L${x + i * 13} ${y + 4} Q${x + i * 13 + 5} ${y - 2} ${x + i * 13 + 10} ${y + 4} L${x + i * 13 + 10} ${y + 12} Z" fill="#ffb060" opacity=".55"/>`).join('');
+        corpo = cielo('#1a0c0c', '#8a2a14', '#ff8a3d') +
+          `<g opacity=".5">${[0, 1, 2, 3, 4].map(i => `<path d="M${40 + i * 110} 120 Q${20 + i * 110} 70 ${60 + i * 110} 40 Q${90 + i * 110} 10 ${70 + i * 110} -10" stroke="#2a1410" stroke-width="${22 + (i % 2) * 10}" fill="none" stroke-linecap="round"/>`).join('')}</g>` +
+          `<path d="M0 150 Q120 96 260 110 T520 100 L520 150 Z" fill="#ff8a3d" opacity=".35"/>` +
+          `<g fill="${S}"><path d="M180 150 L180 96 Q260 80 340 96 L340 150 Z"/></g>${archi(186, 100, 12)}${archi(186, 118, 12)}` +
+          `<g fill="${S}">${[10, 50, 90, 360, 400, 440, 480].map((x, i) => `<rect x="${x}" y="${104 - (i % 3) * 10}" width="${30 + (i % 2) * 8}" height="${46 + (i % 3) * 10}"/>`).join('')}</g>` +
+          `<g fill="#ffd060" opacity=".7">${[18, 62, 98, 368, 410, 452, 488].map((x, i) => `<rect x="${x}" y="${112 - (i % 3) * 8}" width="4" height="5"/><rect x="${x + 10}" y="${122 - (i % 2) * 6}" width="4" height="5"/>`).join('')}</g>` +
+          `<g>${[30, 120, 230, 330, 420, 500].map((x, i) => `<path d="M${x} 150 Q${x - 10} ${128 - i % 2 * 8} ${x} ${118 - (i % 3) * 6} Q${x + 10} ${130} ${x + 6} 150 Z" fill="#ff6a2a" opacity=".8"/><path d="M${x + 2} 150 Q${x - 3} 138 ${x + 2} 130 Q${x + 6} 140 ${x + 4} 150 Z" fill="#ffd060"/>`).join('')}</g>`;
+        break;
+      }
+      case 2: { // Medioevo — torri del Comune e castello sulla neve
+        const torre = (x, w, h, merli) => `<g fill="${S}"><rect x="${x}" y="${150 - h}" width="${w}" height="${h}"/>${merli ? Array.from({ length: Math.floor(w / 4) }, (_, i) => i % 2 ? '' : `<rect x="${x + i * 4}" y="${146 - h}" width="3" height="4"/>`).join('') : ''}</g><rect x="${x + w / 2 - 1}" y="${150 - h + 10}" width="2" height="4" fill="#ffe0a0" opacity=".5"/>`;
+        corpo = cielo('#141c2c', '#4a5a7a', '#8a9ab8') + stelle(30, 1) + `<circle cx="110" cy="34" r="11" fill="#e8eef8" opacity=".75"/><circle cx="114" cy="31" r="9" fill="#4a5a7a" opacity=".5"/>` +
+          colline(112, '#2a3448', 0.9, 30) + `<path d="M300 84 L340 72 L380 84 L380 110 L300 110 Z" fill="${S}"/><g fill="${S}">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => i % 2 ? '' : `<rect x="${300 + i * 8}" y="80" width="6" height="5"/>`).join('')}</g><path d="M340 72 L340 60 L352 64 L340 66" fill="#c0303f"/>` +
+          torre(40, 14, 70, true) + torre(64, 11, 92, true) + torre(84, 16, 60, true) + torre(150, 12, 80, true) + torre(430, 15, 74, true) + torre(456, 10, 96, true) + torre(476, 14, 64, true) +
+          colline(136, '#d8e0ee', 0.18, 10) + `<g fill="#fff" opacity=".7">${Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 61) % 520}" cy="${(i * 37) % 150}" r="${0.6 + (i % 3) * 0.4}"/>`).join('')}</g>`;
+        break;
+      }
+      case 3: { // Rinascimento — Firenze: cupola, torre di Arnolfo, tetti, falò
+        corpo = cielo('#2a1e34', '#b06a4a', '#f0b070') + sole(130, 104, 14) + nuvole('#f0c090', 0.3, 50) +
+          `<g fill="${S}"><path d="M250 150 L250 104 L262 104 Q262 70 290 62 L290 54 L294 50 L298 54 L298 62 Q326 70 326 104 L338 104 L338 150 Z"/><rect x="292" y="40" width="4" height="12"/><circle cx="294" cy="39" r="2.4"/>
+           <rect x="380" y="56" width="16" height="94"/><rect x="376" y="52" width="24" height="6"/><rect x="383" y="40" width="10" height="13"/><path d="M381 40 L388 30 L395 40 Z"/>
+           <rect x="214" y="70" width="8" height="80"/><path d="M212 70 L218 58 L224 70 Z"/></g>` +
+          `<g fill="${S}" opacity=".9">${Array.from({ length: 16 }, (_, i) => `<path d="M${i * 34 - 6} 150 L${i * 34 - 6} ${124 - (i % 3) * 6} L${i * 34 + 10} ${116 - (i % 3) * 6} L${i * 34 + 26} ${124 - (i % 3) * 6} L${i * 34 + 26} 150 Z"/>`).join('')}</g>` +
+          `<g fill="#ffd080" opacity=".6">${Array.from({ length: 14 }, (_, i) => `<rect x="${i * 37 + 4}" y="${130 - (i % 2) * 6}" width="3" height="5"/>`).join('')}</g>` +
+          `<path d="M470 150 Q456 120 474 96 Q478 120 490 106 Q496 128 486 150 Z" fill="#ff7a2a" opacity=".85"/><path d="M474 150 Q468 132 478 118 Q484 134 482 150 Z" fill="#ffe080"/>`;
+        break;
+      }
+      case 4: { // Risorgimento — Milano: guglie del Duomo, tetti, barricate e bandiere
+        const bandiera = (x, y) => `<rect x="${x}" y="${y}" width="1.6" height="${150 - y}" fill="${S}"/><rect x="${x + 1.6}" y="${y}" width="6" height="9" fill="#2a8a4a"/><rect x="${x + 7.6}" y="${y}" width="6" height="9" fill="#f2ede2"/><rect x="${x + 13.6}" y="${y}" width="6" height="9" fill="#c0303f"/>`;
+        corpo = cielo('#18282a', '#4a7a70', '#a0c0a8') + nuvole('#d0e0d0', 0.18, 40) +
+          `<g fill="${S}"><path d="M170 150 L170 96 L350 96 L350 150 Z"/>${Array.from({ length: 14 }, (_, i) => `<path d="M${172 + i * 13} 96 L${175 + i * 13} ${70 - (i % 3) * 8 - (i === 7 ? 18 : 0)} L${178 + i * 13} 96 Z"/>`).join('')}<path d="M256 96 L258 38 L262 96 Z"/><circle cx="259" cy="36" r="2" fill="#e0b43a"/></g>` +
+          `<g fill="${S}" opacity=".9">${Array.from({ length: 10 }, (_, i) => i > 2 && i < 7 ? '' : `<rect x="${i * 54}" y="${112 - (i % 2) * 10}" width="46" height="${38 + (i % 2) * 10}"/>`).join('')}</g>` +
+          `<g fill="#1a1414"><path d="M20 150 L40 126 L70 132 L96 118 L120 134 L150 128 L170 150 Z"/><path d="M370 150 L392 128 L420 136 L446 122 L470 132 L500 124 L520 150 Z"/></g>` +
+          bandiera(90, 98) + bandiera(450, 92) + `<g opacity=".35">${[100, 300, 460].map(x => `<ellipse cx="${x}" cy="${80}" rx="40" ry="14" fill="#d0d0c8"/>`).join('')}</g>`;
+        break;
+      }
+      case 5: { // Prima guerra mondiale — montagne, trincee, filo spinato, pioggia
+        corpo = cielo('#22242a', '#5a5e66', '#8a8c90') + nuvole('#3a3c42', 0.6, 26) + nuvole('#4a4c52', 0.5, 46) +
+          `<path d="M0 150 L0 92 L50 60 L90 84 L140 40 L190 80 L240 56 L300 96 L350 50 L410 86 L460 58 L520 90 L520 150 Z" fill="#3a3c44"/>
+           <path d="M140 40 L156 54 L148 52 L140 60 L132 52 Z M350 50 L364 62 L352 60 L342 66 Z M50 60 L62 70 L50 70 Z" fill="#d8dce4" opacity=".7"/>` +
+          colline(128, S, 0.95, 14) +
+          `<g stroke="#15161a" stroke-width="1" fill="none">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => `<path d="M${i * 54} 130 L${i * 54} 144 M${i * 54 - 4} 133 L${i * 54 + 4} 141"/><path d="M${i * 54} 134 Q${i * 54 + 27} 140 ${i * 54 + 54} 134" stroke-dasharray="2 2"/>`).join('')}</g>` +
+          `<g stroke="#b8c0cc" stroke-width=".6" opacity=".35">${Array.from({ length: 60 }, (_, i) => `<path d="M${(i * 37) % 520} ${(i * 29) % 150} l-3 9"/>`).join('')}</g>`;
+        break;
+      }
+      default: { // Seconda guerra mondiale — città in rovina di notte, fari, cenere
+        corpo = cielo('#08080c', '#24242e', '#3a3a46') + stelle(18, 0.5) +
+          `<g opacity=".18" fill="#e8e8f0"><path d="M120 150 L60 0 L90 0 Z"/><path d="M400 150 L470 0 L500 0 Z"/></g>` +
+          `<g fill="${S}">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => { const x = i * 50 - 10, h = 50 + (i * 23) % 46; return `<path d="M${x} 150 L${x} ${150 - h} L${x + 12} ${150 - h + 6} L${x + 20} ${150 - h - 4} L${x + 30} ${150 - h + 10} L${x + 44} ${150 - h + 2} L${x + 44} 150 Z"/>`; }).join('')}</g>` +
+          `<g fill="#0a0a0e">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => `<rect x="${i * 50 + 2}" y="${116 + (i % 3) * 4}" width="5" height="7"/><rect x="${i * 50 + 18}" y="${124 - (i % 2) * 6}" width="5" height="7"/>`).join('')}</g>` +
+          `<g fill="#ffd080" opacity=".5">${[2, 5, 8].map(i => `<rect x="${i * 50 + 18}" y="${124 - (i % 2) * 6}" width="5" height="7"/>`).join('')}</g>` +
+          `<g fill="#c8c8d0" opacity=".55">${Array.from({ length: 36 }, (_, i) => `<circle cx="${(i * 71) % 520}" cy="${(i * 43) % 150}" r="${0.6 + (i % 3) * 0.4}"/>`).join('')}</g>`;
+      }
+    }
+    return `<svg viewBox="0 0 520 150" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" class="sfondo-svg">${corpo}</svg>`;
   };
 })(typeof window !== 'undefined' ? window : globalThis);

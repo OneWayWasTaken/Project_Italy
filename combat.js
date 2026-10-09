@@ -261,9 +261,16 @@
   function dadoMax(B, unitId) {
     return Math.max(0, ...B.azioni.filter(a => a.u === unitId).map(a => a.dado));
   }
+  /** Risonanza: quante azioni alleate pianificate usano skill di ciascuna affinità in questo turno. */
+  Combat.risonanza = function (B) {
+    const n = {};
+    B.azioni.forEach(a => { if (a.annullata || !a.skill) return; const u = get(B, a.u); if (!u || u.lato !== 'a' || !u.vivo) return; const af = E.SKILL[a.skill].aff; n[af] = (n[af] || 0) + 1; });
+    return n;
+  };
+  const bonusRisonanza = n => (C.RISONANZA && (n >= 4 ? C.RISONANZA[4] : n >= 3 ? C.RISONANZA[3] : 0)) || 0;
   function prepara(B, u, s, az, rival, simula) {
     const rel = E.rel(s.aff, rival.aff);
-    let pb = s.pb, pm = s.pm + rel + u.bonusPM + u.bonusPMlv, molt = 1, monete = s.monete;
+    let pb = s.pb + (u.lato === 'a' ? bonusRisonanza(Combat.risonanza(B)[s.aff] || 0) : 0), pm = s.pm + rel + u.bonusPM + u.bonusPMlv, molt = 1, monete = s.monete;
     if (s.monetePiuSeCed && rival.ced > 0) monete += s.monetePiuSeCed;
     pb += Math.min(6, (u.stati.splendore || 0) * 0.5);
     pm += Math.min(3, Math.floor((u.stati.formazione || 0) / 3));
@@ -484,6 +491,10 @@
    */
   Combat.anteprima = function (B, unitId, skillId, bersId) {
     const a = B.azioni.find(x => x.u === unitId); if (!a) return null;
+    const vecchia = a.skill; if (skillId) a.skill = skillId;   // la risonanza dipende dalla skill che si sta valutando
+    try { return anteprima(B, a, unitId, skillId, bersId); } finally { a.skill = vecchia; }
+  };
+  function anteprima(B, a, unitId, skillId, bersId) {
     const u = get(B, unitId), T = get(B, bersId || a.bers), s = E.SKILL[skillId || a.skill];
     if (!T || !T.vivo || !s) return null;
     const az = { u: unitId, dado: a.dado, skill: s.id, bers: T.id };
@@ -507,7 +518,7 @@
       if (cA > 0 && cB <= 0) vinte++;
     }
     return Object.assign(res, { scontro: true, vittoria: vinte / N, rivale: { id: T.id, skill: sR.id, min: pR.pb, max: pR.pb + pR.monete * pR.pm, monete: pR.monete } });
-  };
+  }
   Combat.costoPiano = B => B.azioni.filter(a => get(B, a.u).lato === 'a' && !a.annullata).reduce((t, a) => t + E.SKILL[a.skill].costo, 0);
   Combat.pianoValido = B => Combat.costoPiano(B) <= B.ardore;
 
@@ -516,6 +527,8 @@
     const costo = Combat.costoPiano(B);
     B.ardore -= costo;
     if (costo) ev(B, { t: 'ardore', valore: B.ardore });
+    const ris = Combat.risonanza(B);
+    Object.keys(ris).forEach(af => { if (bonusRisonanza(ris[af])) ev(B, { t: 'risonanza', aff: af, n: ris[af], pb: bonusRisonanza(ris[af]), msg: 'Risonanza di ' + E.AFFINITA[af].nome + ' ×' + ris[af] + ': +' + bonusRisonanza(ris[af]) + ' PB a quelle skill.' }); });
     eseguiAffondo(B);
     const ordine = B.azioni.slice().sort((x, y) => (y.dado - x.dado) || (B.rng() - 0.5));
     for (const a of ordine) {
